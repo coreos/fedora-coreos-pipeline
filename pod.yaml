@@ -37,6 +37,7 @@ spec:
      image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
 #    image: quay.io/dustymabe/coreos-assembler:latest
      imagePullPolicy: Always
+     restartPolicy: Never
      workingDir: /srv/srv/
      args:
      - build
