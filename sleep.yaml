@@ -1,0 +1,22 @@
+apiVersion: v1
+metadata:
+    name: coreos-assembler-sleep
+kind: Pod
+spec:
+  containers:
+   - name: coreos-assembler-sleep
+     image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
+#    image: quay.io/dustymabe/coreos-assembler:latest
+     imagePullPolicy: Always
+     workingDir: /srv/srv/
+     command: ['/bin/bash']
+     args: ['-c', 'sleep infinity']
+     volumeMounts:
+     - name: data
+       mountPath: /srv/
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: coreos-assembler-claim
+  securityContext:
+    privileged: false

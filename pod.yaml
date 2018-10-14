@@ -1,0 +1,61 @@
+# https://blog.openshift.com/image-streams-faq/                                                                                                                                                                                             
+# # oc import-image dustymabe-coreos-assembler:latest --from=quay.io/dustymabe/coreos-assembler --confirm
+# # oc tag quay.io/dustymabe/coreos-assembler:latest dustymabe-coreos-assembler:latest --scheduled
+apiVersion: v1
+metadata:
+    name: coreos-assembler
+kind: Pod
+spec:
+  initContainers:
+   # This container clones the desired git repo to the EmptyDir volume.
+   - name: coreos-assembler-init
+     image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
+#    image: quay.io/dustymabe/coreos-assembler:latest
+     imagePullPolicy: Always
+     workingDir: /srv/
+     command: ['/bin/bash']
+     args: ['-c', "mkdir -p /srv/srv/; cd /srv/srv/; if [ ! -d src/config ]; then /usr/bin/coreos-assembler init https://github.com/coreos/fedora-coreos-config &>> /srv/init.log; fi" ]
+     securityContext:
+       privileged: false
+     volumeMounts:
+     - name: data
+       mountPath: /srv/
+   - name: coreos-assembler-git-update
+     image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
+#    image: quay.io/dustymabe/coreos-assembler:latest
+     imagePullPolicy: Always
+     workingDir: /srv/srv/
+     command: ['/bin/bash']
+     args: ['-c', "cd ./src/config && git pull &>> /srv/pull.log"]
+     securityContext:
+       privileged: false
+     volumeMounts:
+     - name: data
+       mountPath: /srv/
+  containers:
+   - name: coreos-assembler
+     image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
+#    image: quay.io/dustymabe/coreos-assembler:latest
+     imagePullPolicy: Always
+     workingDir: /srv/srv/
+     args:
+     - build
+     volumeMounts:
+     - name: data
+       mountPath: /srv/
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: coreos-assembler-claim
+  securityContext:
+    privileged: false
+# triggers:
+# - type: ConfigChange
+# - type: ImageChange
+#   imageChangeParams:
+#     automatic: true
+#     containerNames:
+#     - coreos-assembler
+#     from:
+#       kind: ImageStreamTag
+#       name: :latest
