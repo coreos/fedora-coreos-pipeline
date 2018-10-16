@@ -43,12 +43,18 @@ spec:
      volumeMounts:
      - name: data
        mountPath: /srv/
+     - name: duffy-key
+       mountPath: /var/run/secrets/kubernetes.io/duffy-key
+       readOnly: true
      securityContext:
        privileged: false
   volumes:
   - name: data
     persistentVolumeClaim:
       claimName: coreos-assembler-claim
+  - name: duffy-key
+    secret:
+      secretName: duffy.key
   restartPolicy: Never
 # triggers:
 # - type: ConfigChange
