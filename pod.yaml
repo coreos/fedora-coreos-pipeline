@@ -1,6 +1,6 @@
-# https://blog.openshift.com/image-streams-faq/                                                                                                                                                                                             
-# # oc import-image dustymabe-coreos-assembler:latest --from=quay.io/dustymabe/coreos-assembler --confirm
-# # oc tag quay.io/dustymabe/coreos-assembler:latest dustymabe-coreos-assembler:latest --scheduled
+# A pod that will startup and do a complete coreos-assembler run
+# against https://github.com/coreos/fedora-coreos-config and store
+# the results in the mounted PV
 apiVersion: v1
 metadata:
     name: coreos-assembler
@@ -56,13 +56,3 @@ spec:
     secret:
       secretName: duffy.key
   restartPolicy: Never
-# triggers:
-# - type: ConfigChange
-# - type: ImageChange
-#   imageChangeParams:
-#     automatic: true
-#     containerNames:
-#     - coreos-assembler
-#     from:
-#       kind: ImageStreamTag
-#       name: :latest

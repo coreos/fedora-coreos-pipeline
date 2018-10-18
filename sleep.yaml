@@ -1,3 +1,5 @@
+# A container to just get into the coreos-assembler environment
+# (container + mounted physical volume under /srv/)
 apiVersion: v1
 metadata:
     name: coreos-assembler-sleep
@@ -8,15 +10,24 @@ spec:
      image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
 #    image: quay.io/dustymabe/coreos-assembler:latest
      imagePullPolicy: Always
-     workingDir: /srv/srv/
+     workingDir: /srv/
      command: ['/bin/bash']
      args: ['-c', 'sleep infinity']
      volumeMounts:
      - name: data
        mountPath: /srv/
+     - name: duffy-ssh-key
+       mountPath: /var/run/secrets/kubernetes.io/duffy-ssh-key
+       readOnly: true
+     - name: duffy-key
+       mountPath: /var/run/secrets/kubernetes.io/duffy-key
+       readOnly: true
+     securityContext:
+       privileged: false
   volumes:
   - name: data
     persistentVolumeClaim:
       claimName: coreos-assembler-claim
-  securityContext:
-    privileged: false
+  - name: duffy-key
+    secret:
+      secretName: duffy.key
