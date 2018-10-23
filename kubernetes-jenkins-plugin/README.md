@@ -40,6 +40,30 @@ Create the pipeline (buildconfig with pipeline strategy) and start a build:
 
 ```
 $ oc create -f kube-fcos-pipeline.yaml
+```
+
+Update the "secret" token values in the webooks to be unique
+
+``` 
+$ oc set triggers bc/kubernetes-fcos-pipeline --from-github
+$ oc set triggers bc/kubernetes-fcos-pipeline --from-webhook
+```
+
+Grab the URLs of the webhooks from `oc describe` and set up webhook
+in github.
+
+- `oc describe bc/kube-fcos-pipeline` and grab the `Webhook GitHub` URL
+- From the GitHub web console for the configs repository.
+- Select Add Webhook from Settings → Webhooks & Services.
+- Paste the webook URL output into the Payload URL field.
+- Change the Content Type from GitHub’s default `application/x-www-form-urlencoded` to `application/json`.
+- Click Add webhook.
+
+
+
+Start build using the CLI:
+
+```
 $ oc start-build kube-fcos-pipeline
 ```
 
