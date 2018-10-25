@@ -32,4 +32,4 @@ spec:
   strategy:
     jenkinsPipelineStrategy:
       type: JenkinsPipeline
-      jenkinsfilePath: kubernetes-jenkins-plugin/pipeline.groovy
+      jenkinsfilePath: Jenkinsfile
