@@ -1,4 +1,3 @@
-
 This directory contains files that will set up a jenkins pipeline
 using the [Kubernetes Jenkins plugin](https://github.com/jenkinsci/kubernetes-plugin).
 
@@ -64,7 +63,7 @@ in github.
 Start build using the CLI:
 
 ```
-$ oc start-build kube-fcos-pipeline
+$ oc start-build kubernetes-fcos-pipeline
 ```
 
 Use the web interface to view logs from builds
