@@ -1,0 +1,35 @@
+kind: "BuildConfig"
+apiVersion: "build.openshift.io/v1"
+metadata:
+  name: "kubernetes-fcos-pipeline"
+spec:
+  # Define triggers.
+  #   - trigger on buildconfig change
+  #   - trigger on imagestream change
+  #   - trigger on GitHub webhook
+  #   - trigger on Generic webhook (for fedmsg triggered actions)
+  triggers:
+  - type: ConfigChange
+  # use `oc set triggers --from-github` to update token to be unique
+  - type: GitHub
+    github:
+      secret: regenerate
+  # use `oc set triggers --from-webook` to update token to be unique
+  - type: Generic
+    generic:
+      secret: regenerate
+  - type: imageChange
+    imageChange:
+      from:
+        kind: ImageStreamTag
+        name: dustymabe-coreos-assembler:latest
+  source:
+    type: Git
+    git:
+      # XXX: make these into parameters to make it easy for the local dev case
+      uri: 'https://github.com/dustymabe/fedora-coreos-ci'
+      ref: master
+  strategy:
+    jenkinsPipelineStrategy:
+      type: JenkinsPipeline
+      jenkinsfilePath: Jenkinsfile
