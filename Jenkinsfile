@@ -34,6 +34,7 @@ pipeline {
         - name: duffy-key
           secret:
             secretName: duffy.key
+            optional: true
       """
     }
   }
@@ -79,8 +80,15 @@ pipeline {
         container('coreos-assembler') {
           sh """
           cd /srv/
+          keyfile=/var/run/secrets/kubernetes.io/duffy-key/duffy.key
+          if [ ! -f \$keyfile ]; then
+              echo "No \$keyfile file with rsync key."
+              echo "Must be operating in dev environment"
+              echo "Skipping rsync...."
+              exit 0
+          fi
           set +x # so we don't echo password to the jenkins logs
-          RSYNC_PASSWORD=\$(cat /var/run/secrets/kubernetes.io/duffy-key/duffy.key)
+          RSYNC_PASSWORD=\$(cat \$keyfile)
           export RSYNC_PASSWORD=\${RSYNC_PASSWORD:0:13}
           set -x
           rsync -avh --delete ./builds/ fedora-coreos@artifacts.ci.centos.org::fedora-coreos/delete/builds/
