@@ -27,6 +27,8 @@ pipeline {
              readOnly: true
            securityContext:
              privileged: false
+        nodeSelector:
+          oci_kvm_hook: allowed
         volumes:
         - name: data
           persistentVolumeClaim:
