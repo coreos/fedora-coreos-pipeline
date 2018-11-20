@@ -22,7 +22,7 @@ spec:
     imageChange:
       from:
         kind: ImageStreamTag
-        name: dustymabe-coreos-assembler:latest
+        name: coreos-assembler:master
   source:
     type: Git
     git:
