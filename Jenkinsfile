@@ -93,8 +93,8 @@ pipeline {
           RSYNC_PASSWORD=\$(cat \$keyfile)
           export RSYNC_PASSWORD=\${RSYNC_PASSWORD:0:13}
           set -x
-          rsync -avh --delete ./builds/ fedora-coreos@artifacts.ci.centos.org::fedora-coreos/delete/builds/
-          rsync -avh --delete ./repo/ fedora-coreos@artifacts.ci.centos.org::fedora-coreos/delete/repo/
+          rsync -avh --delete ./builds/ fedora-coreos@artifacts.ci.centos.org::fedora-coreos/prod/builds/
+          rsync -avh --delete ./repo/   fedora-coreos@artifacts.ci.centos.org::fedora-coreos/prod/repo/
           """
         }
       }
