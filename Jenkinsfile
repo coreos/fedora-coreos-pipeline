@@ -15,7 +15,7 @@ pipeline {
            image: docker-registry.default.svc:5000/fedora-coreos/jenkins-slave-base-centos7:latest
            args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
          - name: coreos-assembler
-           image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
+           image: docker-registry.default.svc:5000/fedora-coreos/coreos-assembler:master
            imagePullPolicy: Always
            command: ['/bin/bash']
            args: ['-c', 'sleep infinity']

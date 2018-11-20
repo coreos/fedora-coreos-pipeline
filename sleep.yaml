@@ -7,8 +7,8 @@ kind: Pod
 spec:
   containers:
    - name: coreos-assembler-sleep
-     image: docker-registry.default.svc:5000/fedora-coreos/dustymabe-coreos-assembler:latest
-#    image: quay.io/dustymabe/coreos-assembler:latest
+     image: docker-registry.default.svc:5000/fedora-coreos/coreos-assembler:master
+#    image: quay.io/coreos-assembler/coreos-assembler:master
      imagePullPolicy: Always
      workingDir: /srv/
      command: ['/bin/bash']

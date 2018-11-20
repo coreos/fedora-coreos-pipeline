@@ -15,8 +15,8 @@ Also add `--scheduled` to the image so it gets updated when the remote
 tag in the remote registry gets updated.
 
 ```
-$ oc import-image dustymabe-coreos-assembler:latest --from=quay.io/dustymabe/coreos-assembler --confirm
-$ oc tag quay.io/dustymabe/coreos-assembler:latest dustymabe-coreos-assembler:latest --scheduled
+$ oc import-image coreos-assembler:master --from=quay.io/coreos-assembler/coreos-assembler:master --confirm
+$ oc tag quay.io/coreos-assembler/coreos-assembler:master coreos-assembler:master --scheduled
 ```
 
 Create an image stream for the Jenkins slave container so that we
