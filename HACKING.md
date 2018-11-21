@@ -44,7 +44,16 @@ $ oc create -f manifests/pvc.yaml
 ### Create the pipeline (buildconfig with pipeline strategy) and start a build:
 
 ```
-$ oc create -f manifests/bc.yaml
+$ oc new-app --file=manifests/bc.yaml
+```
+
+If working on a private branch, you may override the
+`REPO_URL` and `REPO_REF` parameters:
+
+```
+$ oc new-app --file=manifests/bc.yaml \
+  --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
+  --param=REPO_REF=my-feature-branch
 ```
 
 Update the "secret" token values in the webooks to be unique

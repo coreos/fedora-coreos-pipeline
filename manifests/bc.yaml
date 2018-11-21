@@ -1,35 +1,58 @@
-kind: "BuildConfig"
-apiVersion: "build.openshift.io/v1"
+apiVersion: v1
+kind: Template
+labels:
+  app: fedora-coreos
+  template: fedora-coreos-template
 metadata:
-  name: "kubernetes-fcos-pipeline"
-spec:
-  # Define triggers.
-  #   - trigger on buildconfig change
-  #   - trigger on imagestream change
-  #   - trigger on GitHub webhook
-  #   - trigger on Generic webhook (for fedmsg triggered actions)
-  triggers:
-  - type: ConfigChange
-  # use `oc set triggers --from-github` to update token to be unique
-  - type: GitHub
-    github:
-      secret: regenerate
-  # use `oc set triggers --from-webook` to update token to be unique
-  - type: Generic
-    generic:
-      secret: regenerate
-  - type: imageChange
-    imageChange:
-      from:
-        kind: ImageStreamTag
-        name: coreos-assembler:master
-  source:
-    type: Git
-    git:
-      # XXX: make these into parameters to make it easy for the local dev case
-      uri: 'https://github.com/dustymabe/fedora-coreos-ci'
-      ref: master
-  strategy:
-    jenkinsPipelineStrategy:
-      type: JenkinsPipeline
-      jenkinsfilePath: Jenkinsfile
+  annotations:
+    description: |-
+      Jenkins pipeline for Fedora CoreOS.
+    iconClass: icon-jenkins
+    openshift.io/display-name: Fedora CoreOS Pipeline
+    openshift.io/documentation-url: https://github.com/dustymabe/fedora-coreos-ci
+    openshift.io/support-url: https://github.com/dustymabe/fedora-coreos-ci
+    openshift.io/provider-display-name: Fedora CoreOS
+    tags: fcos,jenkins,fedora
+  name: fedora-coreos
+parameters:
+  - description: Git source URI for Jenkinsfile
+    name: REPO_URL
+    value: https://github.com/dustymabe/fedora-coreos-ci
+  - description: Git branch/tag reference for Jenkinsfile
+    name: REPO_REF
+    value: master
+objects:
+  - kind: "BuildConfig"
+    apiVersion: "build.openshift.io/v1"
+    metadata:
+      name: "kubernetes-fcos-pipeline"
+    spec:
+      # Define triggers.
+      #   - trigger on buildconfig change
+      #   - trigger on imagestream change
+      #   - trigger on GitHub webhook
+      #   - trigger on Generic webhook (for fedmsg triggered actions)
+      triggers:
+      - type: ConfigChange
+      # use `oc set triggers --from-github` to update token to be unique
+      - type: GitHub
+        github:
+          secret: regenerate
+      # use `oc set triggers --from-webook` to update token to be unique
+      - type: Generic
+        generic:
+          secret: regenerate
+      - type: imageChange
+        imageChange:
+          from:
+            kind: ImageStreamTag
+            name: coreos-assembler:master
+      source:
+        type: Git
+        git:
+          uri: ${REPO_URL}
+          ref: ${REPO_REF}
+      strategy:
+        jenkinsPipelineStrategy:
+          type: JenkinsPipeline
+          jenkinsfilePath: Jenkinsfile
