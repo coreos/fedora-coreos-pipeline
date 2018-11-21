@@ -95,6 +95,10 @@ pipeline {
           RSYNC_PASSWORD=\$(cat \$keyfile)
           export RSYNC_PASSWORD=\${RSYNC_PASSWORD:0:13}
           set -x
+          # Change perms to allow reading on webserver side.
+          # Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
+          find builds/ ! -type l -exec chmod a+rX {} +
+          find repo/   ! -type l -exec chmod a+rX {} +
           # Note that if the prod directory doesn't exist on the remote this
           # will fail. We can possibly hack around this in the future:
           # https://stackoverflow.com/questions/1636889/rsync-how-can-i-configure-it-to-create-target-directory-on-server
