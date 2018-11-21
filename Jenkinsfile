@@ -54,13 +54,15 @@ pipeline {
         }
       }
     }
-    stage('Git Pull') {
+    stage('Fetch') {
       steps {
-        echo "<<<< Stage: Git Pull >>>>"
+        echo "<<<< Stage: Fetch >>>>"
         container('coreos-assembler') {
           sh """
-          cd /srv/src/config 
+          cd /srv/src/config
           git pull
+          cd /srv
+          coreos-assembler fetch
           """
         }
       }
