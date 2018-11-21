@@ -4,8 +4,43 @@ using the [Kubernetes Jenkins plugin](https://github.com/jenkinsci/kubernetes-pl
 ### Create a Jenkins instance with a persistent volume backing store:
 
 ```
-$ oc new-app --template=jenkins-persistent --param=MEMORY_LIMIT=2Gi --param=VOLUME_CAPACITY=2Gi
+$ oc new-app --template=jenkins-persistent --param=NAMESPACE=fedora-coreos --param=MEMORY_LIMIT=2Gi --param=VOLUME_CAPACITY=2Gi
 ```
+
+Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
+image from our namespace, which we'll create in the next step. (The
+reason we create the app first is that otherwise OpenShift will
+automatically instantiate Jenkins with default parameters when creating
+the Jenkins pipeline).
+
+### Create the buildconfigs from the template
+
+```
+$ oc new-app --file=manifests/bc.yaml
+```
+
+If working on a private branch, you may override the
+`REPO_URL` and `REPO_REF` parameters:
+
+```
+$ oc new-app --file=manifests/bc.yaml \
+  --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
+  --param=REPO_REF=my-feature-branch
+```
+
+Right now this template creates two buildconfigs:
+
+1. The Jenkins master imagestream
+2. The Jenkins pipeline build
+
+We can now start a build of the Jenkins master:
+
+```
+oc start-build --follow fedora-coreos-jenkins
+```
+
+Once the Jenkins master image is built, Jenkins should start up (verify
+with `oc get pods`).
 
 It is a good idea to
 [update all plugins](TROUBLESHOOTING.md#issue-for-plugins-not-being-up-to-date)
@@ -41,29 +76,14 @@ $ oc tag docker.io/openshift/jenkins-slave-base-centos7:latest jenkins-slave-bas
 $ oc create -f manifests/pvc.yaml
 ```
 
-### Create the pipeline (buildconfig with pipeline strategy) and start a build:
+### [PROD ONLY] Update the "secret" token values in the webooks to be unique
 
 ```
-$ oc new-app --file=manifests/bc.yaml
+$ oc set triggers bc/kubernetes-coreos-pipeline --from-github
+$ oc set triggers bc/kubernetes-coreos-pipeline --from-webhook
 ```
 
-If working on a private branch, you may override the
-`REPO_URL` and `REPO_REF` parameters:
-
-```
-$ oc new-app --file=manifests/bc.yaml \
-  --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
-  --param=REPO_REF=my-feature-branch
-```
-
-Update the "secret" token values in the webooks to be unique
-
-``` 
-$ oc set triggers bc/kubernetes-fcos-pipeline --from-github
-$ oc set triggers bc/kubernetes-fcos-pipeline --from-webhook
-```
-
-### Set up webhooks/automation
+### [PROD ONLY] Set up webhooks/automation
 
 Grab the URLs of the webhooks from `oc describe` and set up webhook
 in github.
