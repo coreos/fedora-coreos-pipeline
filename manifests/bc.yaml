@@ -72,7 +72,7 @@ objects:
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: "kubernetes-fcos-pipeline"
+      name: "fedora-coreos-pipeline"
     spec:
       # Define triggers.
       #   - trigger on buildconfig change

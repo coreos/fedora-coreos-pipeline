@@ -79,8 +79,8 @@ $ oc create -f manifests/pvc.yaml
 ### [PROD ONLY] Update the "secret" token values in the webooks to be unique
 
 ```
-$ oc set triggers bc/kubernetes-coreos-pipeline --from-github
-$ oc set triggers bc/kubernetes-coreos-pipeline --from-webhook
+$ oc set triggers bc/fedora-coreos-pipeline --from-github
+$ oc set triggers bc/fedora-coreos-pipeline --from-webhook
 ```
 
 ### [PROD ONLY] Set up webhooks/automation
@@ -88,7 +88,7 @@ $ oc set triggers bc/kubernetes-coreos-pipeline --from-webhook
 Grab the URLs of the webhooks from `oc describe` and set up webhook
 in github.
 
-- `oc describe bc/kubernetes-fcos-pipeline` and grab the `Webhook GitHub` URL
+- `oc describe bc/fedora-coreos-pipeline` and grab the `Webhook GitHub` URL
 - From the GitHub web console for the configs repository.
 - Select Add Webhook from Settings → Webhooks & Services.
 - Paste the webook URL output into the Payload URL field.
@@ -98,7 +98,7 @@ in github.
 Start build using the CLI:
 
 ```
-$ oc start-build kubernetes-fcos-pipeline
+$ oc start-build fedora-coreos-pipeline
 ```
 
 Use the web interface to view logs from builds.
