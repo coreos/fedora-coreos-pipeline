@@ -16,9 +16,6 @@ spec:
      volumeMounts:
      - name: data
        mountPath: /srv/
-     - name: duffy-ssh-key
-       mountPath: /var/run/secrets/kubernetes.io/duffy-ssh-key
-       readOnly: true
      - name: duffy-key
        mountPath: /var/run/secrets/kubernetes.io/duffy-key
        readOnly: true
