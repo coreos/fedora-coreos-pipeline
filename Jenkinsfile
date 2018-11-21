@@ -17,8 +17,8 @@ pipeline {
          - name: coreos-assembler
            image: docker-registry.default.svc:5000/fedora-coreos/coreos-assembler:master
            imagePullPolicy: Always
-           command: ['/bin/bash']
-           args: ['-c', 'sleep infinity']
+           command: ['/usr/bin/dumb-init']
+           args: ['sleep', 'infinity']
            volumeMounts:
            - name: data
              mountPath: /srv/
