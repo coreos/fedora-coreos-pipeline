@@ -1,10 +1,94 @@
-The `manifests/` directory contains OpenShift manifests that will set up a Jenkins pipeline
-using the [Kubernetes Jenkins plugin](https://github.com/jenkinsci/kubernetes-plugin).
+The `manifests/pipeline.yaml` file contains an OpenShift template that
+will set up a Jenkins pipeline using the
+[Kubernetes Jenkins plugin](https://github.com/jenkinsci/kubernetes-plugin).
 
-### Create a Jenkins instance with a persistent volume backing store:
+These instructions will cover both local developer workflows, as well as
+interacting with the production pipeline in CentOS CI. A section header
+may indicate that the section only applies to one of the two workflows.
+
+### [LOCAL] Set up an OpenShift cluster
+
+First, make sure to install `oci-kvm-hook` on your host system (not in a
+pet container). This is required to ensure that the pipeline has access
+to `/dev/kvm`:
 
 ```
-$ oc new-app --template=jenkins-persistent --param=NAMESPACE=fedora-coreos --param=MEMORY_LIMIT=2Gi --param=VOLUME_CAPACITY=2Gi
+rpm-ostree install oci-kvm-hook # if on OSTree-based system
+dnf install -y oci-kvm-hook # if on traditional
+```
+
+We will use `oc cluster up` to set up a local cluster for testing. To do
+this, simply obtain the OpenShift binary from
+[the latest release](https://github.com/openshift/origin/releases/latest)
+(though note that I'm currently still using the binaries from v3.9, so
+pick that release if you hit issues).
+
+And now, bring up a v3.6.1 cluster (we want to match the CentOS CI
+version):
+
+```
+oc cluster up --version v3.6.1
+```
+
+To have persistent configs and data, I would recommend specifying the
+dirs to use.
+
+```
+oc cluster up --version v3.6.1 \
+    --host-config-dir=/srv/oc/config \
+    --host-data-dir=/srv/oc/data \
+    --host-pv-dir=/srv/oc/pv
+```
+
+Then when doing `oc cluster up` in the future, you can use
+`--use-existing-config`:
+
+```
+oc cluster up --version v3.6.1 \
+    --host-config-dir=/srv/oc/config \
+    --host-data-dir=/srv/oc/data \
+    --host-pv-dir=/srv/oc/pv \
+    --use-existing-config
+```
+
+Once the cluster is up, we need to mark our only node (`localhost`) as
+oci-kvm-hook enabled. To do this:
+
+```
+oc login -u system:admin
+oc patch node localhost -p '{"metadata":{"labels":{"oci_kvm_hook":"allowed"}}}'
+```
+
+You can now sign in as as `developer`:
+
+```
+oc login -u developer https://192.168.0.202:8443
+```
+
+(Any password will work).
+
+We'll want to match the project name used in CentOS CI:
+
+```
+oc new-project fedora-coreos
+oc delete project myproject
+```
+
+And you're all set!
+
+### [LOCAL] Fork the repo
+
+If you're planning to test changes, it would be best to fork
+this repo so that you do your work there. The workflow
+requires a remote repo to which to push changes.
+
+### Create a Jenkins instance with a persistent volume backing store
+
+```
+oc new-app --template=jenkins-persistent \
+    --param=NAMESPACE=fedora-coreos \
+    --param=MEMORY_LIMIT=2Gi \
+    --param=VOLUME_CAPACITY=2Gi
 ```
 
 Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
@@ -13,27 +97,30 @@ reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
 
-### Create the buildconfigs from the template
+### Create the pipeline from the template
+
+If working on the production pipeline, or you're not
+planning any modifications, you may simply do:
 
 ```
-$ oc new-app --file=manifests/bc.yaml
+$ oc new-app --file=manifests/pipeline.yaml
 ```
 
-If working on a private branch, you may override the
+If working on your own repo, you will want to override the
 `REPO_URL` and `REPO_REF` parameters:
 
 ```
-$ oc new-app --file=manifests/bc.yaml \
+$ oc new-app --file=manifests/pipeline.yaml \
   --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
   --param=REPO_REF=my-feature-branch
 ```
 
-Right now this template creates five objects:
+This template creates:
 
 1. the Jenkins master imagestream,
 2. the Jenkins slave imagestream,
 3. the coreos-assembler imagestream,
-4. the PVC, and
+4. the `PersistentVolumeClaim` in which we'll cache and compose, and
 5. the Jenkins pipeline build.
 
 We can now start a build of the Jenkins master:
@@ -43,12 +130,18 @@ oc start-build --follow fedora-coreos-jenkins
 ```
 
 Once the Jenkins master image is built, Jenkins should start up (verify
-with `oc get pods`).
+with `oc get pods`). Once the pod is marked READY, you should be able to
+login to the Jenkins UI at https://jenkins-fedora-coreos.$CLUSTER_URL/
 
-It is a good idea to
-[set the kubernetes plugin to use DNS for service names](TROUBLESHOOTING.md#issue-for-jenkins-dns-names).
+It may be a good idea to set the Kubernetes plugin to
+[use DNS for service names](TROUBLESHOOTING.md#issue-for-jenkins-dns-names).
 
 ### Start build using the CLI
+
+Once Jenkins is ready, the Fedora CoreOS pipeline should've already been
+started. You can verify this by checking the job in the web UI, or by
+running `oc get builds`. You can also manually trigger a new build
+using:
 
 ```
 $ oc start-build fedora-coreos-pipeline
@@ -56,14 +149,14 @@ $ oc start-build fedora-coreos-pipeline
 
 Use the web interface to view logs from builds.
 
-### [PROD ONLY] Update the "secret" token values in the webooks to be unique
+### [PROD] Update the "secret" token values in the webhooks to be unique
 
 ```
 $ oc set triggers bc/fedora-coreos-pipeline --from-github
 $ oc set triggers bc/fedora-coreos-pipeline --from-webhook
 ```
 
-### [PROD ONLY] Set up webhooks/automation
+### [PROD] Set up webhooks/automation
 
 Grab the URLs of the webhooks from `oc describe` and set up webhook
 in github.
