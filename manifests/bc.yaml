@@ -22,6 +22,9 @@ parameters:
     name: REPO_REF
     value: master
 objects:
+
+  ### JENKINS MASTER ###
+
   # use our own "gated" imagestream for the Jenkins master so we can test new
   # images before upgrading
   - apiVersion: v1
@@ -69,6 +72,9 @@ objects:
           namespace: fedora-coreos
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
+
+  ### FEDORA COREOS BUILD PIPELINE ###
+
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
