@@ -1,0 +1,34 @@
+# This pod template is used in the Jenkins pipeline by the Kubernetes plugin
+
+apiVersion: v1
+metadata:
+  name: coreos-assembler
+kind: Pod
+spec:
+  containers:
+   - name: jnlp
+     image: jenkins-slave-base-centos7:latest
+     args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+   - name: coreos-assembler
+     image: coreos-assembler:master
+     imagePullPolicy: Always
+     command: ['/usr/bin/dumb-init']
+     args: ['sleep', 'infinity']
+     volumeMounts:
+     - name: data
+       mountPath: /srv/
+     - name: duffy-key
+       mountPath: /var/run/secrets/kubernetes.io/duffy-key
+       readOnly: true
+     securityContext:
+       privileged: false
+  nodeSelector:
+    oci_kvm_hook: allowed
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: coreos-assembler-claim
+  - name: duffy-key
+    secret:
+      secretName: duffy.key
+      optional: true
