@@ -4,33 +4,36 @@ node {
     pod = readFile(file: "manifests/pod.yaml")
 }
 
+def shwrap(cmds) {
+  sh """
+    set -xeuo pipefail
+    cd /srv
+    ${cmds}
+  """
+}
+
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
         stage('Init') {
-            sh """
-            cd /srv/
+            shwrap("""
             if [ ! -d src/config ]; then
                 coreos-assembler init https://github.com/coreos/fedora-coreos-config
             fi
-            """
+            """)
         }
         stage('Fetch') {
-            sh """
-            cd /srv/src/config
-            git pull
-            cd /srv
-            coreos-assembler fetch | tee
-            """
+            shwrap("""
+            git -C src/config pull
+            coreos-assembler fetch
+            """)
         }
         stage('Build') {
-            sh """
-            cd /srv/
-            coreos-assembler build | tee
-            """
+            shwrap("""
+            coreos-assembler build
+            """)
         }
         stage('Archive') {
-            sh """
-            cd /srv/
+            shwrap("""
             keyfile=/var/run/secrets/kubernetes.io/duffy-key/duffy.key
             if [ ! -f \$keyfile ]; then
                 echo "No \$keyfile file with rsync key."
@@ -51,7 +54,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             # https://stackoverflow.com/questions/1636889/rsync-how-can-i-configure-it-to-create-target-directory-on-server
             rsync -avh --delete ./builds/ fedora-coreos@artifacts.ci.centos.org::fedora-coreos/prod/builds/
             rsync -avh --delete ./repo/   fedora-coreos@artifacts.ci.centos.org::fedora-coreos/prod/repo/
-            """
+            """)
         }
     }}
 }
