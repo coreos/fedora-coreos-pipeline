@@ -12,10 +12,10 @@ pipeline {
       spec:
         containers:
          - name: jnlp
-           image: docker-registry.default.svc:5000/fedora-coreos/jenkins-slave-base-centos7:latest
+           image: jenkins-slave-base-centos7:latest
            args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
          - name: coreos-assembler
-           image: docker-registry.default.svc:5000/fedora-coreos/coreos-assembler:master
+           image: coreos-assembler:master
            imagePullPolicy: Always
            command: ['/usr/bin/dumb-init']
            args: ['sleep', 'infinity']
