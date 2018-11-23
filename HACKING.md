@@ -22,6 +22,37 @@ this, simply obtain the OpenShift binary from
 [the latest release](https://github.com/openshift/origin/releases/latest)
 (though note that I'm currently still using the binaries from v3.9, so
 pick that release if you hit issues).
+`openshift-origin-client-tools` is enough for `oc cluster up`.
+
+If you have not done so already, follow the instructions in the
+[Prerequisites](https://github.com/openshift/origin/blob/v4.0.0-alpha.0/docs/cluster_up_down.md#prerequisites)
+and [Getting Started](https://github.com/openshift/origin/blob/v4.0.0-alpha.0/docs/cluster_up_down.md#getting-started)
+sections to set up your environment and start the Docker daemon.
+
+If on Fedora > 28 and Openshift OKD < 3.11, one extra step is needed.
+Change the `/usr/lib/systemd/system/docker.service` unit file to use the
+`cgroupfs` cgroup driver instead of `systemd`.
+(See https://bugzilla.redhat.com/show_bug.cgi?id=1558425#c22
+for more info).
+
+Change this line (under `ExecStart`):
+
+```
+--exec-opt native.cgroupdriver=systemd \
+```
+
+to:
+
+```
+--exec-opt native.cgroupdriver=cgroupfs \
+```
+
+Then, restart the docker daemon:
+
+```
+systemctl daemon-reload
+systemctl restart docker.service
+```
 
 And now, bring up a v3.6.1 cluster (we want to match the CentOS CI
 version):
@@ -51,6 +82,23 @@ oc cluster up --version v3.6.1 \
     --use-existing-config
 ```
 
+Once complete, something like the
+following will show:
+
+```
+OpenShift server started.
+
+The server is accessible via web console at:
+    https://127.0.0.1:8443
+
+You are logged in as:
+    User:     developer
+    Password: <any value>
+
+To login as administrator:
+    oc login -u system:admin
+```
+
 Once the cluster is up, we need to mark our only node (`localhost`) as
 oci-kvm-hook enabled. To do this:
 
@@ -62,10 +110,11 @@ oc patch node localhost -p '{"metadata":{"labels":{"oci_kvm_hook":"allowed"}}}'
 You can now sign in as as `developer`:
 
 ```
-oc login -u developer https://192.168.0.202:8443
+oc login -u developer https://127.0.0.1:8443
 ```
 
-(Any password will work).
+(Any password will work). The IP address to log in here may differ
+according to the output from `oc cluster up`.
 
 We'll want to match the project name used in CentOS CI:
 
@@ -103,16 +152,16 @@ If working on the production pipeline, or you're not
 planning any modifications, you may simply do:
 
 ```
-$ oc new-app --file=manifests/pipeline.yaml
+oc new-app --file=manifests/pipeline.yaml
 ```
 
 If working on your own repo, you will want to override the
 `REPO_URL` and `REPO_REF` parameters:
 
 ```
-$ oc new-app --file=manifests/pipeline.yaml \
-  --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
-  --param=REPO_REF=my-feature-branch
+oc new-app --file=manifests/pipeline.yaml \
+    --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
+    --param=REPO_REF=my-feature-branch
 ```
 
 This template creates:
@@ -144,7 +193,7 @@ running `oc get builds`. You can also manually trigger a new build
 using:
 
 ```
-$ oc start-build fedora-coreos-pipeline
+oc start-build fedora-coreos-pipeline
 ```
 
 Use the web interface to view logs from builds.
@@ -152,8 +201,8 @@ Use the web interface to view logs from builds.
 ### [PROD] Update the "secret" token values in the webhooks to be unique
 
 ```
-$ oc set triggers bc/fedora-coreos-pipeline --from-github
-$ oc set triggers bc/fedora-coreos-pipeline --from-webhook
+oc set triggers bc/fedora-coreos-pipeline --from-github
+oc set triggers bc/fedora-coreos-pipeline --from-webhook
 ```
 
 ### [PROD] Set up webhooks/automation
@@ -176,7 +225,7 @@ One alternative to creating a "sleeper" pod with the PV mounted is to
 expose a simple httpd server:
 
 ```
-$ oc create -f manifests/simple-httpd.yaml
+oc create -f manifests/simple-httpd.yaml
 ```
 
 You'll then be able to browse the contents of the PV at:
