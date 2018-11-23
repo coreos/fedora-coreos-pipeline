@@ -7,6 +7,7 @@ node {
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
+
         stage('Init') {
             utils.shwrap("""
             if [ ! -d src/config ]; then
@@ -14,6 +15,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             fi
             """)
         }
+
         stage('Fetch') {
             // make sure our cached version matches prod exactly before continuing
             utils.rsync_in("repo", "repo")
@@ -24,11 +26,27 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             coreos-assembler fetch
             """)
         }
+
+        def prevBuildID = null
+        if (utils.shwrap_rc("test -f builds/latest")) {
+            prevBuildID = utils.shwrap_capture("readlink builds/latest")
+        }
+
         stage('Build') {
             utils.shwrap("""
             coreos-assembler build
             """)
         }
+
+        def newBuildID = utils.shwrap_capture("readlink builds/latest")
+        if (prevBuildID == newBuildID) {
+            currentBuild.result = 'SUCCESS'
+            currentBuild.description = "💤 (no new build)"
+            return
+        } else {
+            currentBuild.description = "⚡ ${newBuildID}"
+        }
+
         stage('Archive') {
             utils.shwrap("""
             # Change perms to allow reading on webserver side.
