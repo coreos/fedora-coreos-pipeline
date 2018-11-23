@@ -7,12 +7,11 @@ kind: Pod
 spec:
   containers:
    - name: coreos-assembler-sleep
-     image: docker-registry.default.svc:5000/fedora-coreos/coreos-assembler:master
-#    image: quay.io/coreos-assembler/coreos-assembler:master
+     image: coreos-assembler:master
      imagePullPolicy: Always
      workingDir: /srv/
-     command: ['/bin/bash']
-     args: ['-c', 'sleep infinity']
+     command: ['/usr/bin/dumb-init']
+     args: ['sleep', 'infinity']
      volumeMounts:
      - name: data
        mountPath: /srv/
@@ -28,3 +27,4 @@ spec:
   - name: duffy-key
     secret:
       secretName: duffy.key
+      optional: true
