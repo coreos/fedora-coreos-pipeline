@@ -15,6 +15,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
         stage('Fetch') {
+            // make sure our cached version matches prod exactly before continuing
+            utils.rsync_in("repo", "repo")
+            utils.rsync_in("builds", "builds")
+
             utils.shwrap("""
             git -C src/config pull
             coreos-assembler fetch
