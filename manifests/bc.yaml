@@ -22,10 +22,57 @@ parameters:
     name: REPO_REF
     value: master
 objects:
-  - kind: "BuildConfig"
+  # use our own "gated" imagestream for the Jenkins master so we can test new
+  # images before upgrading
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-s2i
+      namespace: fedora-coreos
+    spec:
+      tags:
+        - name: stable
+          from:
+            kind: DockerImage
+            # 2.138.2
+            name: docker.io/openshift/jenkins-2-centos7@sha256:fd48b67ed2eca6c4042ac59dd3efd6763681bbc312b5f0c2a3adbfbd71f3c5ce
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins
+      namespace: fedora-coreos
+  - kind: BuildConfig
+    apiVersion: v1
+    metadata:
+      name: fedora-coreos-jenkins
+    # Note no triggers: we don't want e.g. git pushes/config changes to restart
+    # Jenkins. Let's just require manual restarts here. XXX: Should investigate if
+    # there's an easy way to auto-redeploy during downtimes.
+    spec:
+      source:
+        type: Git
+        git:
+          uri: ${REPO_URL}
+          ref: ${REPO_REF}
+        contextDir: jenkins/master
+      strategy:
+        type: Source
+        sourceStrategy:
+          from:
+            kind: ImageStreamTag
+            name: jenkins-s2i:stable
+          forcePull: true
+      output:
+        to:
+          kind: ImageStreamTag
+          name: jenkins:2
+          namespace: fedora-coreos
+      successfulBuildsHistoryLimit: 2
+      failedBuildsHistoryLimit: 2
+  - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: "kubernetes-fcos-pipeline"
+      name: "fedora-coreos-pipeline"
     spec:
       # Define triggers.
       #   - trigger on buildconfig change
