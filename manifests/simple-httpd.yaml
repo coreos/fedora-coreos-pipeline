@@ -1,0 +1,44 @@
+apiVersion: v1
+metadata:
+  name: simple-httpd
+  labels:
+    app: simple-httpd
+kind: Pod
+spec:
+  containers:
+   - name: httpd
+     image: registry.centos.org/centos/centos:7
+     command: ['/bin/python2', '-m', 'SimpleHTTPServer', '8000']
+     workingDir: /srv
+     ports:
+       - containerPort: 8000
+         name: httpd
+     volumeMounts:
+     - name: data
+       mountPath: /srv
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: coreos-assembler-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simple-httpd
+spec:
+  selector:
+    app: simple-httpd
+  ports:
+  - nodePort: 0
+    port: 80
+    protocol: TCP
+    targetPort: 8000
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: simple-httpd
+spec:
+  to:
+    kind: Service
+    name: simple-httpd

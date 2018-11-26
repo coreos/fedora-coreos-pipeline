@@ -75,10 +75,29 @@ in github.
 - Change the Content Type from GitHub’s default `application/x-www-form-urlencoded` to `application/json`.
 - Click Add webhook.
 
-Start build using the CLI:
+### Start build using the CLI
 
 ```
 $ oc start-build kubernetes-fcos-pipeline
 ```
 
 Use the web interface to view logs from builds.
+
+### [OPTIONAL] Set up simple-httpd
+
+When hacking locally, it might be useful to look at the contents of the
+PV to see the builds since one isn't rsync'ing to an artifact server.
+One alternative to creating a "sleeper" pod with the PV mounted is to
+expose a simple httpd server:
+
+```
+$ oc create -f manifests/simple-httpd.yaml
+```
+
+You'll then be able to browse the contents of the PV at:
+
+```
+http://simple-httpd-fedora-coreos.$CLUSTER_URL
+```
+
+(Or simply check the output of `oc get route simple-httpd`).
