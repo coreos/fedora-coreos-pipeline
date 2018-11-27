@@ -22,6 +22,9 @@ parameters:
     name: REPO_REF
     value: master
 objects:
+
+  ### JENKINS MASTER ###
+
   # use our own "gated" imagestream for the Jenkins master so we can test new
   # images before upgrading
   - apiVersion: v1
@@ -69,6 +72,68 @@ objects:
           namespace: fedora-coreos
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
+
+  ### JENKINS SLAVE ###
+
+  # keep a local copy of the Jenkins slave image so we're not constantly pulling
+  # it each time from docker.io
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-slave-base-centos7
+      namespace: fedora-coreos
+    spec:
+      lookupPolicy:
+        # this allows e.g. the pipeline to directly reference the imagestream
+        local: true
+      tags:
+        - name: latest
+          from:
+            kind: DockerImage
+            # target :latest for now
+            name: docker.io/openshift/jenkins-slave-base-centos7:latest
+          importPolicy:
+            scheduled: true
+
+  ### COREOS-ASSEMBLER ###
+
+  # keep a local copy of coreos-assembler so we're not constantly pulling it
+  # each time from quay.io
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: coreos-assembler
+      namespace: fedora-coreos
+    spec:
+      lookupPolicy:
+        # this allows e.g. the pipeline to directly reference the imagestream
+        local: true
+      tags:
+        - name: master
+          from:
+            kind: DockerImage
+            # for now we just follow :master, but we may start freezing if
+            # things become too unstable
+            name: quay.io/coreos-assembler/coreos-assembler:master
+          importPolicy:
+            scheduled: true
+
+  ### PVC ###
+
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: coreos-assembler-claim
+      namespace: fedora-coreos
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+
+  ### FEDORA COREOS BUILD PIPELINE ###
+
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:

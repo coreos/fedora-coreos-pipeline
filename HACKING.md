@@ -28,10 +28,13 @@ $ oc new-app --file=manifests/bc.yaml \
   --param=REPO_REF=my-feature-branch
 ```
 
-Right now this template creates two buildconfigs:
+Right now this template creates five objects:
 
-1. The Jenkins master imagestream
-2. The Jenkins pipeline build
+1. the Jenkins master imagestream,
+2. the Jenkins slave imagestream,
+3. the coreos-assembler imagestream,
+4. the PVC, and
+5. the Jenkins pipeline build.
 
 We can now start a build of the Jenkins master:
 
@@ -43,38 +46,15 @@ Once the Jenkins master image is built, Jenkins should start up (verify
 with `oc get pods`).
 
 It is a good idea to
-[update all plugins](TROUBLESHOOTING.md#issue-for-plugins-not-being-up-to-date)
-and 
 [set the kubernetes plugin to use DNS for service names](TROUBLESHOOTING.md#issue-for-jenkins-dns-names).
 
-### Create an image stream for the coreos-assembler container.
-
-It's nice to use an image stream so that we can pull from the local container
-registry rather than from a remote registry each time.
-
-Also add `--scheduled` to the image so it gets updated when the remote
-tag in the remote registry gets updated.
+### Start build using the CLI
 
 ```
-$ oc import-image coreos-assembler:master --from=quay.io/coreos-assembler/coreos-assembler:master --confirm
-$ oc tag quay.io/coreos-assembler/coreos-assembler:master coreos-assembler:master --scheduled
+$ oc start-build fedora-coreos-pipeline
 ```
 
-### Create an image stream for the Jenkins slave container 
-
-This is so that we don't have to pull it from the remote registry each time.
-This is used for the `jnlp` container in the kubernetes plugin.
-
-```
-$ oc import-image jenkins-slave-base-centos7:latest --from=docker.io/openshift/jenkins-slave-base-centos7 --confirm
-$ oc tag docker.io/openshift/jenkins-slave-base-centos7:latest jenkins-slave-base-centos7:latest --scheduled
-```
-
-### Create a PVC where we will store the cache and build artifacts
-
-```
-$ oc create -f manifests/pvc.yaml
-```
+Use the web interface to view logs from builds.
 
 ### [PROD ONLY] Update the "secret" token values in the webooks to be unique
 
@@ -94,14 +74,6 @@ in github.
 - Paste the webook URL output into the Payload URL field.
 - Change the Content Type from GitHub’s default `application/x-www-form-urlencoded` to `application/json`.
 - Click Add webhook.
-
-### Start build using the CLI
-
-```
-$ oc start-build fedora-coreos-pipeline
-```
-
-Use the web interface to view logs from builds.
 
 ### [OPTIONAL] Set up simple-httpd
 
