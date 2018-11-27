@@ -6,6 +6,22 @@ def shwrap(cmds) {
     """
 }
 
+def shwrap_capture(cmds) {
+    return sh(returnStdout: true, script: """
+        set -euo pipefail
+        cd /srv
+        ${cmds}
+    """).trim()
+}
+
+def shwrap_rc(cmds) {
+    return sh(returnStatus: true, script: """
+        set -euo pipefail
+        cd /srv
+        ${cmds}
+    """)
+}
+
 def rsync(from, to) {
 
     def rsync_keypath = "/var/run/secrets/kubernetes.io/duffy-key/duffy.key"
