@@ -71,7 +71,7 @@ objects:
       output:
         to:
           kind: ImageStreamTag
-          name: jenkins:2
+          name: jenkins:latest
           namespace: fedora-coreos
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
