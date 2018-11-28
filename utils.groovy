@@ -37,12 +37,12 @@ def rsync(from, to) {
         return
     }
 
-    def rsync_key = readFile(file: rsync_keypath)
-    rsync_key = rsync_key[0..12]
-
     shwrap("""
     # so we don't echo password to the jenkins logs
-    set +x; export RSYNC_PASSWORD=${rsync_key}; set -x
+    set +x
+    RSYNC_PASSWORD=\$(cat ${rsync_keypath})
+    export RSYNC_PASSWORD=\${RSYNC_PASSWORD:0:13}
+    set -x
     # always add trailing slash for consistent semantics
     rsync -avh --delete ${from}/ ${to}
     """)
