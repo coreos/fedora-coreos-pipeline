@@ -9,15 +9,15 @@ metadata:
       Jenkins pipeline for Fedora CoreOS.
     iconClass: icon-jenkins
     openshift.io/display-name: Fedora CoreOS Pipeline
-    openshift.io/documentation-url: https://github.com/dustymabe/fedora-coreos-ci
-    openshift.io/support-url: https://github.com/dustymabe/fedora-coreos-ci
+    openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
+    openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
     openshift.io/provider-display-name: Fedora CoreOS
     tags: fcos,jenkins,fedora
   name: fedora-coreos
 parameters:
   - description: Git source URI for Jenkinsfile
     name: REPO_URL
-    value: https://github.com/dustymabe/fedora-coreos-ci
+    value: https://github.com/coreos/fedora-coreos-pipeline
   - description: Git branch/tag reference for Jenkinsfile
     name: REPO_REF
     value: master

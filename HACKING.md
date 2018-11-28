@@ -160,7 +160,7 @@ If working on your own repo, you will want to override the
 
 ```
 oc new-app --file=manifests/pipeline.yaml \
-    --param=REPO_URL=https://github.com/jlebon/fedora-coreos-ci \
+    --param=REPO_URL=https://github.com/jlebon/fedora-coreos-pipeline \
     --param=REPO_REF=my-feature-branch
 ```
 
