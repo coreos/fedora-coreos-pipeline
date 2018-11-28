@@ -28,7 +28,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         def prevBuildID = null
-        if (utils.shwrap_rc("test -f builds/latest")) {
+        if (utils.path_exists("builds/latest")) {
             prevBuildID = utils.shwrap_capture("readlink builds/latest")
         }
 
