@@ -44,7 +44,7 @@ def rsync(from, to) {
     export RSYNC_PASSWORD=\${RSYNC_PASSWORD:0:13}
     set -x
     # always add trailing slash for consistent semantics
-    rsync -avh --delete ${from}/ ${to}
+    rsync -ah --stats --delete ${from}/ ${to}
     """)
 }
 
