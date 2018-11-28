@@ -22,10 +22,15 @@ def shwrap_rc(cmds) {
     """)
 }
 
+// This is like fileExists, but actually works inside the Kubernetes container.
+def path_exists(path) {
+    return shwrap_rc("test -e ${path}") == 0
+}
+
 def rsync(from, to) {
 
     def rsync_keypath = "/var/run/secrets/kubernetes.io/duffy-key/duffy.key"
-    if (!fileExists(rsync_keypath)) {
+    if (!path_exists(rsync_keypath)) {
         echo "No ${rsync_keypath} file with rsync key."
         echo "Must be operating in dev environment"
         echo "Skipping rsync...."
