@@ -44,7 +44,7 @@ def rsync(from, to) {
     # so we don't echo password to the jenkins logs
     set +x; export RSYNC_PASSWORD=${rsync_key}; set -x
     # always add trailing slash for consistent semantics
-    rsync -avh --delete ${from}/ ${to}
+    rsync -ah --stats --delete ${from}/ ${to}
     """)
 }
 
