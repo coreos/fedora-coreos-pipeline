@@ -12,6 +12,11 @@ node {
     }
 }
 
+properties([
+    disableConcurrentBuilds(),
+    pipelineTriggers(devel ? [] : [cron("H/30 * * * *")])
+])
+
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
 
