@@ -1,9 +1,21 @@
-def pod, utils
+def pod, utils, devel
 node {
     checkout scm
     pod = readFile(file: "manifests/pod.yaml")
     utils = load("utils.groovy")
+
+    // just autodetect if we're in prod or not
+    devel = (env.JENKINS_URL != 'https://jenkins-fedora-coreos.apps.ci.centos.org/')
+
+    if (devel) {
+        echo "Running in devel mode on ${env.JENKINS_URL}."
+    }
 }
+
+properties([
+    disableConcurrentBuilds(),
+    pipelineTriggers(devel ? [] : [cron("H/30 * * * *")])
+])
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
@@ -17,9 +29,11 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Fetch') {
-            // make sure our cached version matches prod exactly before continuing
-            utils.rsync_in("repo", "repo")
-            utils.rsync_in("builds", "builds")
+            if (!devel) {
+                // make sure our cached version matches prod exactly before continuing
+                utils.rsync_in("repo", "repo")
+                utils.rsync_in("builds", "builds")
+            }
 
             utils.shwrap("""
             git -C src/config pull
@@ -58,8 +72,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // Note that if the prod directory doesn't exist on the remote this
             // will fail. We can possibly hack around this in the future:
             // https://stackoverflow.com/questions/1636889
-            utils.rsync_out("builds", "builds")
-            utils.rsync_out("repo", "repo")
+            if (!devel) {
+                utils.rsync_out("builds", "builds")
+                utils.rsync_out("repo", "repo")
+            }
         }
     }}
 }
