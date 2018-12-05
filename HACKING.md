@@ -29,13 +29,17 @@ If you have not done so already, follow the instructions in the
 and [Getting Started](https://github.com/openshift/origin/blob/v4.0.0-alpha.0/docs/cluster_up_down.md#getting-started)
 sections to set up your environment and start the Docker daemon.
 
-If on Fedora > 28 and Openshift OKD < 3.11, one extra step is needed.
-Change the `/usr/lib/systemd/system/docker.service` unit file to use the
-`cgroupfs` cgroup driver instead of `systemd`.
-(See https://bugzilla.redhat.com/show_bug.cgi?id=1558425#c22
-for more info).
+If on Fedora > 28 and Openshift OKD < 3.11, the
+`/usr/lib/systemd/system/docker.service` unit file needs
+overriding to use the `cgroupfs` cgroup driver instead
+of `systemd`. (See https://bugzilla.redhat.com/show_bug.cgi?id=1558425#c22
+for more info). Add the override as follows:
 
-Change this line (under `ExecStart`):
+```
+systemctl edit --full docker.service
+```
+
+Change the following line (under `ExecStart`) from:
 
 ```
 --exec-opt native.cgroupdriver=systemd \
@@ -47,10 +51,10 @@ to:
 --exec-opt native.cgroupdriver=cgroupfs \
 ```
 
-Then, restart the docker daemon:
+Restart the docker daemon for the override
+to take effect:
 
 ```
-systemctl daemon-reload
 systemctl restart docker.service
 ```
 
@@ -181,6 +185,8 @@ oc start-build --follow fedora-coreos-jenkins
 Once the Jenkins master image is built, Jenkins should start up (verify
 with `oc get pods`). Once the pod is marked READY, you should be able to
 login to the Jenkins UI at https://jenkins-fedora-coreos.$CLUSTER_URL/
+(`oc get route jenkins` will show the URL). As previously noted, any
+password works to log in as `developer`.
 
 It may be a good idea to set the Kubernetes plugin to
 [use DNS for service names](TROUBLESHOOTING.md#issue-for-jenkins-dns-names).
