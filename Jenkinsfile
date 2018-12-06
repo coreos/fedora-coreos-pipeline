@@ -62,9 +62,15 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Archive') {
+
+            // First, compress image artifacts
             utils.shwrap("""
-            # Change perms to allow reading on webserver side.
-            # Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
+            coreos-assembler compress
+            """)
+
+            // Change perms to allow reading on webserver side.
+            // Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
+            utils.shwrap("""
             find builds/ ! -type l -exec chmod a+rX {} +
             find repo/   ! -type l -exec chmod a+rX {} +
             """)
