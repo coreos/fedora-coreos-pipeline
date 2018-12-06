@@ -48,7 +48,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Build') {
             utils.shwrap("""
-            coreos-assembler build
+            coreos-assembler build --skip-prune
             """)
         }
 
@@ -59,6 +59,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             return
         } else {
             currentBuild.description = "⚡ ${newBuildID}"
+        }
+
+        stage('Prune') {
+            utils.shwrap("""
+            coreos-assembler prune --keep-last-n=10
+            """)
         }
 
         stage('Archive') {
