@@ -63,7 +63,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Prune') {
             utils.shwrap("""
-            coreos-assembler prune --keep-last-n=10
+            coreos-assembler prune --keep=10
             """)
         }
 
