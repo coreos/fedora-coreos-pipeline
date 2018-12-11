@@ -1,0 +1,123 @@
+# This pod template provides the same functionality as pod.yaml, but includes a
+# a configMap to adding a CA-Certifiate to trust (i.e. private Git Repo).
+
+apiVersion: v1
+kind: Template
+labels:
+  app: ${DISTRO}-coreos
+  template: ${DISTRO}-coreos-template
+metadata:
+  annotations:
+    description: |-
+      Jenkins pipeline for CoreOS distributions.
+    iconClass: icon-jenkins
+    openshift.io/display-name: Fedora CoreOS Pipeline
+    openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
+    openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
+    openshift.io/provider-display-name: fedora CoreOS
+  name: coreos-certs
+parameters:
+  - description: Distribution name
+    name: DISTRO
+    value: fedora
+  - description: Name of the namespace to use
+    name: NAMESPACE
+    value: fedora-coreos
+  - description: PEM cert data to trust.
+    name: CERT_DATA
+  - description: minimum amount of memory
+    value: 512M
+    name: MIN_MEMORY
+  - description: maximum amount of memory
+    value: 1024M
+    name: MAX_MEMORY
+  - description: minimum amount of cpu
+    value: "1"
+    name: MIN_CPU
+  - description: maximum amount of cpu
+    value: "1"
+    name: MAX_CPU
+
+objects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: trust-ca-cert
+      namespace: ${NAMESPACE}
+    data:
+      cert: |
+        ${CERT_DATA}
+
+  - apiVersion: v1
+    metadata:
+      name: coreos-assembler
+    kind: Pod
+    spec:
+      initContainers:
+       - name: cert-updater
+         image: coreos-assembler:master
+         imagePullPolicy: Always
+         args:
+           - '-c'
+           - |
+              mkdir -p /etc/pki/ca-trust/extracted/{edk2,java,openssl,pem} &&
+              update-ca-trust
+         command: ['/bin/sh']
+         volumeMounts:
+         - name: certs
+           mountPath: /etc/pki/ca-trust/extracted
+         - name: trust-ca
+           mountPath: /etc/pki/ca-trust/source/anchors
+
+      containers:
+       - name: jnlp
+         image: jenkins-slave-base-centos7:latest
+         args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+         resources:
+           limits:
+             cpu: "${MAX_CPU}"
+             memory: ${MAX_MEMORY}
+           requests:
+             cpu: "${MIN_CPU}"
+             memory: ${MIN_MEMORY}
+         volumes:
+         - name: certs
+           mountPath: /etc/pki/ca-trust/extracted
+
+       - name: coreos-assembler
+         image: coreos-assembler:master
+         imagePullPolicy: Always
+         command: ['/usr/bin/dumb-init']
+         args: ['sleep', 'infinity']
+         volumeMounts:
+         - name: data
+           mountPath: /srv/
+         - name: duffy-key
+           mountPath: /var/run/secrets/kubernetes.io/duffy-key
+           readOnly: true
+         - name: certs
+           mountPath: /etc/pki/ca-trust/extracted
+         - name: trust-ca
+           mountPath: /etc/pki/ca-trust/source/anchors
+         securityContext:
+           privileged: false
+
+      nodeSelector:
+        oci_kvm_hook: allowed
+      volumes:
+      - name: certs
+        emptyDir: {}
+      - name: data
+        persistentVolumeClaim:
+          claimName: coreos-assembler-claim
+      - name: duffy-key
+        secret:
+          secretName: duffy.key
+          optional: true
+      - name: trust-ca
+        configMap:
+          defaultMode: 420
+          items:
+           - key: cert
+             path: trust-ca.pem
+          name: trust-ca-cert

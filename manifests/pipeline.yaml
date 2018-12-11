@@ -1,19 +1,19 @@
 apiVersion: v1
 kind: Template
 labels:
-  app: fedora-coreos
-  template: fedora-coreos-template
+  app: ${DISTRO}-coreos
+  template: ${DISTRO}-coreos-template
 metadata:
   annotations:
     description: |-
-      Jenkins pipeline for Fedora CoreOS.
+      Jenkins pipeline for CoreOS distributions.
     iconClass: icon-jenkins
     openshift.io/display-name: Fedora CoreOS Pipeline
     openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
     openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/provider-display-name: Fedora CoreOS
-    tags: fcos,jenkins,fedora
-  name: fedora-coreos
+    openshift.io/provider-display-name: fedora CoreOS
+    tags: ${TAGS}
+  name: ${DISTRO}-coreos
 parameters:
   - description: Git source URI for Jenkinsfile
     name: REPO_URL
@@ -21,17 +21,29 @@ parameters:
   - description: Git branch/tag reference for Jenkinsfile
     name: REPO_REF
     value: master
+  - description: Distribution name
+    name: DISTRO
+    value: fedora
+  - description: Tags to label the pipeline with
+    name: TAGS
+    value: fedora,jenkins,fcos
+  - description: Name of the namespace to use
+    name: NAMESPACE
+    value: fedora-coreos
+  - description: Size of persistant storage
+    name: VOLUME_SIZE
+    value: 50Gi
 objects:
 
   ### JENKINS MASTER ###
 
   # use our own "gated" imagestream for the Jenkins master so we can test new
   # images before upgrading
-  - apiVersion: v1
+  - apiVersion: "image.openshift.io/v1"
     kind: ImageStream
     metadata:
       name: jenkins-s2i
-      namespace: fedora-coreos
+      namespace: ${NAMESPACE}
     spec:
       tags:
         - name: stable
@@ -39,15 +51,17 @@ objects:
             kind: DockerImage
             # 2.138.2
             name: docker.io/openshift/jenkins-2-centos7@sha256:fd48b67ed2eca6c4042ac59dd3efd6763681bbc312b5f0c2a3adbfbd71f3c5ce
-  - apiVersion: v1
+
+  - apiVersion: "image.openshift.io/v1"
     kind: ImageStream
     metadata:
       name: jenkins
-      namespace: fedora-coreos
-  - kind: BuildConfig
-    apiVersion: v1
+      namespace: ${NAMESPACE}
+
+  - apiVersion: "build.openshift.io/v1"
+    kind: BuildConfig
     metadata:
-      name: fedora-coreos-jenkins
+      name: ${DISTRO}-coreos-jenkins
     # Note no triggers: we don't want e.g. git pushes/config changes to restart
     # Jenkins. Let's just require manual restarts here. XXX: Should investigate if
     # there's an easy way to auto-redeploy during downtimes.
@@ -69,19 +83,18 @@ objects:
         to:
           kind: ImageStreamTag
           name: jenkins:2
-          namespace: fedora-coreos
+          namespace: ${NAMESPACE}
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
 
   ### JENKINS SLAVE ###
-
   # keep a local copy of the Jenkins slave image so we're not constantly pulling
   # it each time from docker.io
-  - apiVersion: v1
+  - apiVersion: "image.openshift.io/v1"
     kind: ImageStream
     metadata:
       name: jenkins-slave-base-centos7
-      namespace: fedora-coreos
+      namespace: ${NAMESPACE}
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -96,14 +109,13 @@ objects:
             scheduled: true
 
   ### COREOS-ASSEMBLER ###
-
   # keep a local copy of coreos-assembler so we're not constantly pulling it
   # each time from quay.io
-  - apiVersion: v1
+  - apiVersion: "image.openshift.io/v1"
     kind: ImageStream
     metadata:
       name: coreos-assembler
-      namespace: fedora-coreos
+      namespace: ${NAMESPACE}
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -119,25 +131,23 @@ objects:
             scheduled: true
 
   ### PVC ###
-
   - apiVersion: v1
     kind: PersistentVolumeClaim
     metadata:
       name: coreos-assembler-claim
-      namespace: fedora-coreos
+      namespace: ${NAMESPACE}
     spec:
       accessModes:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 50Gi
+          storage: ${VOLUME_SIZE}
 
   ### FEDORA COREOS BUILD PIPELINE ###
-
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: "fedora-coreos-pipeline"
+      name: "${DISTRO}-coreos-pipeline"
     spec:
       # Define triggers.
       #   - trigger on buildconfig change

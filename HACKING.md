@@ -168,6 +168,12 @@ oc new-app --file=manifests/pipeline.yaml \
     --param=REPO_REF=my-feature-branch
 ```
 
+Optionally, the following parameters are supported:
+- `DISTRO`: build a different distribution, e.g `rhcos`
+- `NAMESPACE`: use a different namespace other than `fedora-coreos`
+- `VOLUME_SIZE`: define a different volume size for Jenkins, defaults to 50Gi
+- `TAGS': set the Jenkins job tags
+
 This template creates:
 
 1. the Jenkins master imagestream,
