@@ -65,6 +65,14 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             utils.shwrap("""
             coreos-assembler prune --keep=10
             """)
+
+            // If the cache img is larger than e.g. 8G, then nuke it. Otherwise
+            // it'll just keep growing and we'll hit ENOSPC.
+            utils.shwrap("""
+            if [ \$(du cache/cache.qcow2 | cut -f1) -gt \$((1024*1024*8)) ]; then
+                rm -vf cache/cache.qcow2
+            fi
+            """)
         }
 
         stage('Archive') {
