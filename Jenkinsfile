@@ -71,6 +71,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             utils.shwrap("""
             if [ \$(du cache/cache.qcow2 | cut -f1) -gt \$((1024*1024*8)) ]; then
                 rm -vf cache/cache.qcow2
+                qemu-img create -f qcow2 cache/cache.qcow2 10G
+                LIBGUESTFS_BACKEND=direct virt-format --filesystem=xfs -a cache/cache.qcow2
             fi
             """)
         }
