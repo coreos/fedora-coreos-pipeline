@@ -12,7 +12,7 @@ metadata:
     openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
     openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
     openshift.io/provider-display-name: fedora CoreOS
-    tags: ${TAGS}
+    tags: fcos,rhcos,jenkins,fedora
   name: ${DISTRO}-coreos
 parameters:
   - description: Git source URI for Jenkinsfile
@@ -24,12 +24,6 @@ parameters:
   - description: Distribution name
     name: DISTRO
     value: fedora
-  - description: Tags to label the pipeline with
-    name: TAGS
-    value: fedora,jenkins,fcos
-  - description: Name of the namespace to use
-    name: NAMESPACE
-    value: fedora-coreos
   - description: Size of persistant storage
     name: VOLUME_SIZE
     value: 50Gi
@@ -43,7 +37,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-s2i
-      namespace: ${NAMESPACE}
     spec:
       tags:
         - name: stable
@@ -56,7 +49,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins
-      namespace: ${NAMESPACE}
 
   - apiVersion: "build.openshift.io/v1"
     kind: BuildConfig
@@ -83,7 +75,6 @@ objects:
         to:
           kind: ImageStreamTag
           name: jenkins:2
-          namespace: ${NAMESPACE}
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
 
@@ -94,7 +85,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-slave-base-centos7
-      namespace: ${NAMESPACE}
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -115,7 +105,6 @@ objects:
     kind: ImageStream
     metadata:
       name: coreos-assembler
-      namespace: ${NAMESPACE}
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -135,7 +124,6 @@ objects:
     kind: PersistentVolumeClaim
     metadata:
       name: coreos-assembler-claim
-      namespace: ${NAMESPACE}
     spec:
       accessModes:
       - ReadWriteOnce

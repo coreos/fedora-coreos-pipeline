@@ -10,18 +10,15 @@ metadata:
     description: |-
       Jenkins pipeline for CoreOS distributions.
     iconClass: icon-jenkins
-    openshift.io/display-name: Fedora CoreOS Pipeline
+    openshift.io/display-name: CoreOS Pipeline
     openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
     openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/provider-display-name: fedora CoreOS
+    openshift.io/provider-display-name: CoreOS
   name: coreos-certs
 parameters:
   - description: Distribution name
     name: DISTRO
     value: fedora
-  - description: Name of the namespace to use
-    name: NAMESPACE
-    value: fedora-coreos
   - description: PEM cert data to trust.
     name: CERT_DATA
   - description: minimum amount of memory
@@ -42,7 +39,6 @@ objects:
     kind: ConfigMap
     metadata:
       name: trust-ca-cert
-      namespace: ${NAMESPACE}
     data:
       cert: |
         ${CERT_DATA}
@@ -118,3 +114,4 @@ objects:
            - key: cert
              path: trust-ca.pem
           name: trust-ca-cert
+          optional: true
