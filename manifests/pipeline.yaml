@@ -15,19 +15,32 @@ metadata:
     tags: fcos,rhcos,jenkins,fedora
   name: ${DISTRO}-coreos
 parameters:
+  - description: PEM cert data to trust.
+    name: CERT_DATA
+  - description: Distribution name
+    name: DISTRO
+    value: fedora
   - description: Git source URI for Jenkinsfile
     name: REPO_URL
     value: https://github.com/coreos/fedora-coreos-pipeline
   - description: Git branch/tag reference for Jenkinsfile
     name: REPO_REF
     value: master
-  - description: Distribution name
-    name: DISTRO
-    value: fedora
-  - description: Size of persistant storage
+  - description: Size of persistent storage
     name: VOLUME_SIZE
     value: 50Gi
+
 objects:
+
+  ### Trust CA ###
+  # this is used by the pod configuration for defining a trusted certificate
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: trust-ca-cert
+    data:
+      cert: |
+        ${CERT_DATA}
 
   ### JENKINS MASTER ###
 
@@ -131,7 +144,7 @@ objects:
         requests:
           storage: ${VOLUME_SIZE}
 
-  ### FEDORA COREOS BUILD PIPELINE ###
+  ### BUILD PIPELINE ###
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:

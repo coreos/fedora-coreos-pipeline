@@ -19,8 +19,6 @@ parameters:
   - description: Distribution name
     name: DISTRO
     value: fedora
-  - description: PEM cert data to trust.
-    name: CERT_DATA
   - description: minimum amount of memory
     value: 512M
     name: MIN_MEMORY
@@ -35,14 +33,6 @@ parameters:
     name: MAX_CPU
 
 objects:
-  - apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: trust-ca-cert
-    data:
-      cert: |
-        ${CERT_DATA}
-
   - apiVersion: v1
     metadata:
       name: coreos-assembler
