@@ -61,6 +61,28 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             currentBuild.description = "⚡ ${newBuildID}"
         }
 
+        stage('Test') {
+            // clone & build kola
+            utils.shwrap("""
+            git clone https://github.com/arithx/mantle
+            cd mantle
+            git checkout fcos_ci
+            ./build kola kolet
+            """)
+            
+            // determine the image & run kola
+            utils.shwrap("""
+            latest_build=\$(readlink builds/latest)
+            qcow=\$(ls builds/"\${latest_build}"/*-"\${latest_build}"-qemu.qcow2)
+            mantle/bin/kola -p unprivileged-qemu --qemu-image "\${qemu}" -b fcos run | tee
+            """)
+
+            // clean-up the mantle folder
+            utils.shwrap("""
+            rm -rf mantle/
+            """)
+        }
+
         stage('Prune') {
             utils.shwrap("""
             coreos-assembler prune --keep=10
