@@ -48,7 +48,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Build') {
             utils.shwrap("""
-            coreos-assembler build --skip-prune
+            coreos-assembler build --skip-prune qemu metal-bios metal-uefi
             """)
         }
 
