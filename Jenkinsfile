@@ -69,7 +69,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Prune') {
             utils.shwrap("""
-            coreos-assembler prune --keep=10
+            coreos-assembler prune --keep=8
             """)
 
             // If the cache img is larger than e.g. 8G, then nuke it. Otherwise
