@@ -61,6 +61,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             currentBuild.description = "⚡ ${newBuildID}"
         }
 
+        stage('Build Installer') {
+            utils.shwrap("""
+            coreos-assembler buildextend-installer
+            """)
+        }
+
         stage('Prune') {
             utils.shwrap("""
             coreos-assembler prune --keep=10
