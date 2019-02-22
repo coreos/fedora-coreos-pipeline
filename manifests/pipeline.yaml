@@ -130,7 +130,7 @@ objects:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 50Gi
+          storage: 100Gi
 
   ### FEDORA COREOS BUILD PIPELINE ###
 
