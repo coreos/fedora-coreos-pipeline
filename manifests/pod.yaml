@@ -27,7 +27,7 @@ spec:
   volumes:
   - name: data
     persistentVolumeClaim:
-      claimName: coreos-assembler-claim
+      claimName: coreos-assembler-claim2
   - name: duffy-key
     secret:
       secretName: duffy.key
