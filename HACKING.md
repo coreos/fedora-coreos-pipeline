@@ -18,10 +18,10 @@ dnf install -y oci-kvm-hook # if on traditional
 ```
 
 We will use `oc cluster up` to set up a local cluster for testing. To do
-this, simply obtain the OpenShift binary from
-[the latest release](https://github.com/openshift/origin/releases/latest)
-(though note that I'm currently still using the binaries from v3.9, so
-pick that release if you hit issues).
+this, simply obtain the OpenShift v3.6.1 binary from
+[here](https://github.com/openshift/origin/releases/tag/v3.6.1). We want
+to match the OCP version running in CentOS CI.
+
 `openshift-origin-client-tools` is enough for `oc cluster up`.
 
 If you have not done so already, follow the instructions in the
@@ -58,8 +58,7 @@ to take effect:
 systemctl restart docker.service
 ```
 
-And now, bring up a v3.6.1 cluster (we want to match the CentOS CI
-version):
+And now, bring up a v3.6.1 cluster (again, to match CentOS CI):
 
 ```
 oc cluster up --version v3.6.1
