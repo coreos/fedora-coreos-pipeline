@@ -67,6 +67,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
+        stage('Build Openstack') {
+            utils.shwrap("""
+            coreos-assembler buildextend-openstack
+            """)
+        }
+
         stage('Prune') {
             utils.shwrap("""
             coreos-assembler prune --keep=8
