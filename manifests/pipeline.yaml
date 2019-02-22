@@ -21,6 +21,9 @@ parameters:
   - description: Git branch/tag reference for Jenkinsfile
     name: REPO_REF
     value: master
+  - description: Size of the PVC to create
+    name: PVC_SIZE
+    value: 100Gi
 objects:
 
   ### JENKINS MASTER ###
@@ -130,7 +133,7 @@ objects:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 100Gi
+          storage: ${PVC_SIZE}
 
   ### FEDORA COREOS BUILD PIPELINE ###
 

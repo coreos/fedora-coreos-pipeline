@@ -176,6 +176,10 @@ This template creates:
 4. the `PersistentVolumeClaim` in which we'll cache and compose, and
 5. the Jenkins pipeline build.
 
+The default size of the PVC is 100Gi. There is a `PVC_SIZE`
+parameter one can use to make this smaller if you do not
+have enough space. E.g. `--param=PVC_SIZE=30Gi`.
+
 We can now start a build of the Jenkins master:
 
 ```
