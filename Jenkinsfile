@@ -9,6 +9,8 @@ node {
 
     if (devel) {
         echo "Running in devel mode on ${env.JENKINS_URL}."
+    } else {
+        echo "Running in prod mode."
     }
 }
 
