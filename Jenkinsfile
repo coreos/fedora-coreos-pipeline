@@ -75,6 +75,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
+        stage('Build VMware') {
+            utils.shwrap("""
+            coreos-assembler buildextend-vmware
+            """)
+        }
+
         stage('Prune') {
             utils.shwrap("""
             coreos-assembler prune --keep=8
