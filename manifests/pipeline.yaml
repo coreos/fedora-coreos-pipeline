@@ -40,8 +40,8 @@ objects:
         - name: stable
           from:
             kind: DockerImage
-            # 2.150.2
-            name: quay.io/openshift/origin-jenkins@sha256:044f2a82cbb0f0e9ba0e275be3cc5728637d957f1428ac48d2e49d68c1a6a2d3
+            # 2.164.2
+            name: docker.io/openshift/jenkins-2-centos7@sha256:19f37019978e9fa37d5571ab39954db5ed9bcb9d0aaedac2ba8cf6d4b4883284
   - apiVersion: v1
     kind: ImageStream
     metadata:
