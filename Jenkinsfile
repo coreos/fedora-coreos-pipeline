@@ -50,7 +50,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Build') {
             utils.shwrap("""
-            coreos-assembler build --skip-prune qemu metal-bios metal-uefi
+            coreos-assembler build --skip-prune
             """)
         }
 
@@ -61,6 +61,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             return
         } else {
             currentBuild.description = "⚡ ${newBuildID}"
+        }
+
+        stage('Build Metal') {
+            utils.shwrap("""
+            coreos-assembler buildextend-metal
+            """)
         }
 
         stage('Build Installer') {
