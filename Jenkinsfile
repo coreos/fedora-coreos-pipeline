@@ -33,7 +33,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         stage('Fetch') {
             if (!devel) {
                 // make sure our cached version matches prod exactly before continuing
-                utils.rsync_in("repo", "repo")
                 utils.rsync_in("builds", "builds")
             }
 
@@ -114,7 +113,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
             utils.shwrap("""
             find builds/ ! -type l -exec chmod a+rX {} +
-            find repo/   ! -type l -exec chmod a+rX {} +
             """)
 
             // Note that if the prod directory doesn't exist on the remote this
@@ -122,7 +120,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // https://stackoverflow.com/questions/1636889
             if (!devel) {
                 utils.rsync_out("builds", "builds")
-                utils.rsync_out("repo", "repo")
             }
         }
     }}
