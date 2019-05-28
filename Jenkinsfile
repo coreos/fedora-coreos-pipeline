@@ -16,7 +16,16 @@ node {
 
 properties([
     disableConcurrentBuilds(),
-    pipelineTriggers(devel ? [] : [cron("H/30 * * * *")])
+    pipelineTriggers(devel ? [] : [cron("H/30 * * * *")]),
+    parameters([
+      choice(name: 'STREAM',
+             // XXX: Just pretend we're the testing stream for now... in
+             // reality, we're closer to what "bodhi-updates" will be. Though the
+             // testing stream is the main stream.
+             choices: ['testing' /*, 'stable', 'testing-devel', 'bodhi-updates', etc... */ ],
+             description: 'Fedora CoreOS stream to build',
+             required: true)
+    ])
 ])
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
