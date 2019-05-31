@@ -159,12 +159,12 @@ oc new-app --file=manifests/pipeline.yaml
 ```
 
 If working on your own repo, you will want to override the
-`REPO_URL` and `REPO_REF` parameters:
+`PIPELINE_REPO_URL` and `PIPELINE_REPO_REF` parameters:
 
 ```
 oc new-app --file=manifests/pipeline.yaml \
-    --param=REPO_URL=https://github.com/jlebon/fedora-coreos-pipeline \
-    --param=REPO_REF=my-feature-branch
+    --param=PIPELINE_REPO_URL=https://github.com/jlebon/fedora-coreos-pipeline \
+    --param=PIPELINE_REPO_REF=my-feature-branch
 ```
 
 This template creates:

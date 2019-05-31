@@ -15,11 +15,11 @@ metadata:
     tags: fcos,jenkins,fedora
   name: fedora-coreos
 parameters:
-  - description: Git source URI for Jenkinsfile
-    name: REPO_URL
+  - description: Git source URI for pipeline Jenkinsfile
+    name: PIPELINE_REPO_URL
     value: https://github.com/coreos/fedora-coreos-pipeline
-  - description: Git branch/tag reference for Jenkinsfile
-    name: REPO_REF
+  - description: Git branch/tag reference for pipeline Jenkinsfile
+    name: PIPELINE_REPO_REF
     value: master
   - description: Size of the PVC to create
     name: PVC_SIZE
@@ -52,14 +52,14 @@ objects:
     metadata:
       name: fedora-coreos-jenkins
     # Note no triggers: we don't want e.g. git pushes/config changes to restart
-    # Jenkins. Let's just require manual restarts here. XXX: Should investigate if
-    # there's an easy way to auto-redeploy during downtimes.
+    # Jenkins. Let's just require manual restarts here. XXX: Should investigate
+    # if there's an easy way to auto-redeploy during downtimes.
     spec:
       source:
         type: Git
         git:
-          uri: ${REPO_URL}
-          ref: ${REPO_REF}
+          uri: ${PIPELINE_REPO_URL}
+          ref: ${PIPELINE_REPO_REF}
         contextDir: jenkins/master
       strategy:
         type: Source
@@ -165,8 +165,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${REPO_URL}
-          ref: ${REPO_REF}
+          uri: ${PIPELINE_REPO_URL}
+          ref: ${PIPELINE_REPO_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
