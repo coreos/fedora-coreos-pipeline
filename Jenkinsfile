@@ -30,6 +30,9 @@ properties([
     ])
 ])
 
+// see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
+def s3_builddir = "fcos-builds/prod/streams/${params.STREAM}/builds"
+
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
 
@@ -46,6 +49,15 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Fetch') {
+            /*
+            // XXX: uncomment once we have a build there
+            if (prod && utils.path_exists("/.aws")) {
+                utils.shwrap("""
+                coreos-assembler buildprep s3://${s3_builddir}
+                """)
+            }
+            */
+
             if (prod) {
                 // make sure our cached version matches prod exactly before continuing
                 utils.rsync_in("builds", "builds")
@@ -101,6 +113,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Prune') {
+            // XXX: stop pruning like this when we fully drop artifact server
             utils.shwrap("""
             coreos-assembler prune --keep=8
             """)
@@ -125,6 +138,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
             // Change perms to allow reading on webserver side.
             // Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
+            // XXX: can drop this when dropping artifact server
             utils.shwrap("""
             find builds/ ! -type l -exec chmod a+rX {} +
             """)
@@ -134,6 +148,13 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // https://stackoverflow.com/questions/1636889
             if (prod) {
                 utils.rsync_out("builds", "builds")
+            }
+
+            if (prod && utils.path_exists("/.aws")) {
+              // XXX: just upload as public-read for now
+              utils.shwrap("""
+              coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
+              """)
             }
         }
     }}
