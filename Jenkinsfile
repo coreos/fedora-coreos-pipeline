@@ -33,9 +33,13 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Init') {
             utils.shwrap("""
-            if [ ! -d src/config ]; then
-                coreos-assembler init https://github.com/coreos/fedora-coreos-config
-            fi
+            # just always restart from scratch in case it's a devel pipeline
+            # and it changed source url or ref; this info also makes it into
+            # the build metadata through cosa reading the origin remote
+            rm -rf src/config
+
+            # in the future, the stream will dictate the branch in the prod path
+            coreos-assembler init --force https://github.com/coreos/fedora-coreos-config
             """)
         }
 
@@ -46,7 +50,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
 
             utils.shwrap("""
-            git -C src/config pull
             coreos-assembler fetch
             """)
         }
