@@ -65,6 +65,8 @@ def parse_args():
                         help="Repo and ref to use for pipeline code")
     parser.add_argument("--config", metavar='<URL>[@REF]',
                         help="Repo and ref to use for FCOS config")
+    parser.add_argument("--bucket", metavar='BUCKET',
+                        help="AWS S3 bucket to use")
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
     # XXX: to add as a mutually exclusive option with above
@@ -95,6 +97,8 @@ def process_template(args):
         params += params_from_git_refspec(args.pipeline, 'PIPELINE_REPO')
     if args.config:
         params += params_from_git_refspec(args.config, 'PIPELINE_FCOS_CONFIG')
+    if args.bucket:
+        params += [f'S3_BUCKET={args.bucket}']
     if args.cosa_img:
         params += [f'COREOS_ASSEMBLER_IMAGE={args.cosa_img}']
 

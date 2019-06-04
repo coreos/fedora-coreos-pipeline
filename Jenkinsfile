@@ -1,11 +1,11 @@
-def pod, utils, prod, devel_prefix, src_config_url, src_config_ref
+def pod, utils, prod, prod_jenkins, devel_prefix, src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
     pod = readFile(file: "manifests/pod.yaml")
     utils = load("utils.groovy")
 
     // just autodetect if we're in prod or not
-    def prod_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ci.centos.org/')
+    prod_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ci.centos.org/')
     def prod_job = (env.JOB_NAME == 'fedora-coreos/fedora-coreos-fedora-coreos-pipeline')
     prod = (prod_jenkins && prod_job)
 
@@ -18,6 +18,7 @@ node {
     devel_prefix = utils.get_pipeline_annotation('devel-prefix')
     src_config_url = utils.get_pipeline_annotation('source-config-url')
     src_config_ref = utils.get_pipeline_annotation('source-config-ref')
+    s3_bucket = utils.get_pipeline_annotation('s3-bucket')
 
     // sanity check that a valid prefix is provided if in devel mode and drop
     // the trailing '-' in the devel prefix
@@ -45,19 +46,11 @@ properties([
     ])
 ])
 
-// see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
-def s3_builddir
+// substitute the right COSA image into the pod definition before spawning it
 if (prod) {
-  s3_builddir = "fcos-builds/prod/streams/${params.STREAM}/builds"
-  pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
+    pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 } else {
-  // One prefix = one pipeline = one stream; the devel-up script is geared
-  // towards testing a specific combination of (cosa, pipeline, fcos config),
-  // not a full duplication of all the prod streams. One can always instantiate
-  // a second prefix to test a separate combination if more than 1 concurrent
-  // devel pipeline is needed.
-  s3_builddir = "fcos-builds/devel/streams/${devel_prefix}/builds"
-  pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${devel_prefix}-coreos-assembler:master")
+    pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${devel_prefix}-coreos-assembler:master")
 }
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
@@ -70,6 +63,30 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
           utils.workdir = "/srv"
         } else {
           utils.workdir = env.WORKSPACE
+        }
+
+        // this is defined IFF we *should* and we *can* upload to S3
+        def s3_builddir
+
+        if (s3_bucket && utils.path_exists("/.aws")) {
+          if (prod) {
+            // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
+            s3_builddir = "${s3_bucket}/prod/streams/${params.STREAM}/builds"
+          } else {
+            // One prefix = one pipeline = one stream; the devel-up script is geared
+            // towards testing a specific combination of (cosa, pipeline, fcos config),
+            // not a full duplication of all the prod streams. One can always instantiate
+            // a second prefix to test a separate combination if more than 1 concurrent
+            // devel pipeline is needed.
+            s3_builddir = "${s3_bucket}/devel/streams/${devel_prefix}/builds"
+          }
+        }
+
+        // Special case for devel pipelines not running in our project and not
+        // uploading to S3; in that case, the only way to make the builds
+        // accessible at all is to have them in the PVC.
+        if (!prod && !prod_jenkins && !s3_builddir) {
+            utils.workdir = "/srv"
         }
 
         stage('Init') {
@@ -86,7 +103,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Fetch') {
             // XXX: drop `!prod && ` once we've uploaded prod builds there
-            if (!prod && utils.path_exists("/.aws")) {
+            if (!prod && s3_builddir) {
                 utils.shwrap("""
                 coreos-assembler buildprep s3://${s3_builddir}
                 """)
@@ -185,7 +202,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 utils.rsync_out("builds", "builds")
             }
 
-            if (utils.path_exists("/.aws")) {
+            if (s3_builddir) {
               // XXX: just upload as public-read for now
               utils.shwrap("""
               coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}

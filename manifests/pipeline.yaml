@@ -38,6 +38,9 @@ parameters:
     # for now we just follow :master, but we may start freezing if things become
     # too unstable
     value: quay.io/coreos-assembler/coreos-assembler:master
+  - description: AWS S3 bucket in which to store builds (or blank for none)
+    name: S3_BUCKET
+    value: fcos-builds
 
 objects:
 
@@ -161,6 +164,7 @@ objects:
         coreos.com/source-config-url: ${PIPELINE_FCOS_CONFIG_URL}
         coreos.com/source-config-ref: ${PIPELINE_FCOS_CONFIG_REF}
         coreos.com/devel-prefix: ${DEVEL_PREFIX}
+        coreos.com/s3-bucket: ${S3_BUCKET}
     spec:
       # Define triggers.
       #   - trigger on buildconfig change
