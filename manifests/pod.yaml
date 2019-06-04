@@ -11,7 +11,7 @@ spec:
      image: jenkins-slave-base-centos7:latest
      args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
    - name: coreos-assembler
-     image: coreos-assembler:master
+     image: COREOS_ASSEMBLER_IMAGE
      imagePullPolicy: Always
      command: ['/usr/bin/dumb-init']
      args: ['sleep', 'infinity']

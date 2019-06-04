@@ -1,4 +1,4 @@
-def pod, utils, prod
+def pod, utils, prod, devel_prefix, src_config_url, src_config_ref
 node {
     checkout scm
     pod = readFile(file: "manifests/pod.yaml")
@@ -13,6 +13,18 @@ node {
         echo "Running in prod mode."
     } else {
         echo "Running in devel mode on ${env.JENKINS_URL}."
+    }
+
+    devel_prefix = utils.get_pipeline_annotation('devel-prefix')
+    src_config_url = utils.get_pipeline_annotation('source-config-url')
+    src_config_ref = utils.get_pipeline_annotation('source-config-ref')
+
+    // sanity check that a valid prefix is provided if in devel mode and drop
+    // the trailing '-' in the devel prefix
+    if (!prod) {
+      assert devel_prefix.length() > 0 : "Missing devel prefix"
+      assert devel_prefix.endsWith("-") : "Missing trailing dash in devel prefix"
+      devel_prefix = devel_prefix[0..-2]
     }
 }
 
@@ -34,10 +46,31 @@ properties([
 ])
 
 // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
-def s3_builddir = "fcos-builds/prod/streams/${params.STREAM}/builds"
+def s3_builddir
+if (prod) {
+  s3_builddir = "fcos-builds/prod/streams/${params.STREAM}/builds"
+  pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
+} else {
+  // One prefix = one pipeline = one stream; the devel-up script is geared
+  // towards testing a specific combination of (cosa, pipeline, fcos config),
+  // not a full duplication of all the prod streams. One can always instantiate
+  // a second prefix to test a separate combination if more than 1 concurrent
+  // devel pipeline is needed.
+  s3_builddir = "fcos-builds/devel/streams/${devel_prefix}/builds"
+  pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${devel_prefix}-coreos-assembler:master")
+}
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
+
+        // Only use the PVC for prod caching. For devel pipelines, we just
+        // always refetch from scratch: we don't want to allocate cached data
+        // for pipelines which may only run once.
+        if (prod) {
+          utils.workdir = "/srv"
+        } else {
+          utils.workdir = env.WORKSPACE
+        }
 
         stage('Init') {
             utils.shwrap("""
@@ -47,19 +80,17 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             rm -rf src/config
 
             # in the future, the stream will dictate the branch in the prod path
-            coreos-assembler init --force https://github.com/coreos/fedora-coreos-config
+            coreos-assembler init --force --branch ${src_config_ref} ${src_config_url}
             """)
         }
 
         stage('Fetch') {
-            /*
-            // XXX: uncomment once we have a build there
-            if (prod && utils.path_exists("/.aws")) {
+            // XXX: drop `!prod && ` once we've uploaded prod builds there
+            if (!prod && utils.path_exists("/.aws")) {
                 utils.shwrap("""
                 coreos-assembler buildprep s3://${s3_builddir}
                 """)
             }
-            */
 
             if (prod) {
                 // make sure our cached version matches prod exactly before continuing
@@ -154,7 +185,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 utils.rsync_out("builds", "builds")
             }
 
-            if (prod && utils.path_exists("/.aws")) {
+            if (utils.path_exists("/.aws")) {
               // XXX: just upload as public-read for now
               utils.shwrap("""
               coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}

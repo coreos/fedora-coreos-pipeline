@@ -1,0 +1,149 @@
+#!/usr/bin/python3
+
+'''
+    Tiny convenient and *safe* wrapper around `oc process/apply` for devel
+    pipelines. Can be run multiple times; subsequent runs will replace existing
+    resources.
+
+    Example usage:
+        ./devel-up --update \
+            --pipeline https://github.com/jlebon/fedora-coreos-pipeline \
+            --config https://github.com/jlebon/fedora-coreos-config@wip \
+            --cosa-img quay.io/jlebon/coreos-assembler:master
+            # OR
+            --cosa https://github.com/jlebon/coreos-assembler
+
+    Deleting devel pipeline:
+        ./devel-up --delete
+'''
+
+import os
+import sys
+import json
+import argparse
+import subprocess
+
+
+def main():
+    args = parse_args()
+    resources = process_template(args)
+
+    if args.update:
+        update_resources(args, resources)
+
+        if args.start:
+            print("Starting:")
+            out = subprocess.run(['oc', 'start-build',
+                                  # hack the name; should extract from manifest
+                                  f'{args.prefix}fedora-coreos-pipeline'],
+                                 check=True, stdout=subprocess.PIPE,
+                                 encoding='utf-8')
+            print(f"  {out.stdout.strip()}")
+            print()
+        else:
+            print("You may start your devel pipeline with:")
+            print(f"  oc start-build {args.prefix}fedora-coreos-pipeline")
+            print()
+    else:
+        assert args.delete
+
+        delete_resources(args, resources)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument("--update", action='store_true',
+                        help="Create or update devel pipeline")
+    action.add_argument("--delete", action='store_true',
+                        help="Delete devel pipeline")
+    parser.add_argument("--start", action='store_true',
+                        help="Start build after updating it")
+    parser.add_argument("--prefix", help="Devel prefix to use for resources",
+                        default=get_username())
+    parser.add_argument("--pipeline", metavar='<URL>[@REF]',
+                        help="Repo and ref to use for pipeline code")
+    parser.add_argument("--config", metavar='<URL>[@REF]',
+                        help="Repo and ref to use for FCOS config")
+    parser.add_argument("--cosa-img", metavar='FQIN',
+                        help="Pullspec to use for COSA image")
+    # XXX: to add as a mutually exclusive option with above
+    # parser.add_argument("--cosa", metavar='<URL>[@REF]',
+    #                     help="Repo and ref to use for COSA image",
+    #                     default=DEFAULT_COSA_IMG)
+
+    args = parser.parse_args()
+
+    # just sanity check we have a prefix
+    assert len(args.prefix)
+    assert not args.prefix.endswith('-'), "Prefix must not end with dash"
+
+    # e.g. jlebon --> jlebon-fedora-coreos-pipeline
+    args.prefix += '-'
+
+    return args
+
+
+def get_username():
+    import pwd
+    return pwd.getpwuid(os.getuid()).pw_name
+
+
+def process_template(args):
+    params = [f'DEVEL_PREFIX={args.prefix}']
+    if args.pipeline:
+        params += params_from_git_refspec(args.pipeline, 'PIPELINE_REPO')
+    if args.config:
+        params += params_from_git_refspec(args.config, 'PIPELINE_FCOS_CONFIG')
+    if args.cosa_img:
+        params += [f'COREOS_ASSEMBLER_IMAGE={args.cosa_img}']
+
+    print("Parameters:")
+    for param in params:
+        print(f"  {param}")
+    params = [q for p in params for q in ['--param', p]]
+    print()
+
+    resources = subprocess.check_output(
+        ['oc', 'process', '--filename', 'manifests/pipeline.yaml'] + params)
+    return json.loads(resources)
+
+
+def update_resources(args, resources):
+    # final safety check: only actually create/update prefixed resources
+    print("Updating:")
+    for resource in resources['items']:
+        if resource['metadata']['name'].startswith(args.prefix):
+            out = subprocess.run(['oc', 'apply', '--filename', '-'],
+                                 input=json.dumps(resource), encoding='utf-8',
+                                 check=True, stdout=subprocess.PIPE)
+            print(f"  {out.stdout.strip()}")
+    print()
+
+
+def delete_resources(args, resources):
+    # only delete prefixed resources
+    print("Deleting:")
+    for resource in resources['items']:
+        if resource['metadata']['name'].startswith(args.prefix):
+            out = subprocess.run(['oc', 'delete', '--filename', '-'],
+                                 input=json.dumps(resource), encoding='utf-8',
+                                 check=True, stdout=subprocess.PIPE)
+            print(f"  {out.stdout.strip()}")
+    print()
+
+
+def params_from_git_refspec(refspec, param_prefix):
+    url, ref = parse_git_refspec(refspec)
+    return [f'{param_prefix}_URL={url}',
+            f'{param_prefix}_REF={ref}']
+
+
+def parse_git_refspec(refspec):
+    if '@' not in refspec:
+        return (refspec, 'master')
+    return tuple(refspec.split('@'))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
