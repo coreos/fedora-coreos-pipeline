@@ -52,7 +52,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-s2i
-      namespace: fedora-coreos
     spec:
       tags:
         - name: stable
@@ -64,7 +63,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins
-      namespace: fedora-coreos
   - kind: BuildConfig
     apiVersion: v1
     metadata:
@@ -90,7 +88,6 @@ objects:
         to:
           kind: ImageStreamTag
           name: jenkins:latest
-          namespace: fedora-coreos
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
 
@@ -102,7 +99,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-slave-base-centos7
-      namespace: fedora-coreos
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -124,7 +120,6 @@ objects:
     kind: ImageStream
     metadata:
       name: ${DEVEL_PREFIX}coreos-assembler
-      namespace: fedora-coreos
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -143,7 +138,6 @@ objects:
     kind: PersistentVolumeClaim
     metadata:
       name: coreos-assembler-claim2
-      namespace: fedora-coreos
     spec:
       accessModes:
       - ReadWriteOnce
