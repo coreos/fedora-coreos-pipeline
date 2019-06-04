@@ -134,7 +134,9 @@ oc login -u developer https://127.0.0.1:8443
 (Any password will work). The IP address to log in here may differ
 according to the output from `oc cluster up`.
 
-We'll want to match the project name used in CentOS CI:
+Ideally you will match the project name used for prod in CentOS CI
+(`fedora-coreos`), but feel free to use a different project name
+like `fedora-coreos-devel` if you'd like.
 
 ```
 oc new-project fedora-coreos
