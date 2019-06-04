@@ -21,9 +21,24 @@ parameters:
   - description: Git branch/tag reference for pipeline Jenkinsfile
     name: PIPELINE_REPO_REF
     value: master
+  - description: Prefix to prepend to resources
+    name: DEVEL_PREFIX
+    value:
+  - description: Git source URI for FCOS config
+    name: PIPELINE_FCOS_CONFIG_URL
+    value: https://github.com/coreos/fedora-coreos-config
+  - description: Git branch/tag reference for FCOS config
+    name: PIPELINE_FCOS_CONFIG_REF
+    value: master
   - description: Size of the PVC to create
     name: PVC_SIZE
     value: 100Gi
+  - description: Image of coreos-assembler to use
+    name: COREOS_ASSEMBLER_IMAGE
+    # for now we just follow :master, but we may start freezing if things become
+    # too unstable
+    value: quay.io/coreos-assembler/coreos-assembler:master
+
 objects:
 
   ### JENKINS MASTER ###
@@ -105,7 +120,7 @@ objects:
   - apiVersion: v1
     kind: ImageStream
     metadata:
-      name: coreos-assembler
+      name: ${DEVEL_PREFIX}coreos-assembler
       namespace: fedora-coreos
     spec:
       lookupPolicy:
@@ -115,9 +130,7 @@ objects:
         - name: master
           from:
             kind: DockerImage
-            # for now we just follow :master, but we may start freezing if
-            # things become too unstable
-            name: quay.io/coreos-assembler/coreos-assembler:master
+            name: ${COREOS_ASSEMBLER_IMAGE}
           importPolicy:
             scheduled: true
 
@@ -140,7 +153,14 @@ objects:
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: "fedora-coreos-pipeline"
+      name: ${DEVEL_PREFIX}fedora-coreos-pipeline
+      # We use annotations as a way to pass information from the bc (and thus
+      # from `oc new-app/process` time) to the Groovy code. This allows us to
+      # centralize all the major knobs in this file for easier management.
+      annotations:
+        coreos.com/source-config-url: ${PIPELINE_FCOS_CONFIG_URL}
+        coreos.com/source-config-ref: ${PIPELINE_FCOS_CONFIG_REF}
+        coreos.com/devel-prefix: ${DEVEL_PREFIX}
     spec:
       # Define triggers.
       #   - trigger on buildconfig change
@@ -161,7 +181,7 @@ objects:
         imageChange:
           from:
             kind: ImageStreamTag
-            name: coreos-assembler:master
+            name: ${DEVEL_PREFIX}coreos-assembler:master
       source:
         type: Git
         git:

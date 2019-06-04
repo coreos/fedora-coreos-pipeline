@@ -6,6 +6,21 @@ These instructions will cover both local developer workflows, as well as
 interacting with the production pipeline in CentOS CI. A section header
 may indicate that the section only applies to one of the two workflows.
 
+Another option if one simply wants to test a different COSA image or
+FCOS config or pipeline code (but otherwise maintain the manifest the
+same) is to create a developer pipeline alongside the production one. To
+do this, you *must* use the `devel-up` script. For example:
+
+```
+./devel-up --update \
+        --pipeline https://github.com/jlebon/fedora-coreos-pipeline \
+        --config https://github.com/jlebon/fedora-coreos-config@feature \
+        --cosa-img quay.io/jlebon/coreos-assembler:random-tag
+```
+
+Now carrying on with the instructions for setting up the environment
+from scratch...
+
 ### [LOCAL] Set up an OpenShift cluster
 
 First, make sure to install `oci-kvm-hook` on your host system (not in a
@@ -151,18 +166,23 @@ the Jenkins pipeline).
 
 ### Create the pipeline from the template
 
-If working on the production pipeline, or you're not
-planning any modifications, you may simply do:
+If working on the production pipeline, you may simply do:
 
 ```
 oc new-app --file=manifests/pipeline.yaml
 ```
 
-If working on your own repo, you will want to override the
+If working on a local cluster you will want to define the `DEVEL_PREFIX`
+parameter to be e.g. `$USER-`. The pipeline will simply not run without
+a `DEVEL_PREFIX` set if it is not running in prod mode.
+
+There are additional useful parameters for the devel case. For example,
+to use a custom pipeline repo, you'll want to override the
 `PIPELINE_REPO_URL` and `PIPELINE_REPO_REF` parameters:
 
 ```
 oc new-app --file=manifests/pipeline.yaml \
+    --param=DEVEL_PREFIX=$(whoami)- \
     --param=PIPELINE_REPO_URL=https://github.com/jlebon/fedora-coreos-pipeline \
     --param=PIPELINE_REPO_REF=my-feature-branch
 ```
