@@ -102,16 +102,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Fetch') {
-            // XXX: drop `!prod && ` once we've uploaded prod builds there
-            if (!prod && s3_builddir) {
+            if (s3_builddir) {
                 utils.shwrap("""
                 coreos-assembler buildprep s3://${s3_builddir}
                 """)
-            }
-
-            if (prod) {
-                // make sure our cached version matches prod exactly before continuing
-                utils.rsync_in("builds", "builds")
             }
 
             utils.shwrap("""
@@ -164,10 +158,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
-        stage('Prune') {
-            // XXX: stop pruning like this when we fully drop artifact server
+        stage('Prune Cache') {
             utils.shwrap("""
-            coreos-assembler prune --keep=8
+            coreos-assembler prune --keep=1
             """)
 
             // If the cache img is larger than e.g. 8G, then nuke it. Otherwise
@@ -188,9 +181,21 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             coreos-assembler compress
             """)
 
+            if (s3_builddir) {
+              // just upload as public-read for now, but see discussions in
+              // https://github.com/coreos/fedora-coreos-tracker/issues/189
+              utils.shwrap("""
+              coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
+              """)
+            }
+
+            // XXX: For now, we keep uploading the latest build to the artifact
+            // server to make it easier for folks to access since we don't have
+            // a stream metadata frontend/website set up yet. The key part here
+            // is that it is *not* the canonical storage for builds.
+
             // Change perms to allow reading on webserver side.
             // Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
-            // XXX: can drop this when dropping artifact server
             utils.shwrap("""
             find builds/ ! -type l -exec chmod a+rX {} +
             """)
@@ -200,13 +205,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // https://stackoverflow.com/questions/1636889
             if (prod) {
                 utils.rsync_out("builds", "builds")
-            }
-
-            if (s3_builddir) {
-              // XXX: just upload as public-read for now
-              utils.shwrap("""
-              coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
-              """)
             }
         }
     }}
