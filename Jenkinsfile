@@ -26,7 +26,10 @@ properties([
              // testing stream is the main stream.
              choices: ['testing' /*, 'stable', 'testing-devel', 'bodhi-updates', etc... */ ],
              description: 'Fedora CoreOS stream to build',
-             required: true)
+             required: true),
+      booleanParam(name: 'FORCE',
+                   defaultValue: false,
+                   description: 'Whether to force a rebuild')
     ])
 ])
 
@@ -74,8 +77,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Build') {
+            def force = params.FORCE ? "--force" : ""
             utils.shwrap("""
-            coreos-assembler build --skip-prune
+            coreos-assembler build --skip-prune ${force}
             """)
         }
 
