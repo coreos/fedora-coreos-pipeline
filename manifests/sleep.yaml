@@ -12,11 +12,18 @@ spec:
      workingDir: /srv/
      command: ['/usr/bin/dumb-init']
      args: ['sleep', 'infinity']
+     env:
+       # `aws` fails to expand ~/.aws otherwise since we have no home
+       - name: AWS_CONFIG_FILE
+         value: /.aws/config
      volumeMounts:
      - name: data
        mountPath: /srv/
      - name: duffy-key
        mountPath: /var/run/secrets/kubernetes.io/duffy-key
+       readOnly: true
+     - name: aws-creds
+       mountPath: /.aws
        readOnly: true
      securityContext:
        privileged: false
@@ -27,4 +34,8 @@ spec:
   - name: duffy-key
     secret:
       secretName: duffy.key
+      optional: true
+  - name: aws-creds
+    secret:
+      secretName: fcos-builds-bot-aws-config
       optional: true
