@@ -1,25 +1,18 @@
-The `manifests/pipeline.yaml` file contains an OpenShift template that
+
+## Setting up a local or production cluster from scratch
+
+The instructions in this section will cover setting up a local (developer)
+cluster as well as a production cluster pipeline in CentOS CI. If you
+have access to an existing deployment and just want to set up a parallel
+"developer pipeline" skip ahead to the [Running A Developer Pipeline Alongside an Existing Deployment](#running-a-developer-pipeline-alongside-an-existing-deployment)
+section.
+
+As for setting up a new pipeline, one key piece of information is that
+the `manifests/pipeline.yaml` file contains an OpenShift template that
 will set up a Jenkins pipeline using the
 [Kubernetes Jenkins plugin](https://github.com/jenkinsci/kubernetes-plugin).
-
-These instructions will cover both local developer workflows, as well as
-interacting with the production pipeline in CentOS CI. A section header
+The instructions below will help you deploy the pipeline. A section header
 may indicate that the section only applies to one of the two workflows.
-
-Another option if one simply wants to test a different COSA image or
-FCOS config or pipeline code (but otherwise maintain the manifest the
-same) is to create a developer pipeline alongside the production one. To
-do this, you *must* use the `devel-up` script. For example:
-
-```
-./devel-up --update \
-        --pipeline https://github.com/jlebon/fedora-coreos-pipeline \
-        --config https://github.com/jlebon/fedora-coreos-config@feature \
-        --cosa-img quay.io/jlebon/coreos-assembler:random-tag
-```
-
-Now carrying on with the instructions for setting up the environment
-from scratch...
 
 ### [LOCAL] Set up an OpenShift cluster
 
@@ -207,19 +200,37 @@ If working on the production pipeline, you may simply do:
 oc new-app --file=manifests/pipeline.yaml
 ```
 
-If working on a local cluster you will want to define the `DEVEL_PREFIX`
-parameter to be e.g. `$USER-`. The pipeline will simply not run without
-a `DEVEL_PREFIX` set if it is not running in prod mode.
+If working on a local cluster you will want to override the defaults
+for some parameters:
 
-There are additional useful parameters for the devel case. For example,
-to use a custom pipeline repo, you'll want to override the
-`PIPELINE_REPO_URL` and `PIPELINE_REPO_REF` parameters:
+- `DEVEL_PREFIX` - **REQUIRED**
+    - The prefix to prepend to created resources.
+    - This is recommended to be your username followed by a dash.
+      i.e. `jlebon-`. The pipeline will simply not run without a
+      `DEVEL_PREFIX` set if it is not running in prod mode.
+- `PIPELINE_REPO_URL`
+    - Git source URI for pipeline Jenkinsfile
+- `PIPELINE_REPO_REF`
+    - Git branch/tag reference for pipeline Jenkinsfile
+- `PIPELINE_FCOS_CONFIG_URL`
+    - Git source URI for FCOS config
+- `PIPELINE_FCOS_CONFIG_REF`
+    - Git branch/tag reference for FCOS config
+- `PVC_SIZE`
+    - Size of the PVC to create
+- `COREOS_ASSEMBLER_IMAGE`
+    - Image of coreos-assembler to use
+- `S3_BUCKET`
+    - AWS S3 bucket in which to store builds (or blank for none)
+
 
 ```
 oc new-app --file=manifests/pipeline.yaml \
     --param=DEVEL_PREFIX=$(whoami)- \
     --param=PIPELINE_REPO_URL=https://github.com/jlebon/fedora-coreos-pipeline \
-    --param=PIPELINE_REPO_REF=my-feature-branch
+    --param=PIPELINE_REPO_REF=my-feature-branch \
+    --param=S3_BUCKET=jlebon-fcos \
+    --param=PVC_SIZE=20Gi
 ```
 
 This template creates:
@@ -299,3 +310,35 @@ http://simple-httpd-fedora-coreos.$CLUSTER_URL
 ```
 
 (Or simply check the output of `oc get route simple-httpd`).
+
+## Running A Developer Pipeline Alongside an Existing Deployment
+
+If you already know of an existing deployed pipeline you can add some
+namespaced (i.e. DEVEL_PREFIX) resources into the existing project
+and run your own developer pipeline. This is useful if you simply want
+to test a different COSA image or FCOS config or pipeline code, but
+otherwise maintain the manifest the same.
+
+### Running a Developer Pipeline Using the `devel-up` Script
+
+The `devel-up` script will just add/edit/delete namespaced resources
+within the project. For example, you can create/update resources for
+yourself using something like:
+
+
+```
+./devel-up --update \
+        --pipeline https://github.com/jlebon/fedora-coreos-pipeline     \
+        --config https://github.com/jlebon/fedora-coreos-config@feature \
+        --cosa-img quay.io/jlebon/coreos-assembler:random-tag           \
+        --bucket jlebon-fcos
+```
+
+You can provide `--prefix` to devel up but if you don't it will
+default to your local username.
+
+Any value you don't pass to devel-up will be reset to its default
+value from the `manifests/pipeline.yaml` OpenShift template. This is
+currently as designed (see [#65](https://github.com/coreos/fedora-coreos-pipeline/issues/65)).
+
+To tear down the developer pipeline run `./devel-up --delete`.
