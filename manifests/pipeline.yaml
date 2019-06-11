@@ -87,7 +87,7 @@ objects:
       output:
         to:
           kind: ImageStreamTag
-          name: jenkins:latest
+          name: jenkins:2
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
 
