@@ -150,6 +150,28 @@ If you're planning to test changes, it would be best to fork
 this repo so that you do your work there. The workflow
 requires a remote repo to which to push changes.
 
+### Creating AWS credentials config
+
+If you are in production where we upload builds to S3 OR you want to
+test uploading to S3 as part of pipeline development you need to
+create a credentials config as a secret within OpenShift.
+
+First create a file with your secret content:
+
+```
+cat <<'EOF' > /path/to/file
+[default]
+aws_access_key_id=keyid
+aws_secret_access_key=key
+EOF
+```
+
+Then create the secret in OpenShift:
+
+```
+oc create secret generic fcos-builds-bot-aws-config --from-file=config=/path/to/file
+```
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 ```
