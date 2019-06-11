@@ -140,7 +140,6 @@ like `fedora-coreos-devel` if you'd like.
 
 ```
 oc new-project fedora-coreos
-oc delete project myproject
 ```
 
 And you're all set!
