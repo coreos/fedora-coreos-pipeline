@@ -165,6 +165,18 @@ reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
 
+Next, let's update the input ImageStreamTag for our Jenkins deployment
+to match latest OpenShift (`jenkins:2`). Some older versions of the
+template in OpenShift uses `jenkins:latest`. This will no longer be
+needed once we are running on a newer version of OpenShift than 3.6 in
+CentOS CI. See [#32](https://github.com/coreos/fedora-coreos-pipeline/pull/32)
+and [#70](https://github.com/coreos/fedora-coreos-pipeline/pull/70)
+for context on why this may be needed):
+
+```
+oc patch dc/jenkins -p '{"spec":{"triggers":[{"imageChangeParams":{"automatic":true,"containerNames":["jenkins"],"from":{"kind":"ImageStreamTag","name":"jenkins:2"}},"type":"ImageChange"},{"type":"ConfigChange"}]}}'
+```
+
 ### Create the pipeline from the template
 
 If working on the production pipeline, you may simply do:
