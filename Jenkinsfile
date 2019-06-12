@@ -68,7 +68,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_builddir
 
-        if (s3_bucket && utils.path_exists("/.aws")) {
+        if (s3_bucket && utils.path_exists("/.aws/config")) {
           if (prod) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_builddir = "${s3_bucket}/prod/streams/${params.STREAM}/builds"
