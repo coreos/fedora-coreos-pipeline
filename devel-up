@@ -145,8 +145,21 @@ def params_from_git_refspec(refspec, param_prefix):
 
 def parse_git_refspec(refspec):
     if '@' not in refspec:
-        return (refspec, 'master')
+        return (refspec, get_default_branch(refspec))
     return tuple(refspec.split('@'))
+
+
+def get_default_branch(repo):
+    output = subprocess.check_output(['git', 'ls-remote', '--symref',
+                                      repo, 'HEAD'],
+                                     encoding='utf-8')
+    for line in output.splitlines():
+        if line.startswith('ref: '):
+            ref, symref = line[len('ref: '):].split()
+            if symref != "HEAD":
+                continue
+            assert ref.startswith("refs/heads/")
+            return ref[len("refs/heads/"):]
 
 
 if __name__ == "__main__":
