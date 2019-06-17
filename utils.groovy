@@ -1,9 +1,6 @@
-workdir = env.WORKSPACE
-
 def shwrap(cmds) {
     sh """
         set -xeuo pipefail
-        cd ${workdir}
         ${cmds}
     """
 }
@@ -11,7 +8,6 @@ def shwrap(cmds) {
 def shwrap_capture(cmds) {
     return sh(returnStdout: true, script: """
         set -euo pipefail
-        cd ${workdir}
         ${cmds}
     """).trim()
 }
@@ -19,7 +15,6 @@ def shwrap_capture(cmds) {
 def shwrap_rc(cmds) {
     return sh(returnStatus: true, script: """
         set -euo pipefail
-        cd ${workdir}
         ${cmds}
     """)
 }
