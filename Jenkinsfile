@@ -90,6 +90,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Init') {
+
+            def ref = params.STREAM
+            if (src_config_ref != "") {
+                ref = src_config_ref
+            }
+
             utils.shwrap("""
             # just always restart from scratch in case it's a devel pipeline
             # and it changed source url or ref; this info also makes it into
@@ -97,7 +103,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             rm -rf src/config
 
             # in the future, the stream will dictate the branch in the prod path
-            coreos-assembler init --force --branch ${src_config_ref} ${src_config_url}
+            coreos-assembler init --force --branch ${ref} ${src_config_url}
             """)
         }
 

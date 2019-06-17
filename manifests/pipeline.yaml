@@ -29,7 +29,7 @@ parameters:
     value: https://github.com/coreos/fedora-coreos-config
   - description: Git branch/tag reference for FCOS config
     name: PIPELINE_FCOS_CONFIG_REF
-    value: testing-devel
+    value: # empty -> based on stream
   - description: Size of the PVC to create
     name: PVC_SIZE
     value: 100Gi
