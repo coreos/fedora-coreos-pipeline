@@ -1,8 +1,9 @@
-def pod, utils, prod, prod_jenkins, devel_prefix, src_config_url, src_config_ref, s3_bucket
+def utils, streams, prod, prod_jenkins, devel_prefix, src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
-    pod = readFile(file: "manifests/pod.yaml")
     utils = load("utils.groovy")
+    streams = load("streams.groovy")
+    pod = readFile(file: "manifests/pod.yaml")
 
     // just autodetect if we're in prod or not
     prod_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ci.centos.org/')
@@ -34,10 +35,8 @@ properties([
     pipelineTriggers(prod ? [cron("H/30 * * * *")] : []),
     parameters([
       choice(name: 'STREAM',
-             // XXX: Just pretend we're the testing stream for now... in
-             // reality, we're closer to what "bodhi-updates" will be. Though the
-             // testing stream is the main stream.
-             choices: ['testing' /*, 'stable', 'testing-devel', 'bodhi-updates', etc... */ ],
+             // list devel first so that it's the default choice
+             choices: (streams.devel + streams.prod + streams.mechanical),
              description: 'Fedora CoreOS stream to build',
              required: true),
       booleanParam(name: 'FORCE',
