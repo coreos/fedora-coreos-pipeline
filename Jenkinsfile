@@ -55,15 +55,6 @@ if (prod) {
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
 
-        // Only use the PVC for prod caching. For devel pipelines, we just
-        // always refetch from scratch: we don't want to allocate cached data
-        // for pipelines which may only run once.
-        if (prod) {
-          utils.workdir = "/srv"
-        } else {
-          utils.workdir = env.WORKSPACE
-        }
-
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_builddir
 
@@ -81,13 +72,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
           }
         }
 
-        // Special case for devel pipelines not running in our project and not
-        // uploading to S3; in that case, the only way to make the builds
-        // accessible at all is to have them in the PVC.
-        if (!prod && !prod_jenkins && !s3_builddir) {
-            utils.workdir = "/srv"
-        }
-
         stage('Init') {
 
             def ref = params.STREAM
@@ -95,14 +79,18 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 ref = src_config_ref
             }
 
-            utils.shwrap("""
-            # just always restart from scratch in case it's a devel pipeline
-            # and it changed source url or ref; this info also makes it into
-            # the build metadata through cosa reading the origin remote
-            rm -rf src/config
+            // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
+            def cache_img
+            if (prod) {
+                cache_img = "/srv/prod/${params.STREAM}/cache.qcow2"
+            } else {
+                cache_img = "/srv/devel/${devel_prefix}/cache.qcow2"
+            }
 
-            # in the future, the stream will dictate the branch in the prod path
+            utils.shwrap("""
             coreos-assembler init --force --branch ${ref} ${src_config_url}
+            mkdir -p \$(dirname ${cache_img})
+            ln -s ${cache_img} cache/cache.qcow2
             """)
         }
 
@@ -164,15 +152,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Prune Cache') {
-            utils.shwrap("""
-            coreos-assembler prune --keep=1
-            """)
-
             // If the cache img is larger than e.g. 8G, then nuke it. Otherwise
-            // it'll just keep growing and we'll hit ENOSPC.
+            // it'll just keep growing and we'll hit ENOSPC. Use realpath since
+            // the cache can actually be located on the PVC.
             utils.shwrap("""
             if [ \$(du cache/cache.qcow2 | cut -f1) -gt \$((1024*1024*8)) ]; then
-                rm -vf cache/cache.qcow2
+                rm -vf \$(realpath cache/cache.qcow2)
                 qemu-img create -f qcow2 cache/cache.qcow2 10G
                 LIBGUESTFS_BACKEND=direct virt-format --filesystem=xfs -a cache/cache.qcow2
             fi
@@ -191,6 +176,15 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               utils.shwrap("""
               coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
+              """)
+            } else if (!prod) {
+              // In devel mode without an S3 server, just archive into the PVC
+              // itself. Otherwise there'd be no other way to retrieve the
+              // artifacts. But note we only keep one build at a time.
+              utils.shwrap("""
+              rm -rf /srv/devel/${devel_prefix}/build
+              mkdir -p /srv/devel/${devel_prefix}/build
+              cp -a \$(realpath builds/latest) /srv/devel/${devel_prefix}/build
               """)
             }
 

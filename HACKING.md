@@ -238,7 +238,7 @@ This template creates:
 1. the Jenkins master imagestream,
 2. the Jenkins slave imagestream,
 3. the coreos-assembler imagestream,
-4. the `PersistentVolumeClaim` in which we'll cache and compose, and
+4. the `PersistentVolumeClaim` in which we'll cache, and
 5. the Jenkins pipeline build.
 
 The default size of the PVC is 100Gi. There is a `PVC_SIZE`
