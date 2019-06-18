@@ -169,16 +169,13 @@ oc create secret generic fcos-builds-bot-aws-config --from-file=config=/path/to/
 
 ```
 oc new-app --template=jenkins-persistent \
-    --param=NAMESPACE=fedora-coreos \
     --param=MEMORY_LIMIT=2Gi \
     --param=VOLUME_CAPACITY=2Gi
 ```
 
-Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
-image from our namespace, which we'll create in the next step. (The
-reason we create the app first is that otherwise OpenShift will
-automatically instantiate Jenkins with default parameters when creating
-the Jenkins pipeline).
+The reason we create the Jenkins app first is that otherwise OpenShift
+will automatically instantiate Jenkins with default parameters when
+creating the actual FCOS pipeline.
 
 Next, let's update the input ImageStreamTag for our Jenkins deployment
 to match latest OpenShift (`jenkins:2`). Some older versions of the
