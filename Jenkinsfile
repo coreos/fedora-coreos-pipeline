@@ -31,8 +31,7 @@ node {
 }
 
 properties([
-    disableConcurrentBuilds(),
-    pipelineTriggers(prod ? [cron("H/30 * * * *")] : []),
+    pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
              // list devel first so that it's the default choice

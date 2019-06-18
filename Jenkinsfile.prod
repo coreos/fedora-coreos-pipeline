@@ -1,0 +1,24 @@
+def utils, streams
+node {
+    checkout scm
+    utils = load("utils.groovy")
+    streams = load("streams.groovy")
+}
+
+properties([
+    pipelineTriggers(streams.get_push_trigger())
+])
+
+node {
+    change = checkout(
+        [$class: 'GitSCM',
+         userRemoteConfigs: [
+            [url: 'https://github.com/coreos/fedora-coreos-config']
+         ],
+         branches: streams.as_branches(streams.prod)
+        ]
+    )
+
+    stream = streams.from_branch(change.GIT_BRANCH)
+    streams.build_stream(stream)
+}

@@ -273,24 +273,23 @@ oc start-build fedora-coreos-pipeline
 
 Use the web interface to view logs from builds.
 
-### [PROD] Update the "secret" token values in the webhooks to be unique
+### [PROD] Update the "secret" token value in the webhook to be unique
 
 ```
-oc set triggers bc/fedora-coreos-pipeline --from-github
-oc set triggers bc/fedora-coreos-pipeline --from-webhook
+oc set triggers bc/fedora-coreos-pipeline-mechanical --from-webhook
 ```
 
 ### [PROD] Set up webhooks/automation
 
-Grab the URLs of the webhooks from `oc describe` and set up webhook
-in github.
-
-- `oc describe bc/fedora-coreos-pipeline` and grab the `Webhook GitHub` URL
-- From the GitHub web console for the configs repository.
-- Select Add Webhook from Settings → Webhooks & Services.
-- Paste the webook URL output into the Payload URL field.
+- From the GitHub Settings tab for `fedora-coreos-config`, go to the
+  "Webhooks" panel
+- Click "Add webhook"
+- In the address, type `$JENKINS_URL/github-webhook/`. So e.g.:
+  https://jenkins-fedora-coreos-devel.apps.ci.centos.org/github-webhook/
 - Change the Content Type from GitHub’s default `application/x-www-form-urlencoded` to `application/json`.
-- Click Add webhook.
+- Click "Add webhook"
+
+Repeat these steps for the `fedora-coreos-pipeline` repo.
 
 ### [OPTIONAL] Set up simple-httpd
 
