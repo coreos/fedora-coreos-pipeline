@@ -41,7 +41,10 @@ properties([
              required: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
-                   description: 'Whether to force a rebuild')
+                   description: 'Whether to force a rebuild'),
+      booleanParam(name: 'MINIMAL',
+                   defaultValue: (prod ? false : true),
+                   description: 'Whether to only build the OSTree and qemu images')
     ])
 ])
 
@@ -134,28 +137,32 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             currentBuild.description = "⚡ ${newBuildID}"
         }
 
-        stage('Build Metal') {
-            utils.shwrap("""
-            coreos-assembler buildextend-metal
-            """)
-        }
+        if (params.MINIMAL) {
+            assert !prod : "Asked for minimal build in prod mode"
+        } else {
+            stage('Build Metal') {
+                utils.shwrap("""
+                coreos-assembler buildextend-metal
+                """)
+            }
 
-        stage('Build Installer') {
-            utils.shwrap("""
-            coreos-assembler buildextend-installer
-            """)
-        }
+            stage('Build Installer') {
+                utils.shwrap("""
+                coreos-assembler buildextend-installer
+                """)
+            }
 
-        stage('Build Openstack') {
-            utils.shwrap("""
-            coreos-assembler buildextend-openstack
-            """)
-        }
+            stage('Build Openstack') {
+                utils.shwrap("""
+                coreos-assembler buildextend-openstack
+                """)
+            }
 
-        stage('Build VMware') {
-            utils.shwrap("""
-            coreos-assembler buildextend-vmware
-            """)
+            stage('Build VMware') {
+                utils.shwrap("""
+                coreos-assembler buildextend-vmware
+                """)
+            }
         }
 
         stage('Prune Cache') {
