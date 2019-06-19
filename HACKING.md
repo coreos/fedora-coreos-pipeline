@@ -203,11 +203,11 @@ oc new-app --file=manifests/pipeline.yaml
 If working on a local cluster you will want to override the defaults
 for some parameters:
 
-- `DEVEL_PREFIX` - **REQUIRED**
+- `DEVELOPER_PREFIX` - **REQUIRED**
     - The prefix to prepend to created resources.
     - This is recommended to be your username followed by a dash.
       i.e. `jlebon-`. The pipeline will simply not run without a
-      `DEVEL_PREFIX` set if it is not running in prod mode.
+      `DEVELOPER_PREFIX` set if it is not running in prod mode.
 - `PIPELINE_REPO_URL`
     - Git source URI for pipeline Jenkinsfile
 - `PIPELINE_REPO_REF`
@@ -226,7 +226,7 @@ for some parameters:
 
 ```
 oc new-app --file=manifests/pipeline.yaml \
-    --param=DEVEL_PREFIX=$(whoami)- \
+    --param=DEVELOPER_PREFIX=$(whoami)- \
     --param=PIPELINE_REPO_URL=https://github.com/jlebon/fedora-coreos-pipeline \
     --param=PIPELINE_REPO_REF=my-feature-branch \
     --param=S3_BUCKET=jlebon-fcos \
@@ -313,7 +313,7 @@ http://simple-httpd-fedora-coreos.$CLUSTER_URL
 ## Running A Developer Pipeline Alongside an Existing Deployment
 
 If you already know of an existing deployed pipeline you can add some
-namespaced (i.e. DEVEL_PREFIX) resources into the existing project
+namespaced (i.e. DEVELOPER_PREFIX) resources into the existing project
 and run your own developer pipeline. This is useful if you simply want
 to test a different COSA image or FCOS config or pipeline code, but
 otherwise maintain the manifest the same.
@@ -333,7 +333,7 @@ yourself using something like:
         --bucket jlebon-fcos
 ```
 
-You can provide `--prefix` to devel up but if you don't it will
+You can provide `--prefix` to `devel-up` but if you don't it will
 default to your local username.
 
 Any value you don't pass to devel-up will be reset to its default

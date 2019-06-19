@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 '''
-    Tiny convenient and *safe* wrapper around `oc process/apply` for devel
+    Tiny convenient and *safe* wrapper around `oc process/apply` for developer
     pipelines. Can be run multiple times; subsequent runs will replace existing
     resources.
 
@@ -13,7 +13,7 @@
             # OR
             --cosa https://github.com/jlebon/coreos-assembler
 
-    Deleting devel pipeline:
+    Deleting developer pipeline:
         ./devel-up --delete
 '''
 
@@ -41,7 +41,7 @@ def main():
             print(f"  {out.stdout.strip()}")
             print()
         else:
-            print("You may start your devel pipeline with:")
+            print("You may start your developer pipeline with:")
             print(f"  oc start-build {args.prefix}fedora-coreos-pipeline")
             print()
     else:
@@ -54,12 +54,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--update", action='store_true',
-                        help="Create or update devel pipeline")
+                        help="Create or update developer pipeline")
     action.add_argument("--delete", action='store_true',
-                        help="Delete devel pipeline")
+                        help="Delete developer pipeline")
     parser.add_argument("--start", action='store_true',
                         help="Start build after updating it")
-    parser.add_argument("--prefix", help="Devel prefix to use for resources",
+    parser.add_argument("--prefix", help="Developer prefix to use for resources",
                         default=get_username())
     parser.add_argument("--pipeline", metavar='<URL>[@REF]',
                         help="Repo and ref to use for pipeline code")
@@ -92,7 +92,7 @@ def get_username():
 
 
 def process_template(args):
-    params = [f'DEVEL_PREFIX={args.prefix}']
+    params = [f'DEVELOPER_PREFIX={args.prefix}']
     if args.pipeline:
         params += params_from_git_refspec(args.pipeline, 'PIPELINE_REPO')
     if args.config:

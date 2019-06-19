@@ -1,32 +1,32 @@
-def utils, streams, prod, prod_jenkins, devel_prefix, src_config_url, src_config_ref, s3_bucket
+def utils, streams, official, official_jenkins, developer_prefix, src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
     utils = load("utils.groovy")
     streams = load("streams.groovy")
     pod = readFile(file: "manifests/pod.yaml")
 
-    // just autodetect if we're in prod or not
-    prod_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ci.centos.org/')
-    def prod_job = (env.JOB_NAME == 'fedora-coreos/fedora-coreos-fedora-coreos-pipeline')
-    prod = (prod_jenkins && prod_job)
+    // just autodetect if we're in the official prod Jenkins or not
+    official_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ci.centos.org/')
+    def official_job = (env.JOB_NAME == 'fedora-coreos/fedora-coreos-fedora-coreos-pipeline')
+    official = (official_jenkins && official_job)
 
-    if (prod) {
-        echo "Running in prod mode."
+    if (official) {
+        echo "Running in official (prod) mode."
     } else {
-        echo "Running in devel mode on ${env.JENKINS_URL}."
+        echo "Running in developer mode on ${env.JENKINS_URL}."
     }
 
-    devel_prefix = utils.get_pipeline_annotation('devel-prefix')
+    developer_prefix = utils.get_pipeline_annotation('developer-prefix')
     src_config_url = utils.get_pipeline_annotation('source-config-url')
     src_config_ref = utils.get_pipeline_annotation('source-config-ref')
     s3_bucket = utils.get_pipeline_annotation('s3-bucket')
 
     // sanity check that a valid prefix is provided if in devel mode and drop
     // the trailing '-' in the devel prefix
-    if (!prod) {
-      assert devel_prefix.length() > 0 : "Missing devel prefix"
-      assert devel_prefix.endsWith("-") : "Missing trailing dash in devel prefix"
-      devel_prefix = devel_prefix[0..-2]
+    if (!official) {
+      assert developer_prefix.length() > 0 : "Missing developer prefix"
+      assert developer_prefix.endsWith("-") : "Missing trailing dash in developer prefix"
+      developer_prefix = developer_prefix[0..-2]
     }
 }
 
@@ -35,14 +35,14 @@ properties([
     parameters([
       choice(name: 'STREAM',
              // list devel first so that it's the default choice
-             choices: (streams.devel + streams.prod + streams.mechanical),
+             choices: (streams.development + streams.production + streams.mechanical),
              description: 'Fedora CoreOS stream to build',
              required: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
       booleanParam(name: 'MINIMAL',
-                   defaultValue: (prod ? false : true),
+                   defaultValue: (official ? false : true),
                    description: 'Whether to only build the OSTree and qemu images')
     ])
 ])
@@ -50,10 +50,10 @@ properties([
 currentBuild.description = "[${params.STREAM}] Running"
 
 // substitute the right COSA image into the pod definition before spawning it
-if (prod) {
+if (official) {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 } else {
-    pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${devel_prefix}-coreos-assembler:master")
+    pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${developer_prefix}-coreos-assembler:master")
 }
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
@@ -63,7 +63,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         def s3_builddir
 
         if (s3_bucket && utils.path_exists("/.aws/config")) {
-          if (prod) {
+          if (official) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_builddir = "${s3_bucket}/prod/streams/${params.STREAM}/builds"
           } else {
@@ -72,26 +72,26 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // not a full duplication of all the prod streams. One can always instantiate
             // a second prefix to test a separate combination if more than 1 concurrent
             // devel pipeline is needed.
-            s3_builddir = "${s3_bucket}/devel/streams/${devel_prefix}/builds"
+            s3_builddir = "${s3_bucket}/devel/streams/${developer_prefix}/builds"
           }
         }
 
-        def devel_builddir = "/srv/devel/${devel_prefix}/build"
+        def developer_builddir = "/srv/devel/${developer_prefix}/build"
 
         stage('Init') {
 
             def ref = params.STREAM
             if (src_config_ref != "") {
-                assert !prod : "Asked to override ref in prod mode"
+                assert !official : "Asked to override ref in official mode"
                 ref = src_config_ref
             }
 
             // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
             def cache_img
-            if (prod) {
+            if (official) {
                 cache_img = "/srv/prod/${params.STREAM}/cache.qcow2"
             } else {
-                cache_img = "/srv/devel/${devel_prefix}/cache.qcow2"
+                cache_img = "/srv/devel/${developer_prefix}/cache.qcow2"
             }
 
             utils.shwrap("""
@@ -106,9 +106,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 utils.shwrap("""
                 coreos-assembler buildprep s3://${s3_builddir}
                 """)
-            } else if (!prod && utils.path_exists(devel_builddir)) {
+            } else if (!official && utils.path_exists(developer_builddir)) {
                 utils.shwrap("""
-                coreos-assembler buildprep ${devel_builddir}
+                coreos-assembler buildprep ${developer_builddir}
                 """)
             }
 
@@ -139,7 +139,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         if (params.MINIMAL) {
-            assert !prod : "Asked for minimal build in prod mode"
+            assert !official : "Asked for minimal build in official mode"
         } else {
             stage('Build Metal') {
                 utils.shwrap("""
@@ -190,14 +190,14 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               utils.shwrap("""
               coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
               """)
-            } else if (!prod) {
+            } else if (!official) {
               // In devel mode without an S3 server, just archive into the PVC
               // itself. Otherwise there'd be no other way to retrieve the
               // artifacts. But note we only keep one build at a time.
               utils.shwrap("""
-              rm -rf ${devel_builddir}
-              mkdir -p ${devel_builddir}
-              cp -aT builds ${devel_builddir}
+              rm -rf ${developer_builddir}
+              mkdir -p ${developer_builddir}
+              cp -aT builds ${developer_builddir}
               """)
             }
 
@@ -215,7 +215,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // Note that if the prod directory doesn't exist on the remote this
             // will fail. We can possibly hack around this in the future:
             // https://stackoverflow.com/questions/1636889
-            if (prod) {
+            if (official) {
                 utils.rsync_out("builds", "builds")
             }
         }

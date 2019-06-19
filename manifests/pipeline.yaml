@@ -22,7 +22,7 @@ parameters:
     name: PIPELINE_REPO_REF
     value: master
   - description: Prefix to prepend to resources
-    name: DEVEL_PREFIX
+    name: DEVELOPER_PREFIX
     value:
   - description: Git source URI for FCOS config
     name: PIPELINE_FCOS_CONFIG_URL
@@ -119,7 +119,7 @@ objects:
   - apiVersion: v1
     kind: ImageStream
     metadata:
-      name: ${DEVEL_PREFIX}coreos-assembler
+      name: ${DEVELOPER_PREFIX}coreos-assembler
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -150,7 +150,7 @@ objects:
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: ${DEVEL_PREFIX}fedora-coreos-pipeline
+      name: ${DEVELOPER_PREFIX}fedora-coreos-pipeline
       # We use annotations as a way to pass information from the bc (and thus
       # from `oc new-app/process` time) to the Groovy code. This allows us to
       # centralize all the major knobs in this file for easier management.
@@ -160,7 +160,7 @@ objects:
       annotations:
         coreos.com/source-config-url: ${PIPELINE_FCOS_CONFIG_URL}
         coreos.com/source-config-ref: ${PIPELINE_FCOS_CONFIG_REF}
-        coreos.com/devel-prefix: ${DEVEL_PREFIX}
+        coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
         coreos.com/s3-bucket: ${S3_BUCKET}
     spec:
       # note no triggers: the base pipeline is only ever triggered manually, or
@@ -180,7 +180,7 @@ objects:
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: fedora-coreos-pipeline-prod
+      name: fedora-coreos-pipeline-production
     spec:
       # note no triggers: the prod pipeline is only ever triggered by GitHub
       # pushes to one of the prod branches
@@ -192,14 +192,14 @@ objects:
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.prod
+          jenkinsfilePath: Jenkinsfile.production
 
   ### FEDORA COREOS BUILD DEVEL PIPELINE ###
 
   - kind: BuildConfig
     apiVersion: "build.openshift.io/v1"
     metadata:
-      name: fedora-coreos-pipeline-devel
+      name: fedora-coreos-pipeline-development
     spec:
       triggers:
       - type: ConfigChange
@@ -216,7 +216,7 @@ objects:
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.devel
+          jenkinsfilePath: Jenkinsfile.development
 
   ### FEDORA COREOS BUILD MECHANICAL PIPELINE ###
 

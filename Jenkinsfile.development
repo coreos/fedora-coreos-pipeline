@@ -15,7 +15,7 @@ node {
          userRemoteConfigs: [
             [url: 'https://github.com/coreos/fedora-coreos-config']
          ],
-         branches: streams.as_branches(streams.devel)
+         branches: streams.as_branches(streams.development)
         ]
     )
 
