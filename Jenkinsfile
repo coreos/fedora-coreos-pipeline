@@ -72,6 +72,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
           }
         }
 
+        def devel_builddir = "/srv/devel/${devel_prefix}/build"
+
         stage('Init') {
 
             def ref = params.STREAM
@@ -99,6 +101,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             if (s3_builddir) {
                 utils.shwrap("""
                 coreos-assembler buildprep s3://${s3_builddir}
+                """)
+            } else if (!prod && utils.path_exists(devel_builddir)) {
+                utils.shwrap("""
+                coreos-assembler buildprep ${devel_builddir}
                 """)
             }
 
@@ -181,9 +187,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               // itself. Otherwise there'd be no other way to retrieve the
               // artifacts. But note we only keep one build at a time.
               utils.shwrap("""
-              rm -rf /srv/devel/${devel_prefix}/build
-              mkdir -p /srv/devel/${devel_prefix}/build
-              cp -a \$(realpath builds/latest) /srv/devel/${devel_prefix}/build
+              rm -rf ${devel_builddir}
+              mkdir -p ${devel_builddir}
+              cp -aT builds ${devel_builddir}
               """)
             }
 
