@@ -76,6 +76,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
             def ref = params.STREAM
             if (src_config_ref != "") {
+                assert !prod : "Asked to override ref in prod mode"
                 ref = src_config_ref
             }
 
