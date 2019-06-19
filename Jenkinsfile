@@ -47,6 +47,8 @@ properties([
     ])
 ])
 
+currentBuild.description = "[${params.STREAM}] Running"
+
 // substitute the right COSA image into the pod definition before spawning it
 if (prod) {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
@@ -130,10 +132,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         def newBuildID = utils.shwrap_capture("readlink builds/latest")
         if (prevBuildID == newBuildID) {
             currentBuild.result = 'SUCCESS'
-            currentBuild.description = "💤 (no new build)"
+            currentBuild.description = "[${params.STREAM}] 💤 (no new build)"
             return
         } else {
-            currentBuild.description = "⚡ ${newBuildID}"
+            currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
         }
 
         if (params.MINIMAL) {
