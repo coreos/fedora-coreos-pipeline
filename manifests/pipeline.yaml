@@ -52,6 +52,8 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-s2i
+      annotations:
+        coreos.com/deploy-default: "true"
     spec:
       tags:
         - name: stable
@@ -63,10 +65,14 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins
+      annotations:
+        coreos.com/deploy-default: "true"
   - kind: BuildConfig
     apiVersion: v1
     metadata:
       name: fedora-coreos-jenkins
+      annotations:
+        coreos.com/deploy-default: "true"
     # Note no triggers: we don't want e.g. git pushes/config changes to restart
     # Jenkins. Let's just require manual restarts here. XXX: Should investigate
     # if there's an easy way to auto-redeploy during downtimes.
@@ -99,6 +105,8 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-slave-base-centos7
+      annotations:
+        coreos.com/deploy-default: "true"
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -120,6 +128,8 @@ objects:
     kind: ImageStream
     metadata:
       name: ${DEVELOPER_PREFIX}coreos-assembler
+      annotations:
+        coreos.com/deploy-default: "true"
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -138,6 +148,8 @@ objects:
     kind: PersistentVolumeClaim
     metadata:
       name: coreos-assembler-claim2
+      annotations:
+        coreos.com/deploy-default: "true"
     spec:
       accessModes:
       - ReadWriteOnce
@@ -158,6 +170,7 @@ objects:
       # to redefine the bc for setting the right repo to the pipeline itself.
       # https://docs.okd.io/latest/dev_guide/builds/build_strategies.html#mapping-buildconfig-jenkins
       annotations:
+        coreos.com/deploy-default: "true"
         coreos.com/source-config-url: ${PIPELINE_FCOS_CONFIG_URL}
         coreos.com/source-config-ref: ${PIPELINE_FCOS_CONFIG_REF}
         coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
@@ -181,6 +194,8 @@ objects:
     apiVersion: "build.openshift.io/v1"
     metadata:
       name: fedora-coreos-pipeline-production
+      annotations:
+        coreos.com/deploy-default: "false"
     spec:
       # note no triggers: the prod pipeline is only ever triggered by GitHub
       # pushes to one of the prod branches
@@ -200,6 +215,8 @@ objects:
     apiVersion: "build.openshift.io/v1"
     metadata:
       name: fedora-coreos-pipeline-development
+      annotations:
+        coreos.com/deploy-default: "false"
     spec:
       triggers:
       - type: ConfigChange
@@ -224,6 +241,8 @@ objects:
     apiVersion: "build.openshift.io/v1"
     metadata:
       name: fedora-coreos-pipeline-mechanical
+      annotations:
+        coreos.com/deploy-default: "false"
     spec:
       triggers:
       - type: ConfigChange
