@@ -171,7 +171,8 @@ oc create secret generic fcos-builds-bot-aws-config --from-file=config=/path/to/
 oc new-app --template=jenkins-persistent \
     --param=NAMESPACE=fedora-coreos \
     --param=MEMORY_LIMIT=2Gi \
-    --param=VOLUME_CAPACITY=2Gi
+    --param=VOLUME_CAPACITY=2Gi \
+    --param=JENKINS_IMAGE_STREAM_TAG=jenkins:2
 ```
 
 Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
@@ -180,17 +181,13 @@ reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
 
-Next, let's update the input ImageStreamTag for our Jenkins deployment
-to match latest OpenShift (`jenkins:2`). Some older versions of the
-template in OpenShift uses `jenkins:latest`. This will no longer be
-needed once we are running on a newer version of OpenShift than 3.6 in
+The `jenkins:2` parameter is to match the tag name in the latest
+OpenShift. Some older versions of the template in OpenShift uses
+`jenkins:latest`. This will no longer be needed once we are running on a
+newer version of OpenShift than 3.6 in
 CentOS CI. See [#32](https://github.com/coreos/fedora-coreos-pipeline/pull/32)
 and [#70](https://github.com/coreos/fedora-coreos-pipeline/pull/70)
-for context on why this may be needed):
-
-```
-oc patch dc/jenkins -p '{"spec":{"triggers":[{"imageChangeParams":{"automatic":true,"containerNames":["jenkins"],"from":{"kind":"ImageStreamTag","name":"jenkins:2"}},"type":"ImageChange"},{"type":"ConfigChange"}]}}'
-```
+for more context).
 
 ### Create the pipeline from the template
 
