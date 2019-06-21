@@ -36,9 +36,10 @@ def triggered_by_push() {
 
 // Starts a stream build.
 def build_stream(stream) {
-    // use `oc start-build` instead of the build step
+    // Use `oc start-build` instead of the build step:
     // https://bugzilla.redhat.com/show_bug.cgi?id=1580468
-    sh "oc start-build fedora-coreos-pipeline -e STREAM=${stream}"
+    // With `--wait`, we'll error out if the build actually failed.
+    sh "oc start-build --wait fedora-coreos-pipeline -e STREAM=${stream}"
 }
 
 return this
