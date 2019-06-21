@@ -128,8 +128,9 @@ def get_username():
 
 
 def process_template(args):
+    params = []
     if not args.official:
-        params = [f'DEVELOPER_PREFIX={args.prefix}']
+        params += [f'DEVELOPER_PREFIX={args.prefix}']
     if args.pipeline:
         params += params_from_git_refspec(args.pipeline, 'PIPELINE_REPO')
     if args.config:
