@@ -8,7 +8,7 @@ a separate cluster entirely.
 
 The main tool to deploy and update these resource is `./deploy`, which
 is located in this repo. It is a simple wrapper around
-`oc process/create/apply` to make deploying and updating the various
+`oc process/create/replace` to make deploying and updating the various
 resources located in the `manifests/pipeline.yaml` OpenShift template
 easier. It will set up a Jenkins pipeline job which uses the
 [Kubernetes Jenkins plugin](https://github.com/jenkinsci/kubernetes-plugin).

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 '''
-    Convenient wrapper around `oc process/create/apply`. Can be run multiple
+    Convenient wrapper around `oc process/create/replace`. Can be run multiple
     times; subsequent runs will replace existing resources.
 
     Example usage:
@@ -180,7 +180,7 @@ def resource_action(resource):
         if kind in ['persistentvolumeclaim']:
             print(f"  {kind} \"{resource['metadata']['name']}\" skipped")
             return 'skip'
-        return 'apply'
+        return 'replace'
     return 'create'
 
 
