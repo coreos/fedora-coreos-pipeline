@@ -178,8 +178,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Archive') {
-
-            // First, compress image artifacts
             utils.shwrap("""
             coreos-assembler compress
             """)
@@ -199,24 +197,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               mkdir -p ${developer_builddir}
               cp -aT builds ${developer_builddir}
               """)
-            }
-
-            // XXX: For now, we keep uploading the latest build to the artifact
-            // server to make it easier for folks to access since we don't have
-            // a stream metadata frontend/website set up yet. The key part here
-            // is that it is *not* the canonical storage for builds.
-
-            // Change perms to allow reading on webserver side.
-            // Don't touch symlinks (https://github.com/CentOS/sig-atomic-buildscripts/pull/355)
-            utils.shwrap("""
-            find builds/ ! -type l -exec chmod a+rX {} +
-            """)
-
-            // Note that if the prod directory doesn't exist on the remote this
-            // will fail. We can possibly hack around this in the future:
-            // https://stackoverflow.com/questions/1636889
-            if (official) {
-                utils.rsync_out("builds", "builds")
             }
         }
     }}
