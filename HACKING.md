@@ -75,6 +75,10 @@ And now, bring up a v3.6.1 cluster (again, to match CentOS CI):
 oc cluster up --version v3.6.1
 ```
 
+Note that `oc cluster up/down` will require running as root, to
+communicate with the docker daemon. However, the other steps in
+this guide can (and should) be run as non-root.
+
 To have persistent configs and data, I would recommend specifying the
 dirs to use.
 
