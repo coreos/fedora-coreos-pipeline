@@ -179,7 +179,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Archive') {
             utils.shwrap("""
-            coreos-assembler compress
+            coreos-assembler compress --compressor xz
             """)
 
             if (s3_builddir) {
