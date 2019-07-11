@@ -1,8 +1,10 @@
-Jenkins pipeline for
-[Fedora CoreOS](https://github.com/coreos/fedora-coreos-config)
-running in
-[CentOS CI](https://console.apps.ci.centos.org:8443/console/)
-and using
+This is the Jenkins pipeline configuration for
+[Fedora CoreOS](https://github.com/coreos/fedora-coreos-config).
+
+The production instance is running in
+[CentOS CI](https://jenkins-fedora-coreos.apps.ci.centos.org).
+
+The pipeline is built around
 [coreos-assembler](https://github.com/coreos/coreos-assembler).
 
 It uses the OpenShift Jenkins template and is meant to be
