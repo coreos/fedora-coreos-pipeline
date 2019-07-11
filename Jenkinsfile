@@ -199,5 +199,15 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               """)
             }
         }
+
+        if (official) {
+            stage('Publish') {
+                // Run plume to publish official builds; This will handle modifying
+                // object ACLs and creating/modifying the releases.json metadata index
+                utils.shwrap("""
+                coreos-assembler shell plume release --distro fcos --version ${newBuildID} --channel ${params.STREAM} --bucket ${s3_bucket}
+                """)
+            }
+        }
     }}
 }
