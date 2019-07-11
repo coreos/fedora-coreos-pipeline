@@ -6,7 +6,8 @@ node {
 }
 
 properties([
-    pipelineTriggers(streams.get_push_trigger())
+    // no triggers; we'll drive production releases manually in the short-term
+    pipelineTriggers([])
 ])
 
 node {
