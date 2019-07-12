@@ -38,6 +38,14 @@ properties([
              choices: (streams.development + streams.production + streams.mechanical),
              description: 'Fedora CoreOS stream to build',
              required: true),
+      // XXX: Temporary parameter for first few FCOS preview releases. We
+      // eventually want some way to drive this automatically as per the
+      // versioning scheme.
+      // https://github.com/coreos/fedora-coreos-tracker/issues/212
+      string(name: 'VERSION',
+             description: 'Override default versioning mechanism',
+             defaultValue: '',
+             trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
@@ -124,8 +132,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Build') {
             def force = params.FORCE ? "--force" : ""
+            def version = params.VERSION ? "--version ${params.VERSION}" : ""
             utils.shwrap("""
-            coreos-assembler build --skip-prune ${force}
+            coreos-assembler build --skip-prune ${force} ${version}
             """)
         }
 
