@@ -147,9 +147,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
         }
 
-        if (params.MINIMAL) {
-            assert !official : "Asked for minimal build in official mode"
-        } else {
+        if (!params.MINIMAL) {
             stage('Build Metal') {
                 utils.shwrap("""
                 coreos-assembler buildextend-metal
