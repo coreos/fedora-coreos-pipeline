@@ -223,7 +223,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 // Run plume to publish official builds; This will handle modifying
                 // object ACLs and creating/modifying the releases.json metadata index
                 utils.shwrap("""
-                plume release --distro fcos --version ${newBuildID} --channel ${params.STREAM} --bucket ${s3_bucket}
+                plume release --distro fcos --version ${newBuildID} --channel ${params.STREAM} --bucket ${s3_bucket} --aws-credentials ${AWS_CONFIG_FILE}
                 """)
             }
         }
