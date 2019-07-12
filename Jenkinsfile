@@ -171,7 +171,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // which will generate a release.json from the meta.json files
             utils.shwrap("""
             git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
-            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
+            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir . || true
             """)
         }
 
