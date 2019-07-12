@@ -194,8 +194,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Archive') {
+            // XXX: temporarily use gzip on non-production streams as we iterate on stuff
+            def compressor = params.STREAM in streams.production ? "xz" : "gzip"
             utils.shwrap("""
-            coreos-assembler compress --compressor xz
+            coreos-assembler compress --compressor ${compressor}
             """)
 
             if (s3_builddir) {
