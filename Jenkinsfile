@@ -173,15 +173,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
         }
 
-        stage('Build Release Metadata') {
-            // Run the coreos-meta-translator against the most recent build,
-            // which will generate a release.json from the meta.json files
-            utils.shwrap("""
-            git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
-            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
-            """)
-        }
-
         stage('Prune Cache') {
             // If the cache img is larger than e.g. 8G, then nuke it. Otherwise
             // it'll just keep growing and we'll hit ENOSPC. Use realpath since
@@ -198,6 +189,13 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             def compressor = params.STREAM in streams.production ? "xz" : "gzip"
             utils.shwrap("""
             coreos-assembler compress --compressor ${compressor}
+            """)
+
+            // Run the coreos-meta-translator against the most recent build,
+            // which will generate a release.json from the meta.json files
+            utils.shwrap("""
+            git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
+            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
             """)
 
             if (s3_builddir) {
