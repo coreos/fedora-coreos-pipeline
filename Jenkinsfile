@@ -171,6 +171,25 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 coreos-assembler buildextend-vmware
                 """)
             }
+
+            // Key off of s3_builddir: i.e. if we're configured to upload artifacts
+            // to S3, we also take that to mean we should upload an AMI. We could
+            // split this into two separate developer knobs in the future.
+            if (s3_builddir) {
+                stage('Upload AWS') {
+                    def suffix = official ? "" : "--name-suffix ${developer_prefix}"
+                    // XXX: hardcode us-east-1 for now
+                    // XXX: use the temporary 'ami-import' subpath for now; once we
+                    // also publish vmdks, we could make this more efficient by
+                    // uploading first, and then pointing ore at our uploaded vmdk
+                    utils.shwrap("""
+                    coreos-assembler buildextend-aws ${suffix} \
+                        --build=${newBuildID} \
+                        --region=us-east-1 \
+                        --bucket s3://${s3_bucket}/ami-import
+                    """)
+                }
+            }
         }
 
         stage('Prune Cache') {
@@ -216,6 +235,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
         }
 
+        // Really, these steps would normally be done separately from here after we're ready
+        // to actually release a build. Right now, essentially every build is released.
         if (official) {
             stage('Publish') {
                 // Run plume to publish official builds; This will handle modifying
@@ -227,6 +248,17 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                     --bucket ${s3_bucket} \
                     --aws-credentials /.aws/config
                 """)
+
+                if (!params.MINIMAL) {
+                    // And make AMIs launchable by all; XXX: should probably integrate this into
+                    // `plume release --distro fcos` along with copying into other regions.
+                    def hvm = utils.shwrap_capture("jq -r '.amis[0].hvm' builds/${newBuildID}/x86_64/meta.json")
+                    utils.shwrap("""
+                    aws ec2 --region us-east-1 modify-image-attribute \
+                        --image-id ${hvm} \
+                        --launch-permission '{"Add": [{"Group":"all"}]}'
+                    """)
+                }
             }
         }
     }}
