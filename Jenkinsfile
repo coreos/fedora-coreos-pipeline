@@ -183,6 +183,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                     // also publish vmdks, we could make this more efficient by
                     // uploading first, and then pointing ore at our uploaded vmdk
                     utils.shwrap("""
+                    # https://github.com/coreos/mantle/issues/1023
+                    export AWS_SDK_LOAD_CONFIG=1
                     coreos-assembler buildextend-aws ${suffix} \
                         --build=${newBuildID} \
                         --region=us-east-1 \
@@ -242,11 +244,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 // Run plume to publish official builds; This will handle modifying
                 // object ACLs and creating/modifying the releases.json metadata index
                 utils.shwrap("""
+                # https://github.com/coreos/mantle/issues/1023
+                export AWS_SDK_LOAD_CONFIG=1
                 plume release --distro fcos \
                     --version ${newBuildID} \
                     --channel ${params.STREAM} \
-                    --bucket ${s3_bucket} \
-                    --aws-credentials /.aws/config
+                    --bucket ${s3_bucket}
                 """)
 
                 if (!params.MINIMAL) {
