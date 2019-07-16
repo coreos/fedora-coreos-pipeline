@@ -223,6 +223,11 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               utils.shwrap("""
+              # XXX: until we have e.g. `cosa sign` in place:
+              # https://github.com/coreos/coreos-assembler/issues/268
+              find builds/${newBuildID} -type f | xargs sha256sum | tee CHECKSUMS
+              sha256sum CHECKSUMS
+              mv CHECKSUMS builds/${newBuildID}
               coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
               """)
             } else if (!official) {
