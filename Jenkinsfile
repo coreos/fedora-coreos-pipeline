@@ -68,19 +68,19 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
     node('coreos-assembler') { container('coreos-assembler') {
 
         // this is defined IFF we *should* and we *can* upload to S3
-        def s3_builddir
+        def s3_stream_dir
 
         if (s3_bucket && utils.path_exists("/.aws/config")) {
           if (official) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
-            s3_builddir = "${s3_bucket}/prod/streams/${params.STREAM}/builds"
+            s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
           } else {
             // One prefix = one pipeline = one stream; the devel-up script is geared
             // towards testing a specific combination of (cosa, pipeline, fcos config),
             // not a full duplication of all the prod streams. One can always instantiate
             // a second prefix to test a separate combination if more than 1 concurrent
             // devel pipeline is needed.
-            s3_builddir = "${s3_bucket}/devel/streams/${developer_prefix}/builds"
+            s3_stream_dir = "${s3_bucket}/devel/streams/${developer_prefix}"
           }
         }
 
@@ -110,9 +110,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Fetch') {
-            if (s3_builddir) {
+            if (s3_stream_dir) {
                 utils.shwrap("""
-                coreos-assembler buildprep s3://${s3_builddir}
+                coreos-assembler buildprep s3://${s3_stream_dir}/builds
                 """)
             } else if (!official && utils.path_exists(developer_builddir)) {
                 utils.shwrap("""
@@ -172,10 +172,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 """)
             }
 
-            // Key off of s3_builddir: i.e. if we're configured to upload artifacts
+            // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
-            if (s3_builddir) {
+            if (s3_stream_dir) {
                 stage('Upload AWS') {
                     def suffix = official ? "" : "--name-suffix ${developer_prefix}"
                     // XXX: hardcode us-east-1 for now
@@ -217,7 +217,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
             """)
 
-            if (s3_builddir) {
+            if (s3_stream_dir) {
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               utils.shwrap("""
@@ -226,7 +226,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               find builds/${newBuildID} -type f | xargs sha256sum | tee CHECKSUMS
               sha256sum CHECKSUMS
               mv CHECKSUMS builds/${newBuildID}
-              coreos-assembler buildupload s3 --acl=public-read ${s3_builddir}
+              coreos-assembler buildupload s3 --acl=public-read ${s3_stream_dir}/builds
               """)
             } else if (!official) {
               // In devel mode without an S3 server, just archive into the PVC
