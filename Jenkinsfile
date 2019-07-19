@@ -85,6 +85,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         def developer_builddir = "/srv/devel/${developer_prefix}/build"
+        def basearch = utils.shwrap_capture("coreos-assembler basearch")
 
         stage('Init') {
 
@@ -260,7 +261,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 if (!params.MINIMAL) {
                     // And make AMIs launchable by all; XXX: should probably integrate this into
                     // `plume release --distro fcos` along with copying into other regions.
-                    def hvm = utils.shwrap_capture("jq -r '.amis[0].hvm' builds/${newBuildID}/x86_64/meta.json")
+                    def hvm = utils.shwrap_capture("jq -r '.amis[0].hvm' builds/${newBuildID}/${basearch}/meta.json")
                     utils.shwrap("""
                     aws ec2 --region us-east-1 modify-image-attribute \
                         --image-id ${hvm} \
