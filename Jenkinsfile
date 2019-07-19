@@ -115,6 +115,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 utils.shwrap("""
                 coreos-assembler buildprep s3://${s3_stream_dir}/builds
                 """)
+                // also fetch releases.json to get the latest build, but don't error if it doesn't exist
+                utils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
             } else if (!official && utils.path_exists(developer_builddir)) {
                 utils.shwrap("""
                 coreos-assembler buildprep ${developer_builddir}
@@ -131,11 +133,22 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             prevBuildID = utils.shwrap_capture("readlink builds/latest")
         }
 
+        def parent_version = ""
+        def parent_commit = ""
         stage('Build') {
+            def parent_arg = ""
+            if (utils.path_exists("tmp/releases.json")) {
+                def releases = readJSON file: "tmp/releases.json"
+                def commit_obj = releases["releases"][-1]["commits"].find{ commit -> commit["architecture"] == basearch }
+                parent_commit = commit_obj["checksum"]
+                parent_arg = "--parent ${parent_commit}"
+                parent_version = releases["releases"][-1]["version"]
+            }
+
             def force = params.FORCE ? "--force" : ""
             def version = params.VERSION ? "--version ${params.VERSION}" : ""
             utils.shwrap("""
-            coreos-assembler build --skip-prune ${force} ${version}
+            coreos-assembler build --skip-prune ${force} ${version} ${parent_arg}
             """)
         }
 
@@ -146,6 +159,16 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             return
         } else {
             currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
+
+            // and insert the parent info into meta.json so we can display it in
+            // the release browser and for sanity checking
+            if (parent_commit && parent_version) {
+                def meta_json = "builds/${newBuildID}/${basearch}/meta.json"
+                def meta = readJSON file: meta_json
+                meta["fedora-coreos.parent-version"] = parent_version
+                meta["fedora-coreos.parent-commit"] = parent_commit
+                writeJSON file: meta_json, json: meta
+            }
         }
 
         if (!params.MINIMAL) {

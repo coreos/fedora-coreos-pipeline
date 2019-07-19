@@ -35,4 +35,26 @@ def path_exists(path) {
     return shwrap_rc("test -e ${path}") == 0
 }
 
+def aws_s3_cp_allow_noent(src, dest) {
+    // see similar code in `cosa buildprep`
+    shwrap("""python3 -c '
+import os, sys, tempfile, botocore, boto3
+src = sys.argv[1]
+dest = sys.argv[2]
+assert src.startswith("s3://")
+bucket, key = src[len("s3://"):].split("/", 1)
+s3 = boto3.client("s3")
+try:
+    with tempfile.NamedTemporaryFile(mode="wb", dir=os.path.dirname(dest), delete=False) as f:
+        s3.download_fileobj(bucket, key, f)
+        f.flush()
+        os.rename(f.name, dest)
+    print(f"Downloaded {src} to {dest}")
+except botocore.exceptions.ClientError as e:
+    if e.response["Error"]["Code"] != "404":
+        raise e
+    print(f"{src} does not exist")
+    ' '${src}' '${dest}'""")
+}
+
 return this
