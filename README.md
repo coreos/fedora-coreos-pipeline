@@ -30,3 +30,31 @@ Please specify the requested username, RBAC for projects
 fingerprint.
 You also need one of the project admins as a sponsor, please
 reach out on Freenode `#fedora-coreos` channel.
+
+### Terminology
+
+This repo tries to maintain a consistent set of words to
+avoid confusion around different concepts with similar
+names:
+
+- `production/development/mechanical streams`: refers to the
+  Fedora CoreOS streams as defined in
+  https://github.com/coreos/fedora-coreos-tracker/blob/master/stream-tooling.md
+- `official pipeline`: the *single* official instance of
+  this pipeline code, which runs in the `fedora-coreos`
+  namespace on the CentOS CI OpenShift cluster and pushes to
+  the `fcos-builds` bucket.
+- `developer pipeline`: a pipeline stood up by a developer
+  running in a separate cluster/namespace
+
+So for example, a developer pipeline may perform e.g. a
+production or development stream build, but release tooling
+only cares about builds performed by the official pipeline
+pushed to the official locations.
+
+Avoid using the naked word `devel`. Always either use
+`development` (if talking about the streams) or `developer`
+(if talking about the pipeline).
+
+Similarly, avoid using the word `production` alone, in
+favour of `production stream` or `official pipeline`.
