@@ -1,0 +1,54 @@
+def utils, streams, s3_bucket
+node {
+    checkout scm
+    utils = load("utils.groovy")
+    streams = load("streams.groovy")
+    pod = readFile(file: "manifests/pod.yaml")
+
+    s3_bucket = utils.get_pipeline_annotation('s3-bucket')
+}
+
+properties([
+    pipelineTriggers([]),
+    parameters([
+      choice(name: 'STREAM',
+             // list devel first so that it's the default choice
+             choices: (streams.development + streams.production + streams.mechanical),
+             description: 'Fedora CoreOS stream to release',
+             required: true),
+      string(name: 'VERSION',
+             description: 'Fedora CoreOS version to release',
+             defaultValue: '',
+             trim: true)
+    ])
+])
+
+currentBuild.description = "[${params.STREAM}] Running"
+
+// substitute the right COSA image into the pod definition before spawning it
+pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
+
+podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
+    node('coreos-assembler') { container('coreos-assembler') {
+
+        // this is defined IFF we *should* and we *can* upload to S3
+        def s3_stream_dir
+
+        if (s3_bucket && utils.path_exists("/.aws/config")) {
+          // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
+          s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+        }
+        
+        stage('Publish') {
+          // Run plume to publish official builds; This will handle modifying
+          // object ACLs, modifying AMI image attributes,
+          // and creating/modifying the releases.json metadata index
+          utils.shwrap("""
+          plume release --distro fcos \
+              --version ${params.VERSION} \
+              --channel ${params.STREAM} \
+              --bucket ${s3_bucket}
+          """)
+        }
+    }}
+}
