@@ -75,7 +75,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
           } else {
-            // One prefix = one pipeline = one stream; the devel-up script is geared
+            // One prefix = one pipeline = one stream; the deploy script is geared
             // towards testing a specific combination of (cosa, pipeline, fcos config),
             // not a full duplication of all the prod streams. One can always instantiate
             // a second prefix to test a separate combination if more than 1 concurrent
@@ -261,6 +261,18 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               mkdir -p ${developer_builddir}
               cp -aT builds ${developer_builddir}
               """)
+            }
+        }
+
+        // For now, we auto-release all non-production streams builds. That
+        // way, we can e.g. test testing-devel AMIs easily.
+        if (official && !(params.STREAM in streams.production)) {
+            stage('Publish') {
+                utils.shwrap("""
+                oc start-build --wait fedora-coreos-pipeline-release \
+                    -e STREAM=${params.STREAM} \
+                    -e VERSION=${newBuildId}
+                """)
             }
         }
     }}
