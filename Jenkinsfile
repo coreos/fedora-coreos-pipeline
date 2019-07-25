@@ -271,7 +271,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 utils.shwrap("""
                 oc start-build --wait fedora-coreos-pipeline-release \
                     -e STREAM=${params.STREAM} \
-                    -e VERSION=${newBuildId}
+                    -e VERSION=${newBuildID}
                 """)
             }
         }
