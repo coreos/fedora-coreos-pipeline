@@ -171,6 +171,22 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
         }
 
+        stage('QEMU Kola Run') {
+            utils.shwrap("""
+            coreos-assembler kola run || :
+            tar -cf - tmp/kola/ | xz -c9 > _kola_temp.tar.xz
+            """)
+            archiveArtifacts "_kola_temp.tar.xz"
+        }
+
+        // archive the image if the tests failed
+        def report = readJSON file: "tmp/kola/reports/report.json"
+        if (report["result"] != "PASS") {
+            archiveArtifacts "builds/latest/**/*.qcow2"
+            currentBuild.result = 'FAILURE'
+            return
+        }
+
         if (!params.MINIMAL) {
             stage('Build Metal') {
                 utils.shwrap("""
