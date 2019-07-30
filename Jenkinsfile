@@ -52,7 +52,11 @@ properties([
       booleanParam(name: 'MINIMAL',
                    defaultValue: (official ? false : true),
                    description: 'Whether to only build the OSTree and qemu images')
-    ])
+    ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '60',
+        artifactNumToKeepStr: '3'
+    ))
 ])
 
 currentBuild.description = "[${params.STREAM}] Running"
