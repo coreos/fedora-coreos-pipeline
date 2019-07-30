@@ -109,6 +109,14 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)
+
+            // If the cache img is larger than 7G, then nuke it. Otherwise
+            // it'll just keep growing and we'll hit ENOSPC. It'll get rebuilt.
+            utils.shwrap("""
+            if [ -f ${cache_img} ] && [ \$(du ${cache_img} | cut -f1) -gt \$((1024*1024*7)) ]; then
+                rm -vf ${cache_img}
+            fi
+            """)
         }
 
         stage('Fetch') {
@@ -235,17 +243,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                     """)
                 }
             }
-        }
-
-        stage('Prune Cache') {
-            // If the cache img is larger than e.g. 8G, then nuke it. Otherwise
-            // it'll just keep growing and we'll hit ENOSPC. Use realpath since
-            // the cache can actually be located on the PVC.
-            utils.shwrap("""
-            if [ \$(du cache/cache.qcow2 | cut -f1) -gt \$((1024*1024*8)) ]; then
-                rm -vf \$(realpath cache/cache.qcow2)
-            fi
-            """)
         }
 
         stage('Archive') {
