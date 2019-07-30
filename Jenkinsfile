@@ -64,6 +64,7 @@ if (official) {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${developer_prefix}-coreos-assembler:master")
 }
 
+def newBuildID
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
 
@@ -152,7 +153,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
-        def newBuildID = utils.shwrap_capture("readlink builds/latest")
+        newBuildID = utils.shwrap_capture("readlink builds/latest")
         if (prevBuildID == newBuildID) {
             currentBuild.result = 'SUCCESS'
             currentBuild.description = "[${params.STREAM}] 💤 (no new build)"
@@ -280,17 +281,20 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               """)
             }
         }
-
-        // For now, we auto-release all non-production streams builds. That
-        // way, we can e.g. test testing-devel AMIs easily.
-        if (official && !(params.STREAM in streams.production)) {
-            stage('Publish') {
-                utils.shwrap("""
-                oc start-build --wait fedora-coreos-pipeline-release \
-                    -e STREAM=${params.STREAM} \
-                    -e VERSION=${newBuildID}
-                """)
-            }
-        }
     }}
+}
+
+// For now, we auto-release all non-production streams builds. That
+// way, we can e.g. test testing-devel AMIs easily.
+if (official && !(params.STREAM in streams.production)) {
+    stage('Publish') {
+        // use master, which has `oc` in it already
+        node {
+            utils.shwrap("""
+            oc start-build --wait fedora-coreos-pipeline-release \
+                -e STREAM=${params.STREAM} \
+                -e VERSION=${newBuildID}
+            """)
+        }
+    }
 }
