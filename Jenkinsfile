@@ -153,13 +153,14 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
-        newBuildID = utils.shwrap_capture("readlink builds/latest")
-        if (prevBuildID == newBuildID) {
+        def latestBuildID = utils.shwrap_capture("readlink builds/latest")
+        if (prevBuildID == latestBuildID) {
             currentBuild.result = 'SUCCESS'
             currentBuild.description = "[${params.STREAM}] 💤 (no new build)"
             return
         } else {
             currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
+            newBuildID = latestBuildID
 
             // and insert the parent info into meta.json so we can display it in
             // the release browser and for sanity checking
@@ -286,7 +287,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
 // For now, we auto-release all non-production streams builds. That
 // way, we can e.g. test testing-devel AMIs easily.
-if (official && !(params.STREAM in streams.production)) {
+if (newBuildID && official && !(params.STREAM in streams.production)) {
     stage('Publish') {
         // use master, which has `oc` in it already
         node {
