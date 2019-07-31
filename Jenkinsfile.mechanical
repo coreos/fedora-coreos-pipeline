@@ -7,9 +7,9 @@ node {
 
 properties([
     pipelineTriggers(streams.get_push_trigger() + [
-        // also run every 30m: we could increase the interval more if we start
+        // also run every 6h: we could increase the interval more if we start
         // triggering on the relevant fedmsgs.
-        cron("H/30 * * * *")
+        cron("H H/6 * * *")
     ])
 ])
 
