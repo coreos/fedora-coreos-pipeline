@@ -30,6 +30,26 @@ pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
+        // Replicate the newly uploaded AMI to other regions. Intentionally
+        // split out from the 'Upload AWS' stage to allow for tests to be added
+        // at a later date before replicating said image.
+        //
+        // We have to re-run the coreos-meta-translator as aws-replicate
+        // only modifies the meta.json
+        stage('Replicate AWS AMI') {
+            s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+            // TODO: Once buildprep supports pulling specific builds
+            // operate on the specific build rather than the most
+            // recent build
+            utils.shwrap("""
+            coreos-assembler buildprep s3://${s3_stream_dir}/builds
+            coreos-assembler aws-replicate --build=${params.VERSION}
+            git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
+            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
+            coreos-assembler buildupload --skip-builds-json s3 --acl=public-read ${s3_stream_dir}/builds
+            """)
+        }
+
         stage('Publish') {
           // Run plume to publish official builds; This will handle modifying
           // object ACLs, modifying AMI image attributes,
