@@ -22,9 +22,6 @@ spec:
      volumeMounts:
      - name: data
        mountPath: /srv/
-     - name: duffy-key
-       mountPath: /var/run/secrets/kubernetes.io/duffy-key
-       readOnly: true
      - name: aws-creds
        mountPath: /.aws
        readOnly: true
@@ -36,10 +33,6 @@ spec:
   - name: data
     persistentVolumeClaim:
       claimName: coreos-assembler-claim2
-  - name: duffy-key
-    secret:
-      secretName: duffy.key
-      optional: true
   - name: aws-creds
     secret:
       secretName: fcos-builds-bot-aws-config
