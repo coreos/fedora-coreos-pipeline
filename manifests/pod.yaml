@@ -6,6 +6,8 @@ metadata:
   name: coreos-assembler
 kind: Pod
 spec:
+  # run as `jenkins` so we can do `oc start-build`
+  serviceAccountName: jenkins
   containers:
    - name: jnlp
      image: jenkins-slave-base-centos7:latest
