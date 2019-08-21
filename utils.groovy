@@ -5,6 +5,14 @@ def shwrap(cmds) {
     """
 }
 
+// Useful when we don't want to show confidential information in logs
+def shwrap_quiet(cmds) {
+    sh """
+        set +x -euo pipefail
+        ${cmds}
+    """
+}
+
 def shwrap_capture(cmds) {
     return sh(returnStdout: true, script: """
         set -euo pipefail

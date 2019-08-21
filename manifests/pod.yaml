@@ -27,6 +27,9 @@ spec:
      - name: aws-creds
        mountPath: /.aws
        readOnly: true
+     - name: github-token
+       mountPath: /.github
+       readOnly: true
      securityContext:
        privileged: false
   nodeSelector:
@@ -38,4 +41,8 @@ spec:
   - name: aws-creds
     secret:
       secretName: fcos-builds-bot-aws-config
+      optional: true
+  - name: github-token
+    secret:
+      secretName: coreosbot-github-token
       optional: true
