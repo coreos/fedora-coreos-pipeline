@@ -248,6 +248,18 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                         --grant-user ${FEDORA_AWS_TESTING_USER_ID}
                     """)
                 }
+
+                // Replicate the newly uploaded AMI to other regions. Intentionally
+                // split out from the 'Upload AWS' stage to allow for tests to be added
+                // at a later date before replicating said image.
+                //
+                // TODO: move to separate job (release?) along with code to buildprep,
+                // regenerate the release.json, and buildupload said meta & release.json
+                stage('Replicate AWS AMI') {
+                    utils.shwrap("""
+                    coreos-assembler aws-replicate --build=${newBuildID}
+                    """)
+                }
             }
         }
 
