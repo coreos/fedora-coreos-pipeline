@@ -255,11 +255,11 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 //
                 // TODO: move to separate job (release?) along with code to buildprep,
                 // regenerate the release.json, and buildupload said meta & release.json
-                stage('Replicate AWS AMI') {
-                    utils.shwrap("""
-                    coreos-assembler aws-replicate --build=${newBuildID}
-                    """)
-                }
+              //stage('Replicate AWS AMI') {
+              //    utils.shwrap("""
+              //    coreos-assembler aws-replicate --build=${newBuildID}
+              //    """)
+              //}
             }
         }
 
