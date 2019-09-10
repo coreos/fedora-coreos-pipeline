@@ -289,8 +289,11 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         if (!params.MINIMAL && s3_stream_dir) {
             stage('Kola Runs') {
+                // use jnlp container in our pod, which has `oc` in it already
                 container('jnlp') {
                     utils.shwrap("""
+                        # We consider the AWS kola tests to be a followup job
+                        # so we aren't adding a `--wait` here.
                         oc start-build fedora-coreos-pipeline-kola-aws \
                             -e VERSION=${newBuildID} \
                             -e S3_STREAM_DIR=${s3_stream_dir}
