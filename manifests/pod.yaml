@@ -20,11 +20,16 @@ spec:
      env:
        - name: AWS_FCOS_BUILDS_BOT_CONFIG
          value: /.aws-fcos-builds-bot-config/config
+       - name: AWS_FCOS_KOLA_BOT_CONFIG
+         value: /.aws-fcos-kola-bot-config/config
      volumeMounts:
      - name: data
        mountPath: /srv/
      - name: aws-fcos-builds-bot-config
        mountPath: /.aws-fcos-builds-bot-config/
+       readOnly: true
+     - name: aws-fcos-kola-bot-config
+       mountPath: /.aws-fcos-kola-bot-config/
        readOnly: true
      - name: github-token
        mountPath: /.github
@@ -41,6 +46,11 @@ spec:
   - name: aws-fcos-builds-bot-config
     secret:
       secretName: aws-fcos-builds-bot-config
+      optional: true
+  # This secret is used for running aws kola tests
+  - name: aws-fcos-kola-bot-config
+    secret:
+      secretName: aws-fcos-kola-bot-config
       optional: true
   - name: github-token
     secret:
