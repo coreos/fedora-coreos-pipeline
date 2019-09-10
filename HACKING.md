@@ -150,7 +150,7 @@ If you're planning to test changes, it would be best to fork
 this repo so that you do your work there. The workflow
 requires a remote repo to which to push changes.
 
-### Creating AWS credentials config
+### Creating AWS credentials configs
 
 If you are in production where we upload builds to S3 OR you want to
 test uploading to S3 as part of your pipeline development, you need to
@@ -159,7 +159,7 @@ create a credentials config as a secret within OpenShift.
 First create a file with your secret content:
 
 ```
-cat <<'EOF' > /path/to/file
+cat <<'EOF' > /path/to/upload-secret
 [default]
 aws_access_key_id=keyid
 aws_secret_access_key=key
@@ -169,7 +169,23 @@ EOF
 Then create the secret in OpenShift:
 
 ```
-oc create secret generic aws-fcos-builds-bot-config --from-file=config=/path/to/file
+oc create secret generic aws-fcos-builds-bot-config --from-file=config=/path/to/upload-secret
+```
+
+We also have a second AWS config that can be used for running kola
+tests. If you have a single account that has enough permissions for
+both then you can use the same account for both uploading builds and
+running kola tests (i.e. re-use `upload-secret` from above. If not then
+you can use a second set of credentials for the kola tests.
+
+```
+cat <<'EOF' > /path/to/kola-secret
+[default]
+aws_access_key_id=keyid
+aws_secret_access_key=key
+EOF
+
+oc create secret generic aws-fcos-kola-bot-config --from-file=config=/path/to/kola-secret
 ```
 
 ### Create a Jenkins instance with a persistent volume backing store
