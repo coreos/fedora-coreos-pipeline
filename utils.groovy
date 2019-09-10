@@ -45,7 +45,9 @@ def path_exists(path) {
 
 def aws_s3_cp_allow_noent(src, dest) {
     // see similar code in `cosa buildprep`
-    shwrap("""python3 -c '
+    shwrap("""
+    export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+    python3 -c '
 import os, sys, tempfile, botocore, boto3
 src = sys.argv[1]
 dest = sys.argv[2]

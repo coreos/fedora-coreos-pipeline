@@ -169,7 +169,7 @@ EOF
 Then create the secret in OpenShift:
 
 ```
-oc create secret generic fcos-builds-bot-aws-config --from-file=config=/path/to/file
+oc create secret generic aws-fcos-builds-bot-config --from-file=config=/path/to/file
 ```
 
 ### Create a Jenkins instance with a persistent volume backing store

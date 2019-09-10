@@ -42,6 +42,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // operate on the specific build rather than the most
             // recent build
             utils.shwrap("""
+            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             coreos-assembler buildprep s3://${s3_stream_dir}/builds
             coreos-assembler aws-replicate --build=${params.VERSION}
             git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
@@ -55,6 +56,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
           // object ACLs, modifying AMI image attributes,
           // and creating/modifying the releases.json metadata index
           utils.shwrap("""
+          export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
           plume release --distro fcos \
               --version ${params.VERSION} \
               --channel ${params.STREAM} \
