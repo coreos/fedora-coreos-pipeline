@@ -18,14 +18,13 @@ spec:
      command: ['/usr/bin/dumb-init']
      args: ['sleep', 'infinity']
      env:
-       # `aws` fails to expand ~/.aws otherwise since we have no home
-       - name: AWS_CONFIG_FILE
-         value: /.aws/config
+       - name: AWS_FCOS_BUILDS_BOT_CONFIG
+         value: /.aws-fcos-builds-bot-config/config
      volumeMounts:
      - name: data
        mountPath: /srv/
-     - name: aws-creds
-       mountPath: /.aws
+     - name: aws-fcos-builds-bot-config
+       mountPath: /.aws-fcos-builds-bot-config/
        readOnly: true
      - name: github-token
        mountPath: /.github
@@ -38,9 +37,10 @@ spec:
   - name: data
     persistentVolumeClaim:
       claimName: coreos-assembler-claim2
-  - name: aws-creds
+  # This secret is used for uploading to AWS
+  - name: aws-fcos-builds-bot-config
     secret:
-      secretName: fcos-builds-bot-aws-config
+      secretName: aws-fcos-builds-bot-config
       optional: true
   - name: github-token
     secret:

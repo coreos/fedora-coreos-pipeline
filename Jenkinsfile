@@ -77,7 +77,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
-        if (s3_bucket && utils.path_exists("/.aws/config")) {
+        if (s3_bucket && utils.path_exists("\${AWS_FCOS_BUILDS_BOT_CONFIG}")) {
           if (official) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
@@ -128,6 +128,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         stage('Fetch') {
             if (s3_stream_dir) {
                 utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                 coreos-assembler buildprep s3://${s3_stream_dir}/builds
                 """)
                 // also fetch releases.json to get the latest build, but don't error if it doesn't exist
@@ -239,6 +240,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                     // also publish vmdks, we could make this more efficient by
                     // uploading first, and then pointing ore at our uploaded vmdk
                     utils.shwrap("""
+                    export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                     coreos-assembler buildextend-aws ${suffix} \
                         --build=${newBuildID} \
                         --region=us-east-1 \
@@ -270,6 +272,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               find builds/${newBuildID} -type f | xargs sha256sum | tee CHECKSUMS
               sha256sum CHECKSUMS
               mv CHECKSUMS builds/${newBuildID}
+              export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
               coreos-assembler buildupload s3 --acl=public-read ${s3_stream_dir}/builds
               """)
             } else if (!official) {

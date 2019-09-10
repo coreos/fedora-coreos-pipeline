@@ -32,6 +32,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Fetch Metadata') {
             utils.shwrap("""
+            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             coreos-assembler buildprep s3://${params.S3_STREAM_DIR}/builds
             """)
 
