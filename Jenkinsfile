@@ -54,7 +54,13 @@ properties([
                    description: 'Whether to force a rebuild'),
       booleanParam(name: 'MINIMAL',
                    defaultValue: (official ? false : true),
-                   description: 'Whether to only build the OSTree and qemu images')
+                   description: 'Whether to only build the OSTree and qemu images'),
+      // use a string here because passing booleans via `oc start-build -e`
+      // is non-trivial
+      choice(name: 'AWS_REPLICATION',
+             choices: (['false', 'true']),
+             defaultValue: 'false',
+             description: 'Force AWS AMI replication for non-production')
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '60',
@@ -305,6 +311,11 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         // For now, we auto-release all non-production streams builds. That
         // way, we can e.g. test testing-devel AMIs easily.
+        //
+        // Since we are only running this stage for non-production (i.e. mechanical
+        // and development) builds we'll default to not doing AWS AMI replication.
+        // That can be overridden by the user setting the AWS_REPLICATION parameter
+        // to true, overriding the default (false).
         if (official && !(params.STREAM in streams.production)) {
             stage('Publish') {
                 // use jnlp container in our pod, which has `oc` in it already
@@ -312,7 +323,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                     utils.shwrap("""
                     oc start-build --wait fedora-coreos-pipeline-release \
                         -e STREAM=${params.STREAM} \
-                        -e VERSION=${newBuildID}
+                        -e VERSION=${newBuildID} \
+                        -e AWS_REPLICATION=${params.AWS_REPLICATION}
                     """)
                 }
             }

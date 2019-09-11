@@ -19,7 +19,18 @@ properties([
       string(name: 'VERSION',
              description: 'Fedora CoreOS version to release',
              defaultValue: '',
-             trim: true)
+             trim: true),
+      // Default to true for AWS_REPLICATION because the only case
+      // where we are running the job by hand is when we're doing a
+      // production release and we want to replicate there. Defaulting
+      // to true means there is less opportunity for human error.
+      //
+      // use a string here because passing booleans via `oc start-build -e`
+      // is non-trivial
+      choice(name: 'AWS_REPLICATION',
+             choices: (['true', 'false']),
+             defaultValue: 'true',
+             description: 'Force AWS AMI replication')
     ])
 ])
 
@@ -30,25 +41,27 @@ pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
-        // Replicate the newly uploaded AMI to other regions. Intentionally
-        // split out from the 'Upload AWS' stage to allow for tests to be added
-        // at a later date before replicating said image.
-        //
-        // We have to re-run the coreos-meta-translator as aws-replicate
-        // only modifies the meta.json
-        stage('Replicate AWS AMI') {
-            s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
-            // TODO: Once buildprep supports pulling specific builds
-            // operate on the specific build rather than the most
-            // recent build
-            utils.shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-            coreos-assembler buildprep s3://${s3_stream_dir}/builds
-            coreos-assembler aws-replicate --build=${params.VERSION}
-            git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
-            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
-            coreos-assembler buildupload --skip-builds-json s3 --acl=public-read ${s3_stream_dir}/builds
-            """)
+        if (params.AWS_REPLICATION == 'true') {
+            // Replicate the newly uploaded AMI to other regions. Intentionally
+            // split out from the 'Upload AWS' stage to allow for tests to be added
+            // at a later date before replicating said image.
+            //
+            // We have to re-run the coreos-meta-translator as aws-replicate
+            // only modifies the meta.json
+            stage('Replicate AWS AMI') {
+                s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+                // TODO: Once buildprep supports pulling specific builds
+                // operate on the specific build rather than the most
+                // recent build
+                utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                coreos-assembler buildprep s3://${s3_stream_dir}/builds
+                coreos-assembler aws-replicate --build=${params.VERSION}
+                git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
+                /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
+                coreos-assembler buildupload --skip-builds-json s3 --acl=public-read ${s3_stream_dir}/builds
+                """)
+            }
         }
 
         stage('Publish') {
