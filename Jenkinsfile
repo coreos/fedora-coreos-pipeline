@@ -193,7 +193,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
         }
 
-        stage('QEMU Kola Run') {
+        stage('Kola:QEMU') {
             utils.shwrap("""
             coreos-assembler kola run || :
             tar -cf - tmp/kola/ | xz -c9 > _kola_temp.tar.xz
@@ -259,7 +259,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         // Now that we have an AMI go ahead and kick off some tests
         if (!params.MINIMAL && s3_stream_dir) {
-            stage('Kola Runs') {
+            stage('Kola:AWS') {
                 // use jnlp container in our pod, which has `oc` in it already
                 container('jnlp') {
                     utils.shwrap("""
