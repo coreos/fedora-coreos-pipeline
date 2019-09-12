@@ -258,7 +258,8 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         // Now that we have an AMI go ahead and kick off some tests
-        if (!params.MINIMAL && s3_stream_dir) {
+        if (!params.MINIMAL && s3_stream_dir &&
+                utils.path_exists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
             stage('Kola:AWS') {
                 // use jnlp container in our pod, which has `oc` in it already
                 container('jnlp') {
