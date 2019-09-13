@@ -267,6 +267,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                         # We consider the AWS kola tests to be a followup job
                         # so we aren't adding a `--wait` here.
                         oc start-build fedora-coreos-pipeline-kola-aws \
+                            -e STREAM=${params.STREAM} \
                             -e VERSION=${newBuildID} \
                             -e S3_STREAM_DIR=${s3_stream_dir}
                     """)

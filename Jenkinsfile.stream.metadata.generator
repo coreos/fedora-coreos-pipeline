@@ -21,7 +21,7 @@ properties([
     ])
 ])
 
-currentBuild.description = "[${params.STREAM}] Running"
+currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 
