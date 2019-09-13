@@ -34,7 +34,7 @@ properties([
     ])
 ])
 
-currentBuild.description = "[${params.STREAM}] Running"
+currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
 // substitute the right COSA image into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")

@@ -9,6 +9,10 @@ node {
 properties([
     pipelineTriggers([]),
     parameters([
+      string(name: 'STREAM',
+             description: 'The Stream we are testing against',
+             defaultValue: '',
+             trim: true),
       string(name: 'VERSION',
              description: 'Fedora CoreOS Build ID to test',
              defaultValue: '',
@@ -20,7 +24,7 @@ properties([
     ])
 ])
 
-currentBuild.description = "[${params.VERSION}] Running"
+currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
 // substitute the right COSA image into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
