@@ -195,7 +195,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Kola:QEMU') {
             utils.shwrap("""
-            coreos-assembler kola run || :
+            coreos-assembler kola run
             tar -cf - tmp/kola/ | xz -c9 > _kola_temp.tar.xz
             """)
             archiveArtifacts "_kola_temp.tar.xz"
