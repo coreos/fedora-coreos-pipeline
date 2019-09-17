@@ -257,24 +257,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
         }
 
-        // Now that we have an AMI go ahead and kick off some tests
-        if (!params.MINIMAL && s3_stream_dir &&
-                utils.path_exists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
-            stage('Kola:AWS') {
-                // use jnlp container in our pod, which has `oc` in it already
-                container('jnlp') {
-                    utils.shwrap("""
-                        # We consider the AWS kola tests to be a followup job
-                        # so we aren't adding a `--wait` here.
-                        oc start-build fedora-coreos-pipeline-kola-aws \
-                            -e STREAM=${params.STREAM} \
-                            -e VERSION=${newBuildID} \
-                            -e S3_STREAM_DIR=${s3_stream_dir}
-                    """)
-                }
-            }
-        }
-
         stage('Archive') {
             utils.shwrap("""
             coreos-assembler compress --compressor xz
@@ -311,6 +293,23 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             }
         }
 
+        // Now that the metadata is uploaded go ahead and kick off some tests
+        if (!params.MINIMAL && s3_stream_dir &&
+                utils.path_exists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
+            stage('Kola:AWS') {
+                // use jnlp container in our pod, which has `oc` in it already
+                container('jnlp') {
+                    utils.shwrap("""
+                        # We consider the AWS kola tests to be a followup job
+                        # so we aren't adding a `--wait` here.
+                        oc start-build fedora-coreos-pipeline-kola-aws \
+                            -e STREAM=${params.STREAM} \
+                            -e VERSION=${newBuildID} \
+                            -e S3_STREAM_DIR=${s3_stream_dir}
+                    """)
+                }
+            }
+        }
 
         // For now, we auto-release all non-production streams builds. That
         // way, we can e.g. test testing-devel AMIs easily.
