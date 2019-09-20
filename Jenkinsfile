@@ -170,7 +170,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             def force = params.FORCE ? "--force" : ""
             def version = params.VERSION ? "--version ${params.VERSION}" : ""
             utils.shwrap("""
-            coreos-assembler build --skip-prune ${force} ${version} ${parent_arg}
+            coreos-assembler build ostree --skip-prune ${force} ${version} ${parent_arg}
             """)
         }
 
@@ -191,6 +191,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 meta["fedora-coreos.parent-commit"] = parent_commit
                 writeJSON file: meta_json, json: meta
             }
+        }
+
+        stage('Build QEMU') {
+            utils.shwrap("""
+            coreos-assembler buildextend-qemu
+            """)
         }
 
         stage('Kola:QEMU') {
