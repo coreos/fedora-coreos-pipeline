@@ -22,6 +22,10 @@ spec:
          value: /.aws-fcos-builds-bot-config/config
        - name: AWS_FCOS_KOLA_BOT_CONFIG
          value: /.aws-fcos-kola-bot-config/config
+         # used together with the request limit below to ensure xz doesn't
+         # cause us to get evicted
+       - name: XZ_DEFAULTS
+         value: "--memlimit=2150MiB"
      volumeMounts:
      - name: data
        mountPath: /srv/
@@ -36,6 +40,12 @@ spec:
        readOnly: true
      securityContext:
        privileged: false
+     resources:
+       requests:
+         # This is really the bare minimum here for building a whole OS.
+         # Notably, the supermin VM uses 2G, and xz specifically is very hungry.
+         # Add a bit more for overhead.
+         memory: 2.5Gi
   nodeSelector:
     oci_kvm_hook: allowed
   volumes:
