@@ -254,6 +254,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                     utils.shwrap("""
                     export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                     coreos-assembler buildextend-aws ${suffix} \
+                        --upload \
                         --build=${newBuildID} \
                         --region=us-east-1 \
                         --bucket s3://${s3_bucket}/ami-import \
