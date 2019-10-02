@@ -229,6 +229,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 """)
             }
 
+            stage('Build Live') {
+                utils.shwrap("""
+                coreos-assembler buildextend-live
+                """)
+            }
+
             stage('Build Openstack') {
                 utils.shwrap("""
                 coreos-assembler buildextend-openstack
