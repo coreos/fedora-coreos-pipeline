@@ -25,7 +25,7 @@ spec:
          # used together with the request limit below to ensure xz doesn't
          # cause us to get evicted
        - name: XZ_DEFAULTS
-         value: "--memlimit=2150MiB"
+         value: "--memlimit=6144MiB"
      volumeMounts:
      - name: data
        mountPath: /srv/
@@ -42,10 +42,9 @@ spec:
        privileged: false
      resources:
        requests:
-         # This is really the bare minimum here for building a whole OS.
-         # Notably, the supermin VM uses 2G, and xz specifically is very hungry.
-         # Add a bit more for overhead.
-         memory: 2.5Gi
+         # Note the supermin VM just uses 2G. The really hungry part is xz,
+         # which without lots of memory takes lots of time.
+         memory: 6.5Gi
   nodeSelector:
     oci_kvm_hook: allowed
   volumes:
