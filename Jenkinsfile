@@ -70,7 +70,20 @@ properties([
 
 currentBuild.description = "[${params.STREAM}] Running"
 
-// substitute the right COSA image into the pod definition before spawning it
+// Note the supermin VM just uses 2G. The really hungry part is xz, which
+// without lots of memory takes lots of time. For now we just hardcode these
+// here; we can look into making them configurable through the template if
+// developers really need to tweak them (note that in the default minimal devel
+// workflow, only the qemu image is built).
+def cosa_memory_request_gb
+if (official) {
+    cosa_memory_request_gb = 6.5
+} else {
+    cosa_memory_request_gb = 2.5
+}
+
+// substitute the right COSA image and mem request into the pod definition before spawning it
+pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_gb}Gi")
 if (official) {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 } else {
@@ -265,7 +278,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Archive') {
+            // lower to make sure we don't go over and account for overhead
+            def xz_memlimit = cosa_memory_request_gb - 0.5
             utils.shwrap("""
+            export XZ_DEFAULTS=--memlimit=${xz_memlimit}Gi
             coreos-assembler compress --compressor xz
             """)
 
