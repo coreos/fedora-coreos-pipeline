@@ -75,15 +75,16 @@ currentBuild.description = "[${params.STREAM}] Running"
 // here; we can look into making them configurable through the template if
 // developers really need to tweak them (note that in the default minimal devel
 // workflow, only the qemu image is built).
-def cosa_memory_request_gb
+def cosa_memory_request_mb
 if (official) {
-    cosa_memory_request_gb = 6.5
+    cosa_memory_request_mb = 6.5 * 1024
 } else {
-    cosa_memory_request_gb = 2.5
+    cosa_memory_request_mb = 2.5 * 1024
 }
+cosa_memory_request_mb = cosa_memory_request_mb as Integer
 
 // substitute the right COSA image and mem request into the pod definition before spawning it
-pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_gb}Gi")
+pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
 if (official) {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 } else {
@@ -279,9 +280,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
 
         stage('Archive') {
             // lower to make sure we don't go over and account for overhead
-            def xz_memlimit = cosa_memory_request_gb - 0.5
+            def xz_memlimit = cosa_memory_request_mb - 512
             utils.shwrap("""
-            export XZ_DEFAULTS=--memlimit=${xz_memlimit}Gi
+            export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
             coreos-assembler compress --compressor xz
             """)
 
