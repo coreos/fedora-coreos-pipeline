@@ -34,6 +34,12 @@ spec:
      - name: github-token
        mountPath: /.github
        readOnly: true
+     - name: fedora-messaging-cfg
+       mountPath: /etc/fedora-messaging-cfg
+       readOnly: true
+     - name: fedora-messaging-coreos-key
+       mountPath: /run/fedora-messaging-coreos-key
+       readOnly: true
      securityContext:
        privileged: false
      resources:
@@ -58,4 +64,13 @@ spec:
   - name: github-token
     secret:
       secretName: coreosbot-github-token
+      optional: true
+  # These two here are used for signing with RoboSignatory
+  - name: fedora-messaging-cfg
+    configMap:
+      name: fedora-messaging-cfg
+      optional: true
+  - name: fedora-messaging-coreos-key
+    secret:
+      secretName: fedora-messaging-coreos-key
       optional: true

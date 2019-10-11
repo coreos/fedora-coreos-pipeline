@@ -1,0 +1,18 @@
+# fedora-messaging config to send messages to RoboSignatory for signing
+amqp_url = "amqps://coreos:@rabbitmq.fedoraproject.org/%2Fpubsub"
+
+[tls]
+ca_cert = "/etc/fedora-messaging/cacert.pem"
+keyfile = "/run/fedora-messaging-coreos-key/coreos.key"
+certfile = "/run/fedora-messaging-coreos-key/coreos.crt"
+
+[client_properties]
+app = "Fedora CoreOS Pipeline"
+app_url = "https://github.com/coreos/fedora-coreos-pipeline"
+app_contacts_email = ["coreos@lists.fedoraproject.org"]
+
+[exchanges."amq.topic"]
+type = "topic"
+durable = true
+auto_delete = false
+arguments = {}
