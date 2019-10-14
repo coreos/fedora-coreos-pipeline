@@ -188,6 +188,18 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
+        if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            stage('Sign OSTree') {
+                utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --ostree --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
+                """)
+            }
+        }
+
         def newBuildID = utils.shwrap_capture("readlink builds/latest")
         if (prevBuildID == newBuildID) {
             currentBuild.result = 'SUCCESS'
@@ -303,11 +315,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               utils.shwrap("""
-              # XXX: until we have e.g. `cosa sign` in place:
-              # https://github.com/coreos/coreos-assembler/issues/268
-              find builds/${newBuildID} -type f | xargs sha256sum | tee CHECKSUMS
-              sha256sum CHECKSUMS
-              mv CHECKSUMS builds/${newBuildID}
               export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
               coreos-assembler buildupload s3 --acl=public-read ${s3_stream_dir}/builds
               """)
@@ -320,6 +327,18 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
               mkdir -p ${developer_builddir}
               cp -aT builds ${developer_builddir}
               """)
+            }
+        }
+
+        if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            stage('Sign Images') {
+                utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --images --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
+                """)
             }
         }
 

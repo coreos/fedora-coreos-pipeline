@@ -322,6 +322,21 @@ currently as designed (see
 oc set triggers bc/fedora-coreos-pipeline-mechanical --from-webhook
 ```
 
+### [PROD] Create fedora-messaging configuration
+
+First create the configmap:
+
+```
+oc create configmap fedora-messaging-cfg --from-file=fedmsg.toml
+```
+
+Then add the client secrets:
+
+```
+oc create secret generic fedora-messaging-coreos-key \
+  --from-file=coreos.crt --from-file=coreos.key
+```
+
 ### [PROD] Set up webhooks/automation
 
 - From the GitHub Settings tab for `fedora-coreos-config`, go to the
