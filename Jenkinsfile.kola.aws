@@ -29,6 +29,9 @@ currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 // substitute the right COSA image into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 
+// shouldn't need more than 256Mi for this job
+pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
+
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
         def ami, ami_region
