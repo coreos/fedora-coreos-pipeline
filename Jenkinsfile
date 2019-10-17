@@ -267,6 +267,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 """)
             }
 
+            stage('Build Aliyun') {
+                utils.shwrap("""
+                coreos-assembler buildextend-aliyun
+                """)
+            }
+
             stage('Build VMware') {
                 utils.shwrap("""
                 coreos-assembler buildextend-vmware
