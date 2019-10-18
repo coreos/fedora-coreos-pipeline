@@ -188,18 +188,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             """)
         }
 
-        if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-            stage('Sign OSTree') {
-                utils.shwrap("""
-                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
-                    --extra-fedmsg-keys stream=${params.STREAM} \
-                    --ostree --gpgkeypath /etc/pki/rpm-gpg \
-                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
-                """)
-            }
-        }
-
         def newBuildID = utils.shwrap_capture("readlink builds/latest")
         if (prevBuildID == newBuildID) {
             currentBuild.result = 'SUCCESS'
@@ -216,6 +204,18 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 meta["fedora-coreos.parent-version"] = parent_version
                 meta["fedora-coreos.parent-commit"] = parent_commit
                 writeJSON file: meta_json, json: meta
+            }
+        }
+
+        if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            stage('Sign OSTree') {
+                utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --ostree --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
+                """)
             }
         }
 
