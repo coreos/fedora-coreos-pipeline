@@ -50,10 +50,6 @@ properties([
              // list devel first so that it's the default choice
              choices: (streams.development + streams.production + streams.mechanical),
              description: 'Fedora CoreOS stream to build'),
-      // XXX: Temporary parameter for first few FCOS preview releases. We
-      // eventually want some way to drive this automatically as per the
-      // versioning scheme.
-      // https://github.com/coreos/fedora-coreos-tracker/issues/212
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
              defaultValue: '',
@@ -137,6 +133,13 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
         def newBuildID
 
         try {
+
+        // Clone the automation repo, which contains helper scripts. In the
+        // future, we'll probably want this either part of the cosa image, or
+        // in a derivative of cosa for pipeline needs.
+        utils.shwrap("""
+        git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
+        """)
 
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
@@ -226,7 +229,13 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
             }
 
             def force = params.FORCE ? "--force" : ""
-            def version = params.VERSION ? "--version ${params.VERSION}" : ""
+            def version
+            if (params.VERSION) {
+                version = "--version ${params.VERSION}"
+            } else if (official) {
+                def new_version = utils.shwrap_capture("/var/tmp/fcos-releng/scripts/versionary.py")
+                version = "--version ${new_version}"
+            }
             utils.shwrap("""
             coreos-assembler build ostree --skip-prune ${force} ${version} ${parent_arg}
             """)
@@ -372,7 +381,6 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
             // Run the coreos-meta-translator against the most recent build,
             // which will generate a release.json from the meta.json files
             utils.shwrap("""
-            git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
             /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
             """)
 
