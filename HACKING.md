@@ -188,6 +188,22 @@ EOF
 oc create secret generic aws-fcos-kola-bot-config --from-file=config=/path/to/kola-secret
 ```
 
+### [OPTIONAL] Allocating S3 storage
+
+If you want to store builds persistently, now is a good time to allocate
+S3 storage.  See the [upstream coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README-design.md)
+around build architecture.
+
+Today, the FCOS pipeline is oriented towards having its own
+bucket; this will likely be fixed in the future.  But using your
+credentials, you should now do e.g.:
+
+```
+$ aws s3 mb my-fcos-bucket
+```
+
+And provide it to `--bucket` below.
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 ```
