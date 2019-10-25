@@ -45,8 +45,7 @@ spec:
      resources:
        requests:
          memory: COREOS_ASSEMBLER_MEMORY_REQUEST
-  nodeSelector:
-    oci_kvm_hook: allowed
+       limits: {}
   volumes:
   - name: data
     persistentVolumeClaim:

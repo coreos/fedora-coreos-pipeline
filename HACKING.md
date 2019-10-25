@@ -17,19 +17,32 @@ In the following sections, the section header may indicate whether the
 section applies to the local cluster case (`[LOCAL]`) or the official
 prod case (`[PROD]`).
 
+You'll want to be sure you have KVM available in your cluster.  See
+[this section of the coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README.md#getting-started---prerequisites).
+
+### Using a production OpenShift cluster
+
+This is recommended for production pipelines, and also gives you
+a lot of flexibility.  The coreos-assembler document above has
+multiple options for this.  To be clear, we would also likely
+support running on "vanilla" Kubernetes if someone interested showed
+up wanting that.
+
 ### [LOCAL] Set up an OpenShift cluster
 
-First, make sure to install `oci-kvm-hook` on your host system (not in a
-pet container). This is required to ensure that the pipeline has access
-to `/dev/kvm`:
+If you're using `oc cluster up` (which is an older OpenShift with Docker)
+the easiest is to install `oci-kvm-hook` on your host system (not in a
+pet container).  NOTE: The production path for this in modern clusters is
+the [KVM device plugin](https://github.com/kubevirt/kubernetes-device-plugins/blob/master/docs/README.kvm.md)
+linked in the `[PROD]` docs.
 
 ```
 rpm-ostree install oci-kvm-hook # if on OSTree-based system
-dnf install -y oci-kvm-hook # if on traditional
+yum -y install oci-kvm-hook # if on traditional
 ```
 
 We will use `oc cluster up` to set up a local cluster for testing. To do
-this, simply obtain the OpenShift v3.6.1 binary from
+this, obtain the OpenShift v3.6.1 binary from
 [here](https://github.com/openshift/origin/releases/tag/v3.6.1). We want
 to match the OCP version running in CentOS CI.
 
@@ -247,6 +260,7 @@ but without the `--official` switch:
 You may also want to provide additional switches depending on the
 circumstances. Here are some of them:
 
+- `--kvm-selector=kvm-device-plugin`: Use this if you're using the KVM device plugin (modern Kubernetes/OpenShift 4+).
 - `--prefix PREFIX`
     - The prefix to prepend to created developer-specific resources. By
       default, this will be your username, but you can provide a
