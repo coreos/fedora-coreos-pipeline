@@ -98,6 +98,9 @@ def parse_args():
                         help="Repo and ref to use for FCOS config")
     parser.add_argument("--bucket", metavar='BUCKET',
                         help="AWS S3 bucket to use")
+    parser.add_argument("--kvm-selector", help="KVM selector",
+                        choices=['kvm-device-plugin', 'legacy-oci-kvm-hook'],
+                        default='legacy-oci-kvm-hook')
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
     parser.add_argument("--pvc-size", metavar='SIZE',
@@ -141,6 +144,7 @@ def process_template(args):
         params += [f'COREOS_ASSEMBLER_IMAGE={args.cosa_img}']
     if args.pvc_size:
         params += [f'PVC_SIZE={args.pvc_size}']
+    params += [f'KVM_SELECTOR={args.kvm_selector}']
 
     print("Parameters:")
     for param in params:

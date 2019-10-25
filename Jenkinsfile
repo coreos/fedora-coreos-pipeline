@@ -1,3 +1,5 @@
+import org.yaml.snakeyaml.Yaml;
+
 def utils, streams, official, official_jenkins, developer_prefix, src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
@@ -20,6 +22,7 @@ node {
     src_config_url = utils.get_pipeline_annotation('source-config-url')
     src_config_ref = utils.get_pipeline_annotation('source-config-ref')
     s3_bucket = utils.get_pipeline_annotation('s3-bucket')
+    kvm_selector = utils.get_pipeline_annotation('kvm-selector')
 
     // sanity check that a valid prefix is provided if in devel mode and drop
     // the trailing '-' in the devel prefix
@@ -89,6 +92,34 @@ if (official) {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 } else {
     pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${developer_prefix}-coreos-assembler:master")
+}
+
+def podYaml = readYaml(text: pod);
+// And the KVM selector
+def cosaContainer = podYaml['spec']['containers'][1];
+switch (kvm_selector) {
+    case 'kvm-device-plugin':
+        def resources = cosaContainer['resources'];
+        def kvmres = 'devices.kubevirt.io/kvm';
+        resources['requests'][kvmres] = '1';
+        resources['limits'][kvmres] = '1';
+        break;
+    case 'legacy-oci-kvm-hook':
+        cosaContainer['nodeSelector'] = ['oci_kvm_hook': 'allowed'];
+        break;
+    default:
+        throw new Exception("Unknown KVM selector: ${kvm_selector}")
+}
+
+// And re-serialize; I couldn't figure out how to dump to a string
+// in a way allowed by the Groovy sandbox.  Tempting to just tell people
+// to disable that.
+node {
+    def tmpPath = "${WORKSPACE}/pod.yaml";
+    sh("rm -vf ${tmpPath}")
+    writeYaml(file: tmpPath, data: podYaml);
+    pod = readFile(file: tmpPath);
+    sh("rm -vf ${tmpPath}")
 }
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
