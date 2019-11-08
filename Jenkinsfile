@@ -257,8 +257,10 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
         }
 
         stage('Kola:QEMU') {
+            // leave 512M for overhead; VMs are 1G each
+            def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
             utils.shwrap("""
-            coreos-assembler kola run || :
+            coreos-assembler kola run -- --parallel ${parallel} || :
             tar -cf - tmp/kola/ | xz -c9 > _kola_temp.tar.xz
             """)
             archiveArtifacts "_kola_temp.tar.xz"
