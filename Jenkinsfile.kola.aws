@@ -66,9 +66,9 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
           export AWS_CONFIG_FILE=\${AWS_FCOS_KOLA_BOT_CONFIG}
           # use `cosa kola` here since it knows about blacklisted tests
           cosa kola -- run -p aws --aws-ami ${ami} --aws-region ${ami_region} -b fcos -j 5 || :
-          tar -cf - _kola_temp/ | xz -c9 > _kola_temp.tar.xz
+          tar -cf - tmp/kola | xz -c9 > kola_tmp.tar.xz
           """)
-          archiveArtifacts "_kola_temp.tar.xz"
+          archiveArtifacts "kola_tmp.tar.xz"
         }
 
         def report = readJSON file: "_kola_temp/aws-latest/reports/report.json"
