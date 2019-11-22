@@ -12,8 +12,7 @@ properties([
       choice(name: 'STREAM',
              // list devel first so that it's the default choice
              choices: (streams.production),
-             description: 'Fedora CoreOS stream metadata',
-             required: true),
+             description: 'Fedora CoreOS stream metadata'),
       string(name: 'VERSION',
              description: 'Fedora CoreOS version getting released',
              defaultValue: '',
@@ -28,7 +27,7 @@ pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
 
-podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
+podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
     node('coreos-assembler') { container('coreos-assembler') {
         stage('Stream Metadata' ) {
             def gopath = "${env.WORKSPACE}" + "/go/"
