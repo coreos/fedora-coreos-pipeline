@@ -310,6 +310,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 """)
             }
 
+            stage('Build GCE') {
+                utils.shwrap("""
+                coreos-assembler buildextend-gcp
+                """)
+            }
+
             // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
