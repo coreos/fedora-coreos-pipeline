@@ -387,3 +387,24 @@ http://simple-httpd-fedora-coreos.$CLUSTER_URL
 ```
 
 (Or simply check the output of `oc get route simple-httpd`).
+
+### Nuking everything
+
+One can leverage Kubernetes labels to delete all objects
+related to the pipeline:
+
+```
+oc delete all -l app=fedora-coreos
+```
+
+This won't delete a few resources. Notably the PVC and the
+SA. Deleting the PVC is usually not recommended since it may
+require cluster admin access to reallocate it in the future
+(if it doesn't, feel free to delete it!). To delete the
+other objects:
+
+```
+oc delete serviceaccounts -l app=fedora-coreos
+oc delete rolebindings -l app=fedora-coreos
+oc delete configmaps -l app=fedora-coreos
+```
