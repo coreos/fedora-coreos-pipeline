@@ -4,6 +4,8 @@
 apiVersion: v1
 metadata:
   name: coreos-assembler
+  labels:
+    app: fedora-coreos
 kind: Pod
 spec:
   # run as `jenkins` so we can do `oc start-build`
