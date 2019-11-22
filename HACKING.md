@@ -220,11 +220,7 @@ And provide it to `--bucket` below.
 ### Create a Jenkins instance with a persistent volume backing store
 
 ```
-oc new-app --template=jenkins-persistent \
-    --param=NAMESPACE=fedora-coreos \
-    --param=MEMORY_LIMIT=2Gi \
-    --param=VOLUME_CAPACITY=2Gi \
-    --param=JENKINS_IMAGE_STREAM_TAG=jenkins:2
+oc new-app --file=manifests/jenkins.yaml --param=NAMESPACE=fedora-coreos
 ```
 
 Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
@@ -232,14 +228,6 @@ image from our namespace, which we'll create in the next step. (The
 reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
-
-The `jenkins:2` parameter is to match the tag name in the latest
-OpenShift. Some older versions of the template in OpenShift uses
-`jenkins:latest`. This will no longer be needed once we are running on a
-newer version of OpenShift than 3.6 in
-CentOS CI. See [#32](https://github.com/coreos/fedora-coreos-pipeline/pull/32)
-and [#70](https://github.com/coreos/fedora-coreos-pipeline/pull/70)
-for more context).
 
 ### Creating the pipeline
 
@@ -260,7 +248,6 @@ but without the `--official` switch:
 You may also want to provide additional switches depending on the
 circumstances. Here are some of them:
 
-- `--kvm-selector=kvm-device-plugin`: Use this if you're using the KVM device plugin (modern Kubernetes/OpenShift 4+).
 - `--prefix PREFIX`
     - The prefix to prepend to created developer-specific resources. By
       default, this will be your username, but you can provide a
@@ -269,6 +256,9 @@ circumstances. Here are some of them:
     - Git source URL and optional git ref for pipeline Jenkinsfile.
 - `--config <URL>[@REF]`
     - Git source URL and optional git ref for FCOS config.
+- `--kvm-selector=kvm-device-plugin`:
+    - Use this if you're using the KVM device plugin (modern
+      Kubernetes/OpenShift 4+).
 - `--pvc-size <SIZE>`
     - Size of the cache PVC to create. Note that the PVC size cannot be
       changed after creation. The format is the one understood by
