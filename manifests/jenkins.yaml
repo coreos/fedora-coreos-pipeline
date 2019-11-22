@@ -74,6 +74,9 @@ objects:
             value: "true"
           - name: JNLP_SERVICE_NAME
             value: ${JNLP_SERVICE_NAME}
+          # DELTA: point c-as-c plugin to config map files; see below
+          - name: CASC_JENKINS_CONFIG
+            value: /var/lib/jenkins/configuration-as-code
           image: ' '
           imagePullPolicy: IfNotPresent
           livenessProbe:
@@ -100,6 +103,14 @@ objects:
           volumeMounts:
           - mountPath: /var/lib/jenkins
             name: ${JENKINS_SERVICE_NAME}-data
+          # DELTA: mount c-as-c config map
+          - name: ${JENKINS_SERVICE_NAME}-casc-cfg
+            mountPath: /var/lib/jenkins/configuration-as-code
+            readOnly: true
+          # DELTA: mount Slack token; see below
+          - name: slack-token
+            mountPath: /var/run/secrets/slack-api-token
+            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -107,6 +118,15 @@ objects:
         - name: ${JENKINS_SERVICE_NAME}-data
           persistentVolumeClaim:
             claimName: ${JENKINS_SERVICE_NAME}
+        # DELTA: add a configmap -- it's defined in pipeline.yaml
+        - name: ${JENKINS_SERVICE_NAME}-casc-cfg
+          configMap:
+            name: jenkins-casc-cfg
+        # DELTA: add the Slack token
+        - name: slack-token
+          secret:
+            secretName: slack-api-token
+            optional: true
     triggers:
     - imageChangeParams:
         automatic: true

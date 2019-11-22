@@ -133,6 +133,11 @@ echo "Final podspec: ${pod}"
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
     node('coreos-assembler') { container('coreos-assembler') {
 
+        // declare this early so we can use it in Slack
+        def newBuildID
+
+        try {
+
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
@@ -227,12 +232,13 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
             """)
         }
 
-        def newBuildID = utils.shwrap_capture("readlink builds/latest")
-        if (prevBuildID == newBuildID) {
+        def buildID = utils.shwrap_capture("readlink builds/latest")
+        if (prevBuildID == buildID) {
             currentBuild.result = 'SUCCESS'
             currentBuild.description = "[${params.STREAM}] 💤 (no new build)"
             return
         } else {
+            newBuildID = buildID
             currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
 
             // and insert the parent info into meta.json so we can display it in
@@ -437,6 +443,41 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
                         -e AWS_REPLICATION=${params.AWS_REPLICATION}
                     """)
                 }
+            }
+        }
+
+        currentBuild.result = 'SUCCESS'
+
+        // main try {} finishes here
+        } catch (e) {
+            currentBuild.result = 'FAILURE'
+            throw e
+        } finally {
+            def color
+            def message = "[${params.STREAM}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
+
+            if (currentBuild.result == 'SUCCESS') {
+                if (!newBuildID) {
+                    // SUCCESS, but no new builds? Must've been a no-op
+                    return
+                }
+                message = ":fcos: :sparkles: ${message} - SUCCESS"
+                color = 'good';
+            } else {
+                message = ":fcos: :trashfire: ${message} - FAILURE"
+                color = 'danger';
+            }
+
+            if (newBuildID) {
+                message = "${message} (${newBuildID})"
+            }
+
+            try {
+                if (official) {
+                    slackSend(color: color, message: message)
+                }
+            } finally {
+                echo message
             }
         }
     }}

@@ -163,7 +163,7 @@ If you're planning to test changes, it would be best to fork
 this repo so that you do your work there. The workflow
 requires a remote repo to which to push changes.
 
-### Creating AWS credentials configs
+### [OPTIONAL] Creating AWS credentials configs
 
 If you are in production where we upload builds to S3 OR you want to
 test uploading to S3 as part of your pipeline development, you need to
@@ -216,6 +216,19 @@ $ aws s3 mb my-fcos-bucket
 ```
 
 And provide it to `--bucket` below.
+
+### [OPTIONAL] Slack integration
+
+If you want to be able to have build status messages appear in Slack,
+create a `slack-api-token` secret:
+
+```
+$ echo -n "$TOKEN" > slack-token
+$ oc create secret generic slack-api-token --from-file=token=slack-token
+```
+
+You can obtain a token when creating a new instance of the Jenkins CI
+app in your Slack workspace.
 
 ### Create a Jenkins instance with a persistent volume backing store
 
