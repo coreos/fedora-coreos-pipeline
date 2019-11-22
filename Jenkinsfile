@@ -49,8 +49,7 @@ properties([
       choice(name: 'STREAM',
              // list devel first so that it's the default choice
              choices: (streams.development + streams.production + streams.mechanical),
-             description: 'Fedora CoreOS stream to build',
-             required: true),
+             description: 'Fedora CoreOS stream to build'),
       // XXX: Temporary parameter for first few FCOS preview releases. We
       // eventually want some way to drive this automatically as per the
       // versioning scheme.
@@ -69,7 +68,6 @@ properties([
       // is non-trivial
       choice(name: 'AWS_REPLICATION',
              choices: (['false', 'true']),
-             defaultValue: 'false',
              description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
@@ -132,7 +130,7 @@ node {
 
 echo "Final podspec: ${pod}"
 
-podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
+podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
     node('coreos-assembler') { container('coreos-assembler') {
 
         // this is defined IFF we *should* and we *can* upload to S3
