@@ -44,6 +44,12 @@ parameters:
   - description: Whether to use KVM device plugin or legacy OCI KVM hook
     name: KVM_SELECTOR
     value: kvm-device-plugin
+  - description: Slack domain on which to post build status updates
+    name: SLACK_DOMAIN
+    value: coreos
+  - description: Slack channel on which to post build status updates
+    name: SLACK_CHANNEL
+    value: jenkins-coreos
 
 objects:
 
@@ -122,6 +128,33 @@ objects:
             name: docker.io/openshift/jenkins-slave-base-centos7:latest
           importPolicy:
             scheduled: true
+
+  ### JENKINS CONFIGURATION ###
+
+  # this uses the configuration-as-code plugin:
+  # https://github.com/jenkinsci/configuration-as-code-plugin
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: jenkins-casc-cfg
+      annotations:
+        coreos.com/deploy-default: "true"
+    data:
+      jenkins.yaml: |
+          credentials:
+            system:
+              domainCredentials:
+                - credentials:
+                  - string:
+                      scope: GLOBAL
+                      id: slack-token
+                      secret: ${slack-api-token/token}
+                      description: Slack API token
+          unclassified:
+            slackNotifier:
+              teamDomain: ${SLACK_DOMAIN}
+              tokenCredentialId: slack-token
+              room: "#${SLACK_CHANNEL}"
 
   ### COREOS-ASSEMBLER ###
 
