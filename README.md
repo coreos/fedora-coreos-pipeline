@@ -13,7 +13,12 @@ workflow. For more information on getting started, see
 
 The production instance is running in
 [CentOS CI](https://jenkins-fedora-coreos.apps.ci.centos.org)
-(though note anonymous view is blocked by default).
+(though note anonymous view is blocked by default). Its raw
+build output can be seen in the
+[build browser](https://builds.coreos.fedoraproject.org/browser)
+(but note that the latest ***supported*** version of FCOS must
+be downloaded from
+[the official page](https://getfedora.org/en/coreos/download/)).
 
 To operate Jenkins (or more generally to access the
 production namespace), you must have access to the cluster
