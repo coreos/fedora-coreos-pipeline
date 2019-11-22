@@ -79,7 +79,8 @@ properties([
     buildDiscarder(logRotator(
         numToKeepStr: '60',
         artifactNumToKeepStr: '3'
-    ))
+    )),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 currentBuild.description = "[${params.STREAM}] Running"
