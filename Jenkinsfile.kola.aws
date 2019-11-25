@@ -71,7 +71,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
           archiveArtifacts "kola_tmp.tar.xz"
         }
 
-        def report = readJSON file: "_kola_temp/aws-latest/reports/report.json"
+        def report = readJSON file: "tmp/kola/reports/report.json"
         if (report["result"] != "PASS") {
           currentBuild.result = 'FAILURE'
           return
