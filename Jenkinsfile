@@ -129,6 +129,8 @@ node {
     sh("rm -vf ${tmpPath}")
 }
 
+echo "Final podspec: ${pod}"
+
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
 
