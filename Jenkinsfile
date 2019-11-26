@@ -36,6 +36,13 @@ node {
 // Share with the Fedora testing account so we can test it afterwards
 FEDORA_AWS_TESTING_USER_ID = "013116697141"
 
+def coreos_assembler_image
+if (official) {
+    coreos_assembler_image = "coreos-assembler:master"
+} else {
+    coreos_assembler_image = "${developer_prefix}-coreos-assembler:master"
+}
+
 properties([
     pipelineTriggers([]),
     parameters([
@@ -63,7 +70,11 @@ properties([
       choice(name: 'AWS_REPLICATION',
              choices: (['false', 'true']),
              defaultValue: 'false',
-             description: 'Force AWS AMI replication for non-production')
+             description: 'Force AWS AMI replication for non-production'),
+      string(name: 'COREOS_ASSEMBLER_IMAGE',
+             description: 'Override coreos-assembler image to use',
+             defaultValue: "${coreos_assembler_image}",
+             trim: true),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '60',
@@ -88,11 +99,7 @@ cosa_memory_request_mb = cosa_memory_request_mb as Integer
 
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
-if (official) {
-    pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
-} else {
-    pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "${developer_prefix}-coreos-assembler:master")
-}
+pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
 
 def podYaml = readYaml(text: pod);
 // And the KVM selector
