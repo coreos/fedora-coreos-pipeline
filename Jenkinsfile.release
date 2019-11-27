@@ -42,6 +42,25 @@ pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
 
+aws_regions = [
+    "ap-northeast-1",
+    "ap-northeast-2",
+    "ap-south-1",
+    "ap-southeast-1",
+    "ap-southeast-2",
+    "ca-central-1",
+    "eu-central-1",
+    "eu-north-1",
+    "eu-west-1",
+    "eu-west-2",
+    "eu-west-3",
+    "sa-east-1",
+    "us-east-1",
+    "us-east-2",
+    "us-west-1",
+    "us-west-2"
+]
+
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultContainer: 'jnlp') {
     node('coreos-assembler') { container('coreos-assembler') {
         if (params.AWS_REPLICATION == 'true') {
@@ -53,6 +72,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
             // only modifies the meta.json
             stage('Replicate AWS AMI') {
                 s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+                def aws_regions_arg = aws_regions.join(" ")
                 // TODO: Once buildprep supports pulling specific builds
                 // operate on the specific build rather than the most
                 // recent build
@@ -60,7 +80,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                 coreos-assembler init https://github.com/coreos/fedora-coreos-config
                 coreos-assembler buildprep s3://${s3_stream_dir}/builds
-                coreos-assembler aws-replicate --build=${params.VERSION}
+                coreos-assembler aws-replicate --build=${params.VERSION} --regions ${aws_regions_arg}
                 git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
                 /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
                 coreos-assembler buildupload --skip-builds-json s3 --acl=public-read ${s3_stream_dir}/builds
