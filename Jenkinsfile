@@ -303,6 +303,12 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod, defaultCon
                 """)
             }
 
+            stage('Build Azure') {
+                utils.shwrap("""
+                coreos-assembler buildextend-azure
+                """)
+            }
+
             stage('Build Openstack') {
                 utils.shwrap("""
                 coreos-assembler buildextend-openstack
