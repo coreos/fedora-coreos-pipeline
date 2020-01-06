@@ -261,17 +261,17 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
             }
         }
 
-      //if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-      //    stage('Sign OSTree') {
-      //        utils.shwrap("""
-      //        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-      //        cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
-      //            --extra-fedmsg-keys stream=${params.STREAM} \
-      //            --ostree --gpgkeypath /etc/pki/rpm-gpg \
-      //            --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
-      //        """)
-      //    }
-      //}
+        if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            stage('Sign OSTree') {
+                utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --ostree --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
+                """)
+            }
+        }
 
         stage('Build QEMU') {
             utils.shwrap("""
@@ -403,17 +403,17 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
             }
         }
 
-      //if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-      //    stage('Sign Images') {
-      //        utils.shwrap("""
-      //        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-      //        cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
-      //            --extra-fedmsg-keys stream=${params.STREAM} \
-      //            --images --gpgkeypath /etc/pki/rpm-gpg \
-      //            --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
-      //        """)
-      //    }
-      //}
+        if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            stage('Sign Images') {
+                utils.shwrap("""
+                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --images --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
+                """)
+            }
+        }
 
         // Now that the metadata is uploaded go ahead and kick off some tests
         if (!params.MINIMAL && s3_stream_dir &&
