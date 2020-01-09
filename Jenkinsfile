@@ -33,6 +33,21 @@ node {
     }
 }
 
+// Parse and handle the result of Kola
+boolean checkKolaSuccess(currentBuild) {
+    // archive the image if the tests failed
+    def report = readJSON file: "tmp/kola/reports/report.json"
+    def result = report["result"]
+    print("kola result: ${result}")
+    if (result != "PASS") {
+        utils.shwrap("coreos-assembler compress --compressor xz")
+        archiveArtifacts "builds/latest/**/*.qcow2.xz"
+        currentBuild.result = 'FAILURE'
+        return false
+    }
+    return true
+}
+
 // Share with the Fedora testing account so we can test it afterwards
 FEDORA_AWS_TESTING_USER_ID = "013116697141"
 
@@ -282,6 +297,17 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
+        stage('Kola:QEMU basic') {
+            utils.shwrap("""
+            cosa kola run --basic-qemu-scenarios || :
+            tar -cf - tmp/kola/ | xz -c9 > kola-basic.tar.xz
+            """)
+            archiveArtifacts "kola-basic.tar.xz"
+        }
+        if (!checkKolaSuccess(currentBuild)) {
+            return
+        }
+
         stage('Kola:QEMU') {
             // leave 512M for overhead; VMs are 1G each
             def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
@@ -291,13 +317,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
             archiveArtifacts "_kola_temp.tar.xz"
         }
-
-        // archive the image if the tests failed
-        def report = readJSON file: "tmp/kola/reports/report.json"
-        if (report["result"] != "PASS") {
-            utils.shwrap("coreos-assembler compress --compressor xz")
-            archiveArtifacts "builds/latest/**/*.qcow2.xz"
-            currentBuild.result = 'FAILURE'
+        if (!checkKolaSuccess(currentBuild)) {
             return
         }
 
