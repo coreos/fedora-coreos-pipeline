@@ -229,7 +229,7 @@ podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
             }
 
             def force = params.FORCE ? "--force" : ""
-            def version
+            def version = ""
             if (params.VERSION) {
                 version = "--version ${params.VERSION}"
             } else if (official) {
