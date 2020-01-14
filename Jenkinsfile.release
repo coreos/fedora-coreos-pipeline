@@ -28,17 +28,23 @@ properties([
       // is non-trivial
       choice(name: 'AWS_REPLICATION',
              choices: (['true', 'false']),
-             description: 'Force AWS AMI replication')
+             description: 'Force AWS AMI replication'),
+      string(name: 'COREOS_ASSEMBLER_IMAGE',
+             description: 'Override coreos-assembler image to use',
+             defaultValue: "coreos-assembler:master",
+             trim: true)
     ])
 ])
 
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
 // substitute the right COSA image into the pod definition before spawning it
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
+pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
 
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
+
+echo "Final podspec: ${pod}"
 
 podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
     node('coreos-assembler') { container('coreos-assembler') {
