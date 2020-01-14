@@ -27,8 +27,11 @@ pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
 
-podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
-    node('coreos-assembler') { container('coreos-assembler') {
+// use a unique label to force Kubernetes to provision a separate pod per run
+def pod_label = "cosa-${UUID.randomUUID().toString()}"
+
+podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
+    node(pod_label) { container('coreos-assembler') {
         stage('Stream Metadata' ) {
             def gopath = "${env.WORKSPACE}" + "/go/"
             def gocache = "${env.WORKSPACE}" + "/gocache/"

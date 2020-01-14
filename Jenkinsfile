@@ -126,8 +126,11 @@ node {
 
 echo "Final podspec: ${pod}"
 
-podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
-    node('coreos-assembler') { container('coreos-assembler') {
+// use a unique label to force Kubernetes to provision a separate pod per run
+def pod_label = "cosa-${UUID.randomUUID().toString()}"
+
+podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
+    node(pod_label) { container('coreos-assembler') {
 
         // declare this early so we can use it in Slack
         def newBuildID
