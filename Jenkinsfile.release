@@ -46,8 +46,11 @@ pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
 
 echo "Final podspec: ${pod}"
 
-podTemplate(cloud: 'openshift', label: 'coreos-assembler', yaml: pod) {
-    node('coreos-assembler') { container('coreos-assembler') {
+// use a unique label to force Kubernetes to provision a separate pod per run
+def pod_label = "cosa-${UUID.randomUUID().toString()}"
+
+podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
+    node(pod_label) { container('coreos-assembler') {
         if (params.AWS_REPLICATION == 'true') {
             // Replicate the newly uploaded AMI to other regions. Intentionally
             // split out from the 'Upload AWS' stage to allow for tests to be added
