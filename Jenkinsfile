@@ -34,7 +34,7 @@ node {
 }
 
 // Parse and handle the result of Kola
-boolean checkKolaSuccess(currentBuild) {
+boolean checkKolaSuccess(utils, currentBuild) {
     // archive the image if the tests failed
     def report = readJSON file: "tmp/kola/reports/report.json"
     def result = report["result"]
@@ -304,7 +304,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
             archiveArtifacts "kola-basic.tar.xz"
         }
-        if (!checkKolaSuccess(currentBuild)) {
+        if (!checkKolaSuccess(utils, currentBuild)) {
             return
         }
 
@@ -317,7 +317,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
             archiveArtifacts "_kola_temp.tar.xz"
         }
-        if (!checkKolaSuccess(currentBuild)) {
+        if (!checkKolaSuccess(utils, currentBuild)) {
             return
         }
 
