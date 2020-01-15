@@ -299,7 +299,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
         stage('Kola:QEMU basic') {
             utils.shwrap("""
-            cosa kola run --basic-qemu-scenarios || :
+            cosa kola run --basic-qemu-scenarios --no-test-exit-error
             tar -cf - tmp/kola/ | xz -c9 > kola-basic.tar.xz
             """)
             archiveArtifacts "kola-basic.tar.xz"
@@ -312,7 +312,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // leave 512M for overhead; VMs are 1G each
             def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
             utils.shwrap("""
-            coreos-assembler kola run -- --parallel ${parallel} || :
+            coreos-assembler kola run --parallel ${parallel} --no-test-exit-error
             tar -cf - tmp/kola/ | xz -c9 > _kola_temp.tar.xz
             """)
             archiveArtifacts "_kola_temp.tar.xz"
