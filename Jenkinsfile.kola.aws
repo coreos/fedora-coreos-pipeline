@@ -40,6 +40,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         def ami, ami_region
         def no_ami = false
 
+        def meta_json
         stage('Fetch Metadata') {
             utils.shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
@@ -48,7 +49,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
 
             def basearch = utils.shwrap_capture("coreos-assembler basearch")
-            def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
+            meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
             if (meta.amis.size() > 0) {
                 ami = meta['amis'][0]['hvm']
@@ -64,20 +65,33 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
           return
         }
 
-        stage('AWS Kola Run') {
-          utils.shwrap("""
-          export AWS_CONFIG_FILE=\${AWS_FCOS_KOLA_BOT_CONFIG}
-          # use `cosa kola` here since it knows about blacklisted tests
-          cosa kola -- run -p aws --aws-ami ${ami} --aws-region ${ami_region} -b fcos -j 5 || :
-          tar -cf - tmp/kola | xz -c9 > kola_tmp.tar.xz
-          """)
-          archiveArtifacts "kola_tmp.tar.xz"
-        }
-
-        def report = readJSON file: "tmp/kola/reports/report.json"
-        if (report["result"] != "PASS") {
-          currentBuild.result = 'FAILURE'
-          return
+        stage('Kola') {
+            parallel aws: {
+                stage('Kola:AWS') {
+                  utils.shwrap("""
+                  export AWS_CONFIG_FILE=\${AWS_FCOS_KOLA_BOT_CONFIG}
+                  # use `cosa kola` here since it knows about blacklisted tests
+                  cosa kola run -p aws --aws-ami ${ami} --aws-region ${ami_region} -b fcos -j 5 --no-test-exit-error
+                  tar -cf - tmp/kola | xz -c9 > kola-run.tar.xz
+                  """)
+                  archiveArtifacts "kola-run.tar.xz"
+                }
+                if (!utils.checkKolaSuccess("tmp/kola", currentBuild)) {
+                    return
+                }
+            },
+            aws_upgrade: {
+                stage('Kola:AWS upgrade') {
+                    utils.shwrap("""
+                    coreos-assembler kola --upgrades -p=aws --aws-region=${ami_region} --no-test-exit-error
+                    tar -cf - tmp/kola/ | xz -c9 > kola-run-upgrade.tar.xz
+                    """)
+                    archiveArtifacts "kola-run-upgrade.tar.xz"
+                }
+                if (!utils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+                    return
+                }
+            }
         }
     }}
 }

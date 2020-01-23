@@ -33,21 +33,6 @@ node {
     }
 }
 
-// Parse and handle the result of Kola
-boolean checkKolaSuccess(utils, currentBuild) {
-    // archive the image if the tests failed
-    def report = readJSON file: "tmp/kola/reports/report.json"
-    def result = report["result"]
-    print("kola result: ${result}")
-    if (result != "PASS") {
-        utils.shwrap("coreos-assembler compress --compressor xz")
-        archiveArtifacts "builds/latest/**/*.qcow2.xz"
-        currentBuild.result = 'FAILURE'
-        return false
-    }
-    return true
-}
-
 // Share with the Fedora testing account so we can test it afterwards
 FEDORA_AWS_TESTING_USER_ID = "013116697141"
 
@@ -259,6 +244,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
+        def meta_json
         def buildID = utils.shwrap_capture("readlink builds/latest")
         if (prevBuildID == buildID) {
             currentBuild.result = 'SUCCESS'
@@ -267,11 +253,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         } else {
             newBuildID = buildID
             currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
+            meta_json = "builds/${newBuildID}/${basearch}/meta.json"
 
             // and insert the parent info into meta.json so we can display it in
             // the release browser and for sanity checking
             if (parent_commit && parent_version) {
-                def meta_json = "builds/${newBuildID}/${basearch}/meta.json"
                 def meta = readJSON file: meta_json
                 meta["fedora-coreos.parent-version"] = parent_version
                 meta["fedora-coreos.parent-commit"] = parent_commit
@@ -300,11 +286,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         stage('Kola:QEMU basic') {
             utils.shwrap("""
             cosa kola run --basic-qemu-scenarios --no-test-exit-error
-            tar -cf - tmp/kola/ | xz -c9 > kola-basic.tar.xz
+            tar -cf - tmp/kola/ | xz -c9 > kola-run-basic.tar.xz
             """)
-            archiveArtifacts "kola-basic.tar.xz"
+            archiveArtifacts "kola-run-basic.tar.xz"
         }
-        if (!checkKolaSuccess(utils, currentBuild)) {
+        if (!utils.checkKolaSuccess("tmp/kola", currentBuild)) {
             return
         }
 
@@ -313,11 +299,22 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
             utils.shwrap("""
             coreos-assembler kola run --parallel ${parallel} --no-test-exit-error
-            tar -cf - tmp/kola/ | xz -c9 > _kola_temp.tar.xz
+            tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
             """)
-            archiveArtifacts "_kola_temp.tar.xz"
+            archiveArtifacts "kola-run.tar.xz"
         }
-        if (!checkKolaSuccess(utils, currentBuild)) {
+        if (!utils.checkKolaSuccess("tmp/kola", currentBuild)) {
+            return
+        }
+
+        stage('Kola:QEMU upgrade') {
+            utils.shwrap("""
+            coreos-assembler kola --upgrades --no-test-exit-error
+            tar -cf - tmp/kola/ | xz -c9 > kola-run-upgrade.tar.xz
+            """)
+            archiveArtifacts "kola-run-upgrade.tar.xz"
+        }
+        if (!utils.checkKolaSuccess("tmp/kola", currentBuild)) {
             return
         }
 
