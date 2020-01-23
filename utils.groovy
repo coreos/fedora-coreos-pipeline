@@ -43,6 +43,21 @@ def path_exists(path) {
     return shwrap_rc("test -e ${path}") == 0
 }
 
+// Parse and handle the result of Kola
+boolean checkKolaSuccess(dir, currentBuild) {
+    // archive the image if the tests failed
+    def report = readJSON file: "${dir}/reports/report.json"
+    def result = report["result"]
+    print("kola result: ${result}")
+    if (result != "PASS" && report["platform"] == "qemu-unpriv") {
+        shwrap("coreos-assembler compress --compressor xz")
+        archiveArtifacts "builds/latest/**/*.qcow2.xz"
+        currentBuild.result = 'FAILURE'
+        return false
+    }
+    return true
+}
+
 def aws_s3_cp_allow_noent(src, dest) {
     // see similar code in `cosa buildprep`
     shwrap("""
