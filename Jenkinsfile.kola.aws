@@ -83,6 +83,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             aws_upgrade: {
                 stage('Kola:AWS upgrade') {
                     utils.shwrap("""
+                    export AWS_CONFIG_FILE=\${AWS_FCOS_KOLA_BOT_CONFIG}
                     coreos-assembler kola --upgrades -p=aws --aws-region=${ami_region} --no-test-exit-error
                     tar -cf - tmp/kola/ | xz -c9 > kola-run-upgrade.tar.xz
                     """)
