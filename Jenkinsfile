@@ -310,11 +310,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         stage('Kola:QEMU upgrade') {
             utils.shwrap("""
             coreos-assembler kola --upgrades --no-test-exit-error
-            tar -cf - tmp/kola/ | xz -c9 > kola-run-upgrade.tar.xz
+            tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
             """)
             archiveArtifacts "kola-run-upgrade.tar.xz"
         }
-        if (!utils.checkKolaSuccess("tmp/kola", currentBuild)) {
+        if (!utils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
             return
         }
 
