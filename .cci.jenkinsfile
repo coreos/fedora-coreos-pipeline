@@ -1,0 +1,12 @@
+@Library('github.com/coreos/coreos-ci-lib@master') _
+
+node {
+    checkout scm
+
+    stage("Test") {
+        // for now, just sanity check all the manifests
+        coreos.shwrap("""
+        find manifests/ -iname '*.yaml' | xargs -n 1 oc create --dry-run -f
+        """)
+    }
+}
