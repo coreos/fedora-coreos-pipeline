@@ -77,8 +77,6 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-currentBuild.description = "[${params.STREAM}] Running"
-
 // Note the supermin VM just uses 2G. The really hungry part is xz, which
 // without lots of memory takes lots of time. For now we just hardcode these
 // here; we can look into making them configurable through the template if
@@ -129,7 +127,14 @@ echo "Final podspec: ${pod}"
 // use a unique label to force Kubernetes to provision a separate pod per run
 def pod_label = "cosa-${UUID.randomUUID().toString()}"
 
-podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
+
+echo "Waiting for build-${params.STREAM} lock"
+currentBuild.description = "[${params.STREAM}] Waiting"
+
+lock(resource: "build-${params.STREAM}") {
+    currentBuild.description = "[${params.STREAM}] Running"
+
+    podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
 
         // declare this early so we can use it in Slack
@@ -503,4 +508,4 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             }
         }
     }}
-}
+}}
