@@ -220,6 +220,7 @@ objects:
         git:
           uri: ${PIPELINE_REPO_URL}
           ref: ${PIPELINE_REPO_REF}
+      runPolicy: Parallel
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
