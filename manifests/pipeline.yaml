@@ -323,6 +323,7 @@ objects:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile.release
+      runPolicy: Parallel
 
   ### FEDORA COREOS STREAM PIPELINE ###
 

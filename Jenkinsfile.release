@@ -49,6 +49,10 @@ echo "Final podspec: ${pod}"
 // use a unique label to force Kubernetes to provision a separate pod per run
 def pod_label = "cosa-${UUID.randomUUID().toString()}"
 
+// We just lock here out of an abundance of caution in case somehow two release
+// jobs run for the same stream, but that really shouldn't happen. Anyway, if it
+// *does*, this makes sure they're run serially.
+lock(resource: "release-${params.STREAM}") {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
         if (params.AWS_REPLICATION == 'true') {
@@ -88,4 +92,4 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
           """)
         }
     }}
-}
+}}
