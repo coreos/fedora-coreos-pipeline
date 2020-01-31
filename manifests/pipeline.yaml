@@ -366,3 +366,4 @@ objects:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile.kola.aws
+      runPolicy: Parallel
