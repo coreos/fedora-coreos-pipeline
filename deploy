@@ -136,9 +136,10 @@ def process_template(args):
     if not args.official:
         params += [f'DEVELOPER_PREFIX={args.prefix}']
     if args.pipeline:
-        params += params_from_git_refspec(args.pipeline, 'PIPELINE_REPO')
+        params += params_from_git_refspec(args.pipeline, 'JENKINS_S2I')
+        params += params_from_git_refspec(args.pipeline, 'JENKINS_JOBS')
     if args.config:
-        params += params_from_git_refspec(args.config, 'PIPELINE_FCOS_CONFIG')
+        params += params_from_git_refspec(args.config, 'FCOS_CONFIG')
     if args.bucket:
         params += [f'S3_BUCKET={args.bucket}']
     if args.cosa_img:

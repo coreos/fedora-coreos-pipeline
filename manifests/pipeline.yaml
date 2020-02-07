@@ -15,20 +15,26 @@ metadata:
     tags: fcos,jenkins,fedora
   name: fedora-coreos
 parameters:
-  - description: Git source URI for pipeline Jenkinsfile
-    name: PIPELINE_REPO_URL
+  - description: Git source URI for Jenkins S2I
+    name: JENKINS_S2I_URL
     value: https://github.com/coreos/fedora-coreos-pipeline
-  - description: Git branch/tag reference for pipeline Jenkinsfile
-    name: PIPELINE_REPO_REF
+  - description: Git branch/tag reference for Jenkins S2I
+    name: JENKINS_S2I_REF
+    value: master
+  - description: Git source URI for Jenkins jobs
+    name: JENKINS_JOBS_URL
+    value: https://github.com/coreos/fedora-coreos-pipeline
+  - description: Git branch/tag reference for Jenkins jobs
+    name: JENKINS_JOBS_REF
     value: master
   - description: Prefix to prepend to resources
     name: DEVELOPER_PREFIX
     value:
   - description: Git source URI for FCOS config
-    name: PIPELINE_FCOS_CONFIG_URL
+    name: FCOS_CONFIG_URL
     value: https://github.com/coreos/fedora-coreos-config
   - description: Git branch/tag reference for FCOS config
-    name: PIPELINE_FCOS_CONFIG_REF
+    name: FCOS_CONFIG_REF
     value: # empty -> based on stream
   - description: Size of the PVC to create
     name: PVC_SIZE
@@ -83,8 +89,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_S2I_URL}
+          ref: ${JENKINS_S2I_REF}
         contextDir: jenkins/master
       strategy:
         type: Source
@@ -174,8 +180,8 @@ objects:
       # https://docs.okd.io/latest/dev_guide/builds/build_strategies.html#mapping-buildconfig-jenkins
       annotations:
         coreos.com/deploy-default: "true"
-        coreos.com/source-config-url: ${PIPELINE_FCOS_CONFIG_URL}
-        coreos.com/source-config-ref: ${PIPELINE_FCOS_CONFIG_REF}
+        coreos.com/source-config-url: ${FCOS_CONFIG_URL}
+        coreos.com/source-config-ref: ${FCOS_CONFIG_REF}
         coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
         coreos.com/s3-bucket: ${S3_BUCKET}
         coreos.com/kvm-selector: ${KVM_SELECTOR}
@@ -185,8 +191,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       runPolicy: Parallel
       strategy:
         jenkinsPipelineStrategy:
@@ -207,8 +213,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
@@ -233,8 +239,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
@@ -264,8 +270,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
@@ -284,8 +290,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
@@ -308,8 +314,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
@@ -327,8 +333,8 @@ objects:
       source:
         type: Git
         git:
-          uri: ${PIPELINE_REPO_URL}
-          ref: ${PIPELINE_REPO_REF}
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
       strategy:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
