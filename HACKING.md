@@ -315,7 +315,7 @@ one can use to make this smaller if you do not have enough space. E.g.
 We can now start a build of the Jenkins master:
 
 ```
-oc start-build --follow fedora-coreos-jenkins
+oc start-build --follow jenkins
 ```
 
 Once the Jenkins master image is built, Jenkins should start up (verify
