@@ -88,6 +88,8 @@ def parse_args():
                              "(implies --all)")
     parser.add_argument("--all", action='store_true',
                         help="Whether to update all resources")
+    parser.add_argument("--dry-run", action='store_true',
+                        help="Only print what would happen")
     parser.add_argument("--prefix", help="Developer prefix for resources",
                         default=get_username())
     parser.add_argument("--start", action='store_true',
@@ -163,6 +165,9 @@ def update_resources(args, resources):
         if args.all or is_default_resource(resource):
             action = resource_action(resource)
             if action == 'skip':
+                continue
+            if args.dry_run:
+                print(f"Would {action} {resource['kind'].lower()} {resource['metadata']['name']}")
                 continue
             out = subprocess.run(['oc', action, '--filename', '-'],
                                  input=json.dumps(resource), encoding='utf-8',
