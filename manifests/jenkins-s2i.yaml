@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Template
+labels:
+  app: fedora-coreos
+  template: fedora-coreos-jenkins-s2i-template
+metadata:
+  annotations:
+    description: |-
+      Jenkins S2I builder for Fedora CoreOS.
+    iconClass: icon-jenkins
+    openshift.io/display-name: Fedora CoreOS Jenkins S2I
+    openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
+    openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
+    openshift.io/provider-display-name: Fedora CoreOS
+    tags: fcos,jenkins,fedora
+  name: fedora-coreos-jenkins-s2i
+parameters:
+  - description: Git source URI for Jenkins S2I
+    name: JENKINS_S2I_URL
+    value: https://github.com/coreos/fedora-coreos-pipeline
+  - description: Git branch/tag reference for Jenkins S2I
+    name: JENKINS_S2I_REF
+    value: master
+  - description: Git source URI for Jenkins jobs
+    name: JENKINS_JOBS_URL
+    value: https://github.com/coreos/fedora-coreos-pipeline
+  - description: Git branch/tag reference for Jenkins jobs
+    name: JENKINS_JOBS_REF
+    value: master
+
+objects:
+
+  ### JENKINS MASTER ###
+
+  # use our own "gated" imagestream for the Jenkins master so we can test new
+  # images before upgrading
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-s2i
+      annotations:
+        coreos.com/deploy-default: "true"
+    spec:
+      tags:
+        - name: stable
+          from:
+            kind: DockerImage
+            # 2.204.1
+            name: docker.io/openshift/jenkins-2-centos7@sha256:9b75175c6feabfac03f39af5342b31cb4931b53ad9d077d843bb2f1e2d9eb408
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins
+      annotations:
+        coreos.com/deploy-default: "true"
+  - kind: BuildConfig
+    apiVersion: v1
+    metadata:
+      name: jenkins
+      annotations:
+        coreos.com/deploy-default: "true"
+        # These annotations will allow Jenkins to know from where to seed its
+        # jobs once it comes up. Note that it can be from a different git repo
+        # than where the S2I repo is defined.
+        coreos.com/jenkins-jobs-url: ${JENKINS_JOBS_URL}
+        coreos.com/jenkins-jobs-ref: ${JENKINS_JOBS_REF}
+    # Note no triggers: we don't want e.g. git pushes/config changes to restart
+    # Jenkins. Let's just require manual restarts here. XXX: Should investigate
+    # if there's an easy way to auto-redeploy during downtimes.
+    spec:
+      source:
+        type: Git
+        git:
+          uri: ${JENKINS_S2I_URL}
+          ref: ${JENKINS_S2I_REF}
+        contextDir: jenkins/master
+      strategy:
+        type: Source
+        sourceStrategy:
+          from:
+            kind: ImageStreamTag
+            name: jenkins-s2i:stable
+          forcePull: true
+      output:
+        to:
+          kind: ImageStreamTag
+          name: jenkins:2
+      successfulBuildsHistoryLimit: 2
+      failedBuildsHistoryLimit: 2
+
+  ### JENKINS SLAVE ###
+
+  # keep a local copy of the Jenkins slave image so we're not constantly pulling
+  # it each time from docker.io
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-slave-base-centos7
+      annotations:
+        coreos.com/deploy-default: "true"
+    spec:
+      lookupPolicy:
+        # this allows e.g. the pipeline to directly reference the imagestream
+        local: true
+      tags:
+        - name: latest
+          from:
+            kind: DockerImage
+            # target :latest for now
+            name: docker.io/openshift/jenkins-slave-base-centos7:latest
+          importPolicy:
+            scheduled: true

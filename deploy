@@ -154,13 +154,19 @@ def process_template(args):
         print(f"  {k}={v}")
     print()
 
-    def gen_param_args():
-        return [q for k, v in params.items() for q in ['--param', f'{k}={v}']]
+    def gen_param_args(selected):
+        selected_params = {(k, v) for k, v in params.items() if k in selected}
+        return [q for k, v in selected_params for q in ['--param', f'{k}={v}']]
 
     resources = []
-    for template in ['pipeline.yaml']:
+    for template in ['pipeline.yaml', 'jenkins-s2i.yaml']:
+        # we only want to pass the params which each template actually
+        # supports, so filter it down for this specific template
+        with open(f'manifests/{template}') as f:
+            t = yaml.safe_load(f)
+            tparams = [p['name'] for p in t.get('parameters', [])]
         # and generate the --param FOO=bar ... args for this template
-        param_args = gen_param_args()
+        param_args = gen_param_args(tparams)
         j = json.loads(subprocess.check_output(
             ['oc', 'process', '--filename', f'manifests/{template}'] + param_args))
         resources += j['items']
