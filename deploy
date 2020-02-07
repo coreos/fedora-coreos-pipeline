@@ -132,37 +132,44 @@ def get_username():
 
 
 def process_template(args):
-    params = []
+    params = {}
     if not args.official:
-        params += [f'DEVELOPER_PREFIX={args.prefix}']
+        params['DEVELOPER_PREFIX'] = args.prefix
     if args.pipeline:
-        params += params_from_git_refspec(args.pipeline, 'JENKINS_S2I')
-        params += params_from_git_refspec(args.pipeline, 'JENKINS_JOBS')
+        params.update(params_from_git_refspec(args.pipeline, 'JENKINS_S2I'))
+        params.update(params_from_git_refspec(args.pipeline, 'JENKINS_JOBS'))
     if args.config:
-        params += params_from_git_refspec(args.config, 'FCOS_CONFIG')
+        params.update(params_from_git_refspec(args.config, 'FCOS_CONFIG'))
     if args.bucket:
-        params += [f'S3_BUCKET={args.bucket}']
+        params['S3_BUCKET'] = args.bucket
     if args.cosa_img:
-        params += [f'COREOS_ASSEMBLER_IMAGE={args.cosa_img}']
+        params['COREOS_ASSEMBLER_IMAGE'] = args.cosa_img
     if args.pvc_size:
-        params += [f'PVC_SIZE={args.pvc_size}']
+        params['PVC_SIZE'] = args.pvc_size
     if args.kvm_selector:
-        params += [f'KVM_SELECTOR={args.kvm_selector}']
+        params['KVM_SELECTOR'] = args.kvm_selector
 
     print("Parameters:")
-    for param in params:
-        print(f"  {param}")
-    params = [q for p in params for q in ['--param', p]]
+    for k, v in params.items():
+        print(f"  {k}={v}")
     print()
 
-    resources = subprocess.check_output(
-        ['oc', 'process', '--filename', 'manifests/pipeline.yaml'] + params)
-    return json.loads(resources)
+    def gen_param_args():
+        return [q for k, v in params.items() for q in ['--param', f'{k}={v}']]
+
+    resources = []
+    for template in ['pipeline.yaml']:
+        # and generate the --param FOO=bar ... args for this template
+        param_args = gen_param_args()
+        j = json.loads(subprocess.check_output(
+            ['oc', 'process', '--filename', f'manifests/{template}'] + param_args))
+        resources += j['items']
+    return resources
 
 
 def update_resources(args, resources):
     print("Updating:")
-    for resource in resources['items']:
+    for resource in resources:
         if args.all or is_default_resource(resource):
             action = resource_action(resource)
             if action == 'skip':
@@ -204,7 +211,7 @@ def resource_exists(resource):
 def delete_developer_resources(args, resources):
     # only delete prefixed resources
     print("Deleting:")
-    for resource in resources['items']:
+    for resource in resources:
         if resource['metadata']['name'].startswith(args.prefix):
             out = subprocess.run(['oc', 'delete', '--filename', '-'],
                                  input=json.dumps(resource), encoding='utf-8',
@@ -215,8 +222,8 @@ def delete_developer_resources(args, resources):
 
 def params_from_git_refspec(refspec, param_prefix):
     url, ref = parse_git_refspec(refspec)
-    return [f'{param_prefix}_URL={url}',
-            f'{param_prefix}_REF={ref}']
+    return {f'{param_prefix}_URL': url,
+            f'{param_prefix}_REF': ref}
 
 
 def parse_git_refspec(refspec):
