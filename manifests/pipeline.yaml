@@ -43,7 +43,7 @@ parameters:
     value: fcos-builds
   - description: Whether to use KVM device plugin or legacy OCI KVM hook
     name: KVM_SELECTOR
-    value: kvm-device-plugin
+    value: legacy-oci-kvm-hook
 
 objects:
 
