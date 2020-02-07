@@ -242,6 +242,12 @@ reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
 
+Now, create the Jenkins configmap:
+
+```
+oc create configmap jenkins-casc-cfg --from=file=jenkins/config
+```
+
 ### Creating the pipeline
 
 If working on the production pipeline, you may simply do:

@@ -1,0 +1,14 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: slack-token
+            secret: ${slack-api-token/token}
+            description: Slack API token
+unclassified:
+  slackNotifier:
+    teamDomain: coreos
+    tokenCredentialId: slack-token
+    room: "#jenkins-coreos"
