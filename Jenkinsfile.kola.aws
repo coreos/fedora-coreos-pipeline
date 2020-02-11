@@ -44,11 +44,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         stage('Fetch Metadata') {
             utils.shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-            coreos-assembler init https://github.com/coreos/fedora-coreos-config
-            coreos-assembler buildprep --ostree --build=${params.VERSION} s3://${params.S3_STREAM_DIR}/builds
+            cosa init https://github.com/coreos/fedora-coreos-config
+            cosa buildprep --ostree --build=${params.VERSION} s3://${params.S3_STREAM_DIR}/builds
             """)
 
-            def basearch = utils.shwrap_capture("coreos-assembler basearch")
+            def basearch = utils.shwrap_capture("cosa basearch")
             meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
             if (meta.amis.size() > 0) {
@@ -81,7 +81,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 stage('Kola:AWS upgrade') {
                     utils.shwrap("""
                     export AWS_CONFIG_FILE=\${AWS_FCOS_KOLA_BOT_CONFIG}
-                    coreos-assembler kola --build=${params.VERSION} --upgrades -p=aws --aws-region=${ami_region} --no-test-exit-error
+                    cosa kola --build=${params.VERSION} --upgrades -p=aws --aws-region=${ami_region} --no-test-exit-error
                     tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
                     """)
                     archiveArtifacts "kola-run-upgrade.tar.xz"

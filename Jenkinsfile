@@ -167,7 +167,7 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         def developer_builddir = "/srv/devel/${developer_prefix}/build"
-        def basearch = utils.shwrap_capture("coreos-assembler basearch")
+        def basearch = utils.shwrap_capture("cosa basearch")
 
         stage('Init') {
 
@@ -186,7 +186,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             utils.shwrap("""
-            coreos-assembler init --force --branch ${ref} ${src_config_url}
+            cosa init --force --branch ${ref} ${src_config_url}
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)
@@ -204,18 +204,18 @@ lock(resource: "build-${params.STREAM}") {
             if (s3_stream_dir) {
                 utils.shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                coreos-assembler buildprep s3://${s3_stream_dir}/builds
+                cosa buildprep s3://${s3_stream_dir}/builds
                 """)
                 // also fetch releases.json to get the latest build, but don't error if it doesn't exist
                 utils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
             } else if (!official && utils.path_exists(developer_builddir)) {
                 utils.shwrap("""
-                coreos-assembler buildprep ${developer_builddir}
+                cosa buildprep ${developer_builddir}
                 """)
             }
 
             utils.shwrap("""
-            coreos-assembler fetch
+            cosa fetch
             """)
         }
 
@@ -245,7 +245,7 @@ lock(resource: "build-${params.STREAM}") {
                 version = "--version ${new_version}"
             }
             utils.shwrap("""
-            coreos-assembler build ostree --skip-prune ${force} ${version} ${parent_arg}
+            cosa build ostree --skip-prune ${force} ${version} ${parent_arg}
             """)
         }
 
@@ -284,7 +284,7 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Build QEMU') {
             utils.shwrap("""
-            coreos-assembler buildextend-qemu
+            cosa buildextend-qemu
             """)
         }
 
@@ -303,7 +303,7 @@ lock(resource: "build-${params.STREAM}") {
             // leave 512M for overhead; VMs are 1G each
             def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
             utils.shwrap("""
-            coreos-assembler kola run --parallel ${parallel} --no-test-exit-error
+            cosa kola run --parallel ${parallel} --no-test-exit-error
             tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
             """)
             archiveArtifacts "kola-run.tar.xz"
@@ -314,7 +314,7 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Kola:QEMU upgrade') {
             utils.shwrap("""
-            coreos-assembler kola --upgrades --no-test-exit-error
+            cosa kola --upgrades --no-test-exit-error
             tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
             """)
             archiveArtifacts "kola-run-upgrade.tar.xz"
@@ -326,43 +326,43 @@ lock(resource: "build-${params.STREAM}") {
         if (!params.MINIMAL) {
             stage('Build Metal') {
                 utils.shwrap("""
-                coreos-assembler buildextend-metal
+                cosa buildextend-metal
                 """)
             }
 
             stage('Build Live') {
                 utils.shwrap("""
-                coreos-assembler buildextend-live
+                cosa buildextend-live
                 """)
             }
 
             stage('Build Azure') {
                 utils.shwrap("""
-                coreos-assembler buildextend-azure
+                cosa buildextend-azure
                 """)
             }
 
             stage('Build Openstack') {
                 utils.shwrap("""
-                coreos-assembler buildextend-openstack
+                cosa buildextend-openstack
                 """)
             }
 
             stage('Build Aliyun') {
                 utils.shwrap("""
-                coreos-assembler buildextend-aliyun
+                cosa buildextend-aliyun
                 """)
             }
 
             stage('Build VMware') {
                 utils.shwrap("""
-                coreos-assembler buildextend-vmware
+                cosa buildextend-vmware
                 """)
             }
 
             stage('Build GCE') {
                 utils.shwrap("""
-                coreos-assembler buildextend-gcp
+                cosa buildextend-gcp
                 """)
             }
 
@@ -378,7 +378,7 @@ lock(resource: "build-${params.STREAM}") {
                     // uploading first, and then pointing ore at our uploaded vmdk
                     utils.shwrap("""
                     export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                    coreos-assembler buildextend-aws ${suffix} \
+                    cosa buildextend-aws ${suffix} \
                         --upload \
                         --build=${newBuildID} \
                         --region=us-east-1 \
@@ -394,7 +394,7 @@ lock(resource: "build-${params.STREAM}") {
             def xz_memlimit = cosa_memory_request_mb - 512
             utils.shwrap("""
             export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
-            coreos-assembler compress --compressor xz
+            cosa compress --compressor xz
             """)
 
             // Run the coreos-meta-translator against the most recent build,
@@ -408,7 +408,7 @@ lock(resource: "build-${params.STREAM}") {
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               utils.shwrap("""
               export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-              coreos-assembler buildupload s3 --acl=public-read ${s3_stream_dir}/builds
+              cosa buildupload s3 --acl=public-read ${s3_stream_dir}/builds
               """)
             } else if (!official) {
               // In devel mode without an S3 server, just archive into the PVC
