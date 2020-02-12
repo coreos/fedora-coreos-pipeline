@@ -66,7 +66,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
                 utils.shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa init https://github.com/coreos/fedora-coreos-config
+                cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
                 cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
                 cosa aws-replicate --build=${params.VERSION} --log-level=INFO
                 git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
