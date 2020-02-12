@@ -55,6 +55,14 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 lock(resource: "release-${params.STREAM}") {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
+
+        // Clone the automation repo, which contains helper scripts. In the
+        // future, we'll probably want this either part of the cosa image, or
+        // in a derivative of cosa for pipeline needs.
+        utils.shwrap("""
+        git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
+        """)
+
         if (params.AWS_REPLICATION == 'true') {
             // Replicate the newly uploaded AMI to other regions. Intentionally
             // split out from the 'Upload AWS' stage to allow for tests to be added
@@ -69,7 +77,6 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
                 cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
                 cosa aws-replicate --build=${params.VERSION} --log-level=INFO
-                git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
                 /var/tmp/fcos-releng/coreos-meta-translator/trans.py --build-id ${params.VERSION} --workdir .
                 cosa buildupload --build=${params.VERSION} --skip-builds-json s3 --acl=public-read ${s3_stream_dir}/builds
                 """)
