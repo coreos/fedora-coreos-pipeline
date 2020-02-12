@@ -146,7 +146,7 @@ lock(resource: "build-${params.STREAM}") {
         // future, we'll probably want this either part of the cosa image, or
         // in a derivative of cosa for pipeline needs.
         utils.shwrap("""
-        git clone https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
+        git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
         """)
 
         // this is defined IFF we *should* and we *can* upload to S3
