@@ -1,3 +1,4 @@
+// vim: set syntax=groovy:
 def utils, streams, s3_bucket
 node {
     checkout scm
