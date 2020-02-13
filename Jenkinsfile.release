@@ -63,6 +63,13 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
         """)
 
+        // Buildprep for the build we are interested in
+        utils.shwrap("""
+        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+        cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
+        cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
+        """)
+
         if (params.AWS_REPLICATION == 'true') {
             // Replicate the newly uploaded AMI to other regions. Intentionally
             // split out from the 'Upload AWS' stage to allow for tests to be added
@@ -74,8 +81,6 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
                 utils.shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-                cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
                 cosa aws-replicate --build=${params.VERSION} --log-level=INFO
                 /var/tmp/fcos-releng/coreos-meta-translator/trans.py --build-id ${params.VERSION} --workdir .
                 cosa buildupload --build=${params.VERSION} --skip-builds-json s3 --acl=public-read ${s3_stream_dir}/builds
