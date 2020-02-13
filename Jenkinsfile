@@ -422,6 +422,10 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
+        // These steps interact with Fedora Infrastructure/Releng for
+        // signing of artifacts and importing of OSTree commits. They
+        // must be run after the archive stage because the artifacts
+        // are pulled from their S3 locations.
         if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
             stage('Sign Images') {
                 utils.shwrap("""
@@ -430,6 +434,13 @@ lock(resource: "build-${params.STREAM}") {
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --images --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
+                """)
+            }
+            stage("OSTree Import: Compose Repo") {
+                utils.shwrap("""
+                /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
+                    --build=${newBuildID} --s3=${s3_stream_dir} --repo=compose \
+                    --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
                 """)
             }
         }

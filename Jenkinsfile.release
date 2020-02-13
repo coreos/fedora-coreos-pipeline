@@ -72,6 +72,18 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
         """)
 
+        // For production streams, import the OSTree into the prod
+        // OSTree repo.
+        if ((params.STREAM in streams.production) && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            stage("OSTree Import: Prod Repo") {
+                utils.shwrap("""
+                /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
+                    --build=${params.VERSION} --s3=${s3_stream_dir} --repo=prod \
+                    --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
+                """)
+            }
+        }
+
         if (params.AWS_REPLICATION == 'true') {
             // Replicate the newly uploaded AMI to other regions. Intentionally
             // split out from the 'Upload AWS' stage to allow for tests to be added
