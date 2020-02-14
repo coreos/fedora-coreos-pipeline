@@ -56,6 +56,8 @@ lock(resource: "release-${params.STREAM}") {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
 
+        def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+
         // Clone the automation repo, which contains helper scripts. In the
         // future, we'll probably want this either part of the cosa image, or
         // in a derivative of cosa for pipeline needs.
@@ -78,7 +80,6 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // We have to re-run the coreos-meta-translator as aws-replicate
             // only modifies the meta.json
             stage('Replicate AWS AMI') {
-                s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
                 utils.shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                 cosa aws-replicate --build=${params.VERSION} --log-level=INFO
