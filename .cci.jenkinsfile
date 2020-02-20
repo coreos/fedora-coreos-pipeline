@@ -1,11 +1,11 @@
-@Library('github.com/coreos/coreos-ci-lib@master') _
+// Documentation: https://github.com/coreos/coreos-ci/blob/master/README-upstream-ci.md
 
 node {
     checkout scm
 
     stage("Test") {
         // for now, just sanity check all the manifests
-        coreos.shwrap("""
+        shwrap("""
         find manifests/ -iname '*.yaml' | xargs -n 1 oc create --dry-run -f
         """)
     }
