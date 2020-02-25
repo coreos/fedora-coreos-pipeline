@@ -346,6 +346,12 @@ lock(resource: "build-${params.STREAM}") {
                 cosa buildextend-azure
                 """)
             }
+            
+            stage('Build Exoscale') {
+                utils.shwrap("""
+                cosa buildextend-exoscale
+                """)
+            }
 
             stage('Build Openstack') {
                 utils.shwrap("""
