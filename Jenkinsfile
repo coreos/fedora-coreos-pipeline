@@ -341,6 +341,12 @@ lock(resource: "build-${params.STREAM}") {
                 """)
             }
 
+            stage('Test Live ISO') {
+                utils.shwrap("""
+                cosa kola testiso -S
+                """)
+            }
+
             stage('Build Azure') {
                 utils.shwrap("""
                 cosa buildextend-azure
