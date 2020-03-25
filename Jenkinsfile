@@ -145,7 +145,7 @@ lock(resource: "build-${params.STREAM}") {
         // declare this early so we can use it in Slack
         def newBuildID
 
-        try {
+        try { timeout(time: 240, unit: 'MINUTES') {
 
         // Clone the automation repo, which contains helper scripts. In the
         // future, we'll probably want this either part of the cosa image, or
@@ -515,8 +515,8 @@ lock(resource: "build-${params.STREAM}") {
 
         currentBuild.result = 'SUCCESS'
 
-        // main try {} finishes here
-        } catch (e) {
+        // main timeout and try {} finish here
+        }} catch (e) {
             currentBuild.result = 'FAILURE'
             throw e
         } finally {
