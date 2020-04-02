@@ -345,16 +345,26 @@ lock(resource: "build-${params.STREAM}") {
                 """)
             }
 
-            stage('Test Live ISO') {
-                utils.shwrap("""
-                cosa kola testiso -S
-                """)
-            }
-
             stage('Build Metal (4K Native)') {
                 utils.shwrap("""
                 cosa buildextend-metal4k
                 """)
+            }
+
+            stage('Test Live ISO') {
+                // compress the metal and metal4k images now so that each test
+                // doesn't have to compress them
+                // lower to make sure we don't go over and account for overhead
+                def xz_memlimit = cosa_memory_request_mb - 512
+                utils.shwrap("""
+                export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
+                cosa compress --compressor xz --artifact metal --artifact metal4k
+                """)
+                parallel 512b: {
+                    utils.shwrap("kola testiso -S")
+                }, 4k: {
+                    utils.shwrap("kola testiso -SP --qemu-native-4k")
+                }
             }
 
             stage('Build Azure') {
