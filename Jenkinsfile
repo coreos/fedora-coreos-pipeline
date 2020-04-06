@@ -23,6 +23,7 @@ node {
     src_config_ref = utils.get_pipeline_annotation('source-config-ref')
     s3_bucket = utils.get_pipeline_annotation('s3-bucket')
     kvm_selector = utils.get_pipeline_annotation('kvm-selector')
+    gcp_gs_bucket = utils.get_pipeline_annotation('gcp-gs-bucket')
 
     // sanity check that a valid prefix is provided if in devel mode and drop
     // the trailing '-' in the devel prefix
@@ -413,6 +414,23 @@ lock(resource: "build-${params.STREAM}") {
                         --region=us-east-1 \
                         --bucket s3://${s3_bucket}/ami-import \
                         --grant-user ${FEDORA_AWS_TESTING_USER_ID}
+                    """)
+                }
+            }
+
+            // If there is a config for GCP then we'll upload our image to GCP
+            if (utils.path_exists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
+                stage('Upload GCP') {
+                    utils.shwrap("""
+                    # pick up the project to use from the config
+                    gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
+                    cosa buildextend-gcp \
+                        --build=${newBuildID} \
+                        --upload \
+                        --family fedora-coreos-${params.STREAM} \
+                        --project=\${gcp_project} \
+                        --bucket gs://${gcp_gs_bucket}/image-import \
+                        --json \${GCP_IMAGE_UPLOAD_CONFIG}
                     """)
                 }
             }

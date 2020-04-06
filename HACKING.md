@@ -201,6 +201,29 @@ EOF
 oc create secret generic aws-fcos-kola-bot-config --from-file=config=/path/to/kola-secret
 ```
 
+### [OPTIONAL] Creating GCP credentials configs
+
+If you are in production where we upload images to GCP OR you want to
+test uploading to GCP as part of your pipeline development, you need to
+create a upload credentials for a service account as a secret within OpenShift.
+For more information on creating a service account see
+[the Google Cloud Docs](https://cloud.google.com/iam/docs/creating-managing-service-accounts#creating).
+
+Once you have the json file that represents the credentials for your service account
+from GCP, create the secret in OpenShift:
+
+```
+oc create secret generic gcp-image-upload-config --from-file=config=/path/to/upload-secret
+```
+
+We also have a second GCP config that can be used for running kola tests. If you have a
+single account that you'd like to use for both image uploading and tests you can do that
+assuming they have enough permissions.
+
+```
+oc create secret generic gcp-kola-tests-config --from-file=config=/path/to/kola-secret
+```
+
 ### [OPTIONAL] Allocating S3 storage
 
 If you want to store builds persistently, now is a good time to allocate
