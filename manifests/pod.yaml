@@ -24,6 +24,10 @@ spec:
          value: /.aws-fcos-builds-bot-config/config
        - name: AWS_FCOS_KOLA_BOT_CONFIG
          value: /.aws-fcos-kola-bot-config/config
+       - name: GCP_IMAGE_UPLOAD_CONFIG
+         value: /.gcp-image-upload-config/config
+       - name: GCP_KOLA_TESTS_CONFIG
+         value: /.gcp-kola-tests-config/config
      volumeMounts:
      - name: cache
        mountPath: /srv/
@@ -32,6 +36,12 @@ spec:
        readOnly: true
      - name: aws-fcos-kola-bot-config
        mountPath: /.aws-fcos-kola-bot-config/
+       readOnly: true
+     - name: gcp-image-upload-config
+       mountPath: /.gcp-image-upload-config/
+       readOnly: true
+     - name: gcp-kola-tests-config
+       mountPath: /.gcp-kola-tests-config/
        readOnly: true
      - name: github-token
        mountPath: /.github
@@ -64,6 +74,16 @@ spec:
   - name: aws-fcos-kola-bot-config
     secret:
       secretName: aws-fcos-kola-bot-config
+      optional: true
+  # This secret is used for uploading to GCP
+  - name: gcp-image-upload-config
+    secret:
+      secretName: gcp-image-upload-config
+      optional: true
+  # This secret is used for running GCP kola tests
+  - name: gcp-kola-tests-config
+    secret:
+      secretName: gcp-kola-tests-config
       optional: true
   - name: github-token
     secret:

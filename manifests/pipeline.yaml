@@ -44,6 +44,9 @@ parameters:
   - description: Whether to use KVM device plugin or legacy OCI KVM hook
     name: KVM_SELECTOR
     value: legacy-oci-kvm-hook
+  - description: GCP GS bucket to use for image uploads (or blank for none)
+    name: GCP_GS_BUCKET
+    value: fedora-coreos-cloud-image-uploads
 
 objects:
 
@@ -103,6 +106,7 @@ objects:
         coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
         coreos.com/s3-bucket: ${S3_BUCKET}
         coreos.com/kvm-selector: ${KVM_SELECTOR}
+        coreos.com/gcp-gs-bucket: ${GCP_GS_BUCKET}
     spec:
       # note no triggers: the base pipeline is only ever triggered manually, or
       # by one of the stream-specific pipelines
