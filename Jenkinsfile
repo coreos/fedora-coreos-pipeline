@@ -383,7 +383,7 @@ lock(resource: "build-${params.STREAM}") {
                 """)
             }
 
-            stage('Build GCE') {
+            stage('Build GCP') {
                 utils.shwrap("""
                 cosa buildextend-gcp
                 """)
