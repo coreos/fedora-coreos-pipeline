@@ -424,13 +424,15 @@ lock(resource: "build-${params.STREAM}") {
                     utils.shwrap("""
                     # pick up the project to use from the config
                     gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
+                    today=\$(date +%Y-%m-%d)
                     cosa buildextend-gcp \
                         --build=${newBuildID} \
                         --upload \
                         --family fedora-coreos-${params.STREAM} \
                         --project=\${gcp_project} \
                         --bucket gs://${gcp_gs_bucket}/image-import \
-                        --json \${GCP_IMAGE_UPLOAD_CONFIG}
+                        --json \${GCP_IMAGE_UPLOAD_CONFIG} \
+                        --description=\"Fedora CoreOS, Fedora CoreOS ${params.STREAM}, ${newBuildID}, ${basearch} published on \$today\"
                     """)
                 }
             }
