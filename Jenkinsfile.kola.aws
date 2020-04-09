@@ -20,6 +20,10 @@ properties([
       string(name: 'S3_STREAM_DIR',
              description: 'Fedora CoreOS S3 Stream Directory',
              defaultValue: '',
+             trim: true),
+      string(name: 'COREOS_ASSEMBLER_IMAGE',
+             description: 'Override coreos-assembler image to use',
+             defaultValue: "coreos-assembler:master",
              trim: true)
     ])
 ])
@@ -27,7 +31,7 @@ properties([
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
 // substitute the right COSA image into the pod definition before spawning it
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
+pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
 
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
