@@ -20,5 +20,7 @@ node {
     )
 
     stream = streams.from_branch(change.GIT_BRANCH)
-    streams.build_stream(stream)
+    if (stream != "") {
+        streams.build_stream(stream)
+    }
 }

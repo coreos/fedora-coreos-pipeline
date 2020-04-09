@@ -25,7 +25,9 @@ node {
 
     if (streams.triggered_by_push()) {
         stream = streams.from_branch(change.GIT_BRANCH)
-        streams.build_stream(stream)
+        if (stream != "") {
+            streams.build_stream(stream)
+        }
     } else {
         // cron or manual build: build all mechanical streams
         streams.mechanical.each{ streams.build_stream(it) }
