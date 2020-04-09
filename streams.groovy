@@ -1,18 +1,25 @@
 // Canonical definition of all our streams and their type.
 
 production = ['testing', 'stable' /* , 'next' */]
-development = ['testing-devel', 'next-devel']
-mechanical = ['bodhi-updates' /* , 'bodhi-updates-testing', 'branched', 'rawhide' */]
+development = ['testing-devel' /* , 'next-devel' */]
+mechanical = [/*'bodhi-updates', 'bodhi-updates-testing', 'branched', 'rawhide' */]
+
+all_streams = production + development + mechanical
 
 // Maps a list of streams to a list of GitSCM branches.
 def as_branches(streams) {
     return streams.collect{ [name: "origin/${it}"] }
 }
 
-// Retrieves the stream name from a branch name.
+// Retrieves the stream name from a branch name. Returns "" if branch doesn't
+// correspond to a stream.
 def from_branch(branch) {
     assert branch.startsWith('origin/')
-    return branch['origin/'.length()..-1]
+    stream = branch['origin/'.length()..-1]
+    if (stream in all_streams) {
+        return stream
+    }
+    return ""
 }
 
 // Returns the default trigger for push notifications. This will trigger builds
