@@ -236,10 +236,13 @@ lock(resource: "build-${params.STREAM}") {
             def parent_arg = ""
             if (utils.path_exists("tmp/releases.json")) {
                 def releases = readJSON file: "tmp/releases.json"
-                def commit_obj = releases["releases"][-1]["commits"].find{ commit -> commit["architecture"] == basearch }
-                parent_commit = commit_obj["checksum"]
-                parent_arg = "--parent ${parent_commit}"
-                parent_version = releases["releases"][-1]["version"]
+                // check if there's a previous release we should use as parent
+                if (releases["releases"].size() > 0) {
+                    def commit_obj = releases["releases"][-1]["commits"].find{ commit -> commit["architecture"] == basearch }
+                    parent_commit = commit_obj["checksum"]
+                    parent_arg = "--parent ${parent_commit}"
+                    parent_version = releases["releases"][-1]["version"]
+                }
             }
 
             def force = params.FORCE ? "--force" : ""
