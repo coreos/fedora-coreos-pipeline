@@ -254,7 +254,7 @@ lock(resource: "build-${params.STREAM}") {
                 version = "--version ${new_version}"
             }
             utils.shwrap("""
-            cosa build ostree --skip-prune ${force} ${version} ${parent_arg}
+            cosa build ostree --strict --skip-prune ${force} ${version} ${parent_arg}
             """)
         }
 
