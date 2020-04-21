@@ -221,7 +221,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             utils.shwrap("""
-            cosa fetch
+            cosa fetch --strict
             """)
         }
 
