@@ -1,0 +1,51 @@
+# This seed job simply defines a new pipeline job for each Jenkinsfile found in
+# the jobs/ directory of the target jenkins jobs repo.
+
+security:
+  globalJobDslSecurityConfiguration:
+    # turn off approval for job DSL; we already approve scripts via PR review
+    useScriptSecurity: false
+jobs:
+  - script: |
+      pipelineJob('seed') {
+        definition {
+          cps {
+            sandbox(true)
+            script('''
+              node {
+                // XXX: hack, should put this in coreos-ci-lib
+                sh("curl -LO https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/master/utils.groovy")
+                def utils = load("utils.groovy")
+
+                def url = utils.get_annotation("jenkins", "jenkins-jobs-url")
+                def ref = utils.get_annotation("jenkins", "jenkins-jobs-ref")
+                utils.shwrap("rm -rf source")
+                utils.shwrap("git clone -b ^${ref} ^${url} source")
+
+                findFiles(glob: "source/jobs/*.Jenkinsfile").each { file ->
+                  def split = file.name.split("\\\\.")
+                  assert split[1] == "Jenkinsfile"
+                  def jobName = split[0]
+                  jobDsl scriptText: """
+                    pipelineJob("^${jobName}") {
+                      definition {
+                        cpsScm {
+                          scm {
+                            git {
+                              remote { url("^${url}") }
+                              branches("^${ref}")
+                              extensions { }
+                            }
+                            scriptPath("jobs/^${file.name}")
+                          }
+                        }
+                      }
+                    }
+                  """
+                }
+              }
+            '''.stripIndent())
+          }
+        }
+      }
+      queue('seed')
