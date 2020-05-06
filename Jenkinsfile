@@ -61,6 +61,9 @@ properties([
       booleanParam(name: 'MINIMAL',
                    defaultValue: (official ? false : true),
                    description: 'Whether to only build the OSTree and qemu images'),
+      booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
+                   defaultValue: false,
+                   description: "Don't error out if upgrade tests fail (temporary)"),
       // use a string here because passing booleans via `oc start-build -e`
       // is non-trivial
       choice(name: 'AWS_REPLICATION',
@@ -328,7 +331,7 @@ lock(resource: "build-${params.STREAM}") {
             """)
             archiveArtifacts "kola-run-upgrade.tar.xz"
         }
-        if (!utils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+        if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !utils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
             return
         }
 
