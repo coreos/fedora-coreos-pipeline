@@ -384,6 +384,12 @@ lock(resource: "build-${params.STREAM}") {
                 """)
             }
 
+            stage('Build Vultr') {
+                utils.shwrap("""
+                cosa buildextend-vultr
+                """)
+            }
+
             stage('Build VMware') {
                 utils.shwrap("""
                 cosa buildextend-vmware
