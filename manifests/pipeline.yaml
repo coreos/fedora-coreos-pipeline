@@ -262,3 +262,21 @@ objects:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile.kola.aws
       runPolicy: Parallel
+
+  - kind: BuildConfig
+    apiVersion: "build.openshift.io/v1"
+    metadata:
+      name: fedora-coreos-pipeline-kola-gcp
+      annotations:
+        coreos.com/deploy-default: "false"
+    spec:
+      source:
+        type: Git
+        git:
+          uri: ${JENKINS_JOBS_URL}
+          ref: ${JENKINS_JOBS_REF}
+      strategy:
+        jenkinsPipelineStrategy:
+          type: JenkinsPipeline
+          jenkinsfilePath: Jenkinsfile.kola.gcp
+      runPolicy: Parallel
