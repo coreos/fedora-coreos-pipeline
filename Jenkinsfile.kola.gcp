@@ -41,8 +41,7 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
-        def gcp_image, no_gcp_image
-        def no_gcp_image = false
+        def gcp_image = ""
         // we'll want to get the image project from the meta.json in the
         // future, but it's not in there for now.
         // def gcp_image_project
@@ -61,13 +60,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             def meta = readJSON file: meta_json
             if (meta.gcp.image) {
                 gcp_image = meta.gcp.image
-            } else {
-                no_gcp_image = true
             }
         }
 
         // fail immediately if the build contained no GCP image
-        if (no_gcp_image) {
+        if (gcp_image == "") {
           currentBuild.result = 'FAILURE'
           return
         }
