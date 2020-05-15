@@ -3,3 +3,4 @@ configuration-as-code:1.33
 slack:2.34
 job-dsl:1.76
 matrix-auth:2.4.2
+aws-credentials:1.28
