@@ -111,6 +111,10 @@ objects:
           - name: slack-token
             mountPath: /var/run/secrets/slack-api-token
             readOnly: true
+          # DELTA: mount AWS creds; see below
+          - name: aws-fcos-builds-bot-creds
+            mountPath: /var/run/secrets/aws-fcos-builds-bot-config
+            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -122,10 +126,15 @@ objects:
         - name: ${JENKINS_SERVICE_NAME}-casc-cfg
           configMap:
             name: jenkins-casc-cfg
-        # DELTA: add the Slack token
+        # DELTA: add the Slack token (needed to report pipeline failures)
         - name: slack-token
           secret:
             secretName: slack-api-token
+            optional: true
+        # DELTA: add AWS creds (used by the sync-stream-metadata job)
+        - name: aws-fcos-builds-bot-creds
+          secret:
+            secretName: aws-fcos-builds-bot-config
             optional: true
     triggers:
     - imageChangeParams:

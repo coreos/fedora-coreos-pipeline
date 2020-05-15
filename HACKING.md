@@ -169,20 +169,28 @@ If you are in production where we upload builds to S3 OR you want to
 test uploading to S3 as part of your pipeline development, you need to
 create a credentials config as a secret within OpenShift.
 
-First create a file with your secret content:
+First create files with your secret content:
 
 ```
-cat <<'EOF' > /path/to/upload-secret
+mkdir dir
+cat <<'EOF' > dir/config
 [default]
 aws_access_key_id=keyid
 aws_secret_access_key=key
 EOF
+echo keyid > dir/accessKey
+echo key > dir/secretKey
 ```
+
+We expose it in different ways (as an AWS config file and as direct
+fields) because those credentials are used both directly as Jenkins
+credentials (which use the direct fields) and by e.g. `cosa`, which
+accepts an AWS config file.
 
 Then create the secret in OpenShift:
 
 ```
-oc create secret generic aws-fcos-builds-bot-config --from-file=config=/path/to/upload-secret
+oc create secret generic aws-fcos-builds-bot-config --from-file=dir
 ```
 
 We also have a second AWS config that can be used for running kola

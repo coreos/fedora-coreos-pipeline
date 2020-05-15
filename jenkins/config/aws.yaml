@@ -1,0 +1,10 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - aws:
+            scope: GLOBAL
+            id: aws-fcos-builds-bot
+            accessKey: ${aws-fcos-builds-bot-config/accessKey}
+            secretKey: ${aws-fcos-builds-bot-config/secretKey}
+            description: AWS fcos-builds-bot credentials
