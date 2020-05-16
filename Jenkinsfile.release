@@ -57,6 +57,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
 
         def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+        def gcp_image = ""
 
         // Clone the automation repo, which contains helper scripts. In the
         // future, we'll probably want this either part of the cosa image, or
@@ -65,12 +66,21 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
         """)
 
-        // Buildprep for the build we are interested in
-        utils.shwrap("""
-        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-        cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-        cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
-        """)
+        // Fetch metadata for the build we are interested in
+        stage('Fetch Metadata') {
+            utils.shwrap("""
+            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+            cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
+            cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
+            """)
+
+            def basearch = utils.shwrap_capture("cosa basearch")
+            meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
+            def meta = readJSON file: meta_json
+            if (meta.gcp.image) {
+                gcp_image = meta.gcp.image
+            }
+        }
 
         // For production streams, import the OSTree into the prod
         // OSTree repo.
@@ -80,6 +90,24 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
                     --build=${params.VERSION} --s3=${s3_stream_dir} --repo=prod \
                     --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
+                """)
+            }
+        }
+
+        // For production streams, promote the GCP image so that it
+        // will be the chosen image in an image family and deprecate
+        // all others. `ore gcloud promote-image` does this for us.
+        if (params.STREAM in streams.production) {
+            stage('GCP: Image Promotion') {
+                utils.shwrap("""
+                # pick up the project to use from the config
+                gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
+                ore gcloud promote-image \
+                    --log-level=INFO \
+                    --project=\${gcp_project} \
+                    --json-key \${GCP_IMAGE_UPLOAD_CONFIG} \
+                    --family fedora-coreos-${params.STREAM} \
+                    --image "${gcp_image}"
                 """)
             }
         }
