@@ -436,11 +436,18 @@ lock(resource: "build-${params.STREAM}") {
                     utils.shwrap("""
                     # pick up the project to use from the config
                     gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
+                    # collect today's date for the description
                     today=\$(date +%Y-%m-%d)
+                    # NOTE: Add --deprecated to create image in deprecated state.
+                    #       We undeprecate in the release pipeline with promote-image.
                     cosa buildextend-gcp \
+                        --log-level=INFO \
                         --build=${newBuildID} \
                         --upload \
+                        --create-image=true \
+                        --deprecated \
                         --family fedora-coreos-${params.STREAM} \
+                        --license fedora-coreos-${params.STREAM} \
                         --project=\${gcp_project} \
                         --bucket gs://${gcp_gs_bucket}/image-import \
                         --json \${GCP_IMAGE_UPLOAD_CONFIG} \
