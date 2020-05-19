@@ -80,7 +80,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                       -b fcos -j 5 \
                       --no-test-exit-error \
                       --build=${params.VERSION} \
-                      --platform gce \
+                      --platform=gce \
                       --gce-project=\${gcp_project} \
                       --gce-image="projects/${gcp_image_project}/global/images/${gcp_image}" \
                       --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}
@@ -96,14 +96,13 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                   gcp_project=\$(jq -r .project_id \${GCP_KOLA_TESTS_CONFIG})
                   # use `cosa kola` here since it knows about blacklisted tests
                   cosa kola run \
-                      -b fcos -j 5 \
-                      --no-test-exit-error \
                       --build=${params.VERSION} \
-                      --platform gce \
+                      --upgrades \
+                      --no-test-exit-error \
+                      --platform=gce \
                       --gce-project=\${gcp_project} \
                       --gce-image="projects/${gcp_image_project}/global/images/${gcp_image}" \
                       --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}
-                      --upgrades
                   tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
                   """)
                   archiveArtifacts "kola-run-upgrade.tar.xz"
