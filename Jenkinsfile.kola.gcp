@@ -95,7 +95,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                   # pick up the project to use from the config
                   gcp_project=\$(jq -r .project_id \${GCP_KOLA_TESTS_CONFIG})
                   # use `cosa kola` here since it knows about blacklisted tests
-                  cosa kola run \
+                  cosa kola \
                       --build=${params.VERSION} \
                       --upgrades \
                       --no-test-exit-error \
