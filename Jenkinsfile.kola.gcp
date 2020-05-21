@@ -101,7 +101,6 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                       --no-test-exit-error \
                       --platform=gce \
                       --gce-project=\${gcp_project} \
-                      --gce-image="projects/${gcp_image_project}/global/images/${gcp_image}" \
                       --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}
                   tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
                   """)
