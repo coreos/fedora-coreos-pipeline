@@ -448,6 +448,7 @@ lock(resource: "build-${params.STREAM}") {
                         --deprecated \
                         --family fedora-coreos-${params.STREAM} \
                         --license fedora-coreos-${params.STREAM} \
+                        --license "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx" \
                         --project=\${gcp_project} \
                         --bucket gs://${gcp_gs_bucket}/image-import \
                         --json \${GCP_IMAGE_UPLOAD_CONFIG} \
