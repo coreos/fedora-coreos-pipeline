@@ -363,9 +363,9 @@ lock(resource: "build-${params.STREAM}") {
                 export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
                 cosa compress --compressor xz --artifact metal --artifact metal4k
                 """)
-                parallel 512b: {
+                parallel metal: {
                     utils.shwrap("kola testiso -S")
-                }, 4k: {
+                }, metal4k: {
                     utils.shwrap("kola testiso -SP --qemu-native-4k")
                 }
             }
