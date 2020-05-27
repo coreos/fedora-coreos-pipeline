@@ -72,7 +72,7 @@ cosaPod {
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
                   // should gracefully handle race conditions here
-                  sh("git -C src/config push https://${GHUSER}:${GHTOKEN}@github.com/${repo} ${branch}")
+                  sh("git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}")
                 }
             }
         }
