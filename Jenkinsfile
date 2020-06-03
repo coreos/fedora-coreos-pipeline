@@ -209,14 +209,31 @@ lock(resource: "build-${params.STREAM}") {
             """)
         }
 
+        def parent_version = ""
+        def parent_commit = ""
         stage('Fetch') {
             if (s3_stream_dir) {
+                utils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
+                if (utils.path_exists("tmp/releases.json")) {
+                    def releases = readJSON file: "tmp/releases.json"
+                    // check if there's a previous release we should use as parent
+                    if (releases["releases"].size() > 0) {
+                        def commit_obj = releases["releases"][-1]["commits"].find{ commit -> commit["architecture"] == basearch }
+                        parent_commit = commit_obj["checksum"]
+                        parent_version = releases["releases"][-1]["version"]
+                    }
+                }
+
                 utils.shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                 cosa buildprep s3://${s3_stream_dir}/builds
                 """)
-                // also fetch releases.json to get the latest build, but don't error if it doesn't exist
-                utils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
+                if (parent_version != "") {
+                    // also fetch the parent version; this is used by cosa to do the diff
+                    utils.shwrap("""
+                    cosa buildprep s3://${s3_stream_dir}/builds --build ${parent_version}
+                    """)
+                }
             } else if (!official && utils.path_exists(developer_builddir)) {
                 utils.shwrap("""
                 cosa buildprep ${developer_builddir}
@@ -233,19 +250,10 @@ lock(resource: "build-${params.STREAM}") {
             prevBuildID = utils.shwrap_capture("readlink builds/latest")
         }
 
-        def parent_version = ""
-        def parent_commit = ""
         stage('Build') {
             def parent_arg = ""
-            if (utils.path_exists("tmp/releases.json")) {
-                def releases = readJSON file: "tmp/releases.json"
-                // check if there's a previous release we should use as parent
-                if (releases["releases"].size() > 0) {
-                    def commit_obj = releases["releases"][-1]["commits"].find{ commit -> commit["architecture"] == basearch }
-                    parent_commit = commit_obj["checksum"]
-                    parent_arg = "--parent ${parent_commit}"
-                    parent_version = releases["releases"][-1]["version"]
-                }
+            if (parent_version != "") {
+                parent_arg = "--parent-build ${parent_version}"
             }
 
             def force = params.FORCE ? "--force" : ""
