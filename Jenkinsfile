@@ -363,10 +363,16 @@ lock(resource: "build-${params.STREAM}") {
                 export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
                 cosa compress --compressor xz --artifact metal --artifact metal4k
                 """)
-                parallel metal: {
-                    utils.shwrap("kola testiso -S")
-                }, metal4k: {
-                    utils.shwrap("kola testiso -SP --qemu-native-4k")
+                try {
+                    parallel metal: {
+                        utils.shwrap("kola testiso -S --output-dir tmp/kola-metal")
+                    }, metal4k: {
+                        utils.shwrap("kola testiso -SP --qemu-native-4k --output-dir tmp/kola-metal4k")
+                    }
+                } finally {
+                    utils.shwrap("tar -cf - tmp/kola-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
+                    utils.shwrap("tar -cf - tmp/kola-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
+                    archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
                 }
             }
 
