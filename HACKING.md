@@ -160,6 +160,15 @@ $ oc create secret generic slack-api-token --from-file=token=slack-token
 You can obtain a token when creating a new instance of the Jenkins CI
 app in your Slack workspace.
 
+### [PROD] GitHub webhook shared secret
+
+Create a shared webhook secret using e.g. `uuidgen -r`:
+
+```
+uuidgen -r > secret
+oc secret new github-webhook-shared-secret secret=secret
+```
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 ```
