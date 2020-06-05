@@ -407,18 +407,6 @@ oc create secret generic fedora-messaging-coreos-key \
   --from-file=coreos.crt --from-file=coreos.key
 ```
 
-### [PROD] Set up webhooks/automation
-
-- From the GitHub Settings tab for `fedora-coreos-config`, go to the
-  "Webhooks" panel
-- Click "Add webhook"
-- In the address, type `$JENKINS_URL/github-webhook/`. So e.g.:
-  https://jenkins-fedora-coreos-devel.apps.ci.centos.org/github-webhook/
-- Change the Content Type from GitHub’s default `application/x-www-form-urlencoded` to `application/json`.
-- Click "Add webhook"
-
-Repeat these steps for the `fedora-coreos-pipeline` repo.
-
 ### [OPTIONAL] Set up simple-httpd
 
 When hacking locally, it might be useful to look at the contents of the

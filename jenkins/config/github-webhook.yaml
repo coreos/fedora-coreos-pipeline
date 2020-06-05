@@ -1,0 +1,5 @@
+unclassified:
+  gitHubPluginConfig:
+    configs:
+      - credentialsId: github-coreosbot-token-string
+        manageHooks: true
