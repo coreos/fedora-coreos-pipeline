@@ -1,5 +1,16 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: github-webhook-shared-secret
+            secret: ${github-webhook-shared-secret/secret}
+            description: GitHub Webhook Shared Secret
 unclassified:
   gitHubPluginConfig:
+    hookSecretConfig:
+      credentialsId: github-webhook-shared-secret
     configs:
       - credentialsId: github-coreosbot-token-string
         manageHooks: true
