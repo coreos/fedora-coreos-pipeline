@@ -342,15 +342,15 @@ lock(resource: "build-${params.STREAM}") {
                 """)
             }
 
-            stage('Build Live') {
-                utils.shwrap("""
-                cosa buildextend-live
-                """)
-            }
-
             stage('Build Metal (4K Native)') {
                 utils.shwrap("""
                 cosa buildextend-metal4k
+                """)
+            }
+
+            stage('Build Live') {
+                utils.shwrap("""
+                cosa buildextend-live
                 """)
             }
 
