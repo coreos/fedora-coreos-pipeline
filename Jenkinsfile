@@ -231,6 +231,7 @@ lock(resource: "build-${params.STREAM}") {
                 if (parent_version != "") {
                     // also fetch the parent version; this is used by cosa to do the diff
                     utils.shwrap("""
+                    export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                     cosa buildprep s3://${s3_stream_dir}/builds --build ${parent_version}
                     """)
                 }
