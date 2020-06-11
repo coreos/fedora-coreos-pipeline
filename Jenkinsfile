@@ -480,7 +480,7 @@ lock(resource: "build-${params.STREAM}") {
                         --project=\${gcp_project} \
                         --bucket gs://${gcp_gs_bucket}/image-import \
                         --json \${GCP_IMAGE_UPLOAD_CONFIG} \
-                        --description=\"Fedora CoreOS, Fedora CoreOS ${params.STREAM}, ${newBuildID}, ${basearch} published on \$today\"
+                        --description=\"Fedora, Fedora CoreOS ${params.STREAM}, ${newBuildID}, ${basearch} published on \$today\"
                     """)
                 }
             }
