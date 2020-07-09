@@ -2,8 +2,8 @@
 
 repo = "coreos/fedora-coreos-config"
 branches = [
-    "testing-devel"
-    // "next-devel"
+    "testing-devel",
+    "next-devel"
 ]
 botCreds = "github-coreosbot-token"
 

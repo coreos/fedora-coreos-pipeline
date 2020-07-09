@@ -1,7 +1,7 @@
 // Canonical definition of all our streams and their type.
 
 production = ['testing', 'stable', 'next']
-development = ['testing-devel'] /* , 'next-devel'] */
+development = ['testing-devel', 'next-devel']
 mechanical = [/*'bodhi-updates', 'bodhi-updates-testing', 'branched', 'rawhide' */]
 
 all_streams = production + development + mechanical
