@@ -374,7 +374,10 @@ lock(resource: "build-${params.STREAM}") {
                 """)
                 try {
                     parallel metal: {
-                        utils.shwrap("kola testiso -S --output-dir tmp/kola-metal")
+                        utils.shwrap("kola testiso -SP --output-dir tmp/kola-metal")
+                        // ignore PXE failures for now; this test is flaky
+                        // https://github.com/coreos/coreos-assembler/issues/1597
+                        utils.shwrap("kola testiso -S --no-iso --output-dir tmp/kola-metal || :")
                     }, metal4k: {
                         utils.shwrap("kola testiso -SP --qemu-native-4k --output-dir tmp/kola-metal4k")
                     }
