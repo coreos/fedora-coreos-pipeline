@@ -364,8 +364,8 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             stage('Test Live ISO') {
-                // compress the metal and metal4k images now so that each test
-                // doesn't have to compress them
+                // compress the metal and metal4k images now so we're testing
+                // installs with the image format we ship
                 // lower to make sure we don't go over and account for overhead
                 def xz_memlimit = cosa_memory_request_mb - 512
                 utils.shwrap("""
