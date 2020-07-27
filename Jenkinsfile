@@ -359,7 +359,7 @@ lock(resource: "build-${params.STREAM}") {
 
             stage('Build Live') {
                 utils.shwrap("""
-                cosa buildextend-live
+                cosa buildextend-live --legacy-pxe
                 """)
             }
 
