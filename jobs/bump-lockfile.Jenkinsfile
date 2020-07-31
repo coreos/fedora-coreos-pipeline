@@ -63,6 +63,30 @@ cosaPod {
 
             fcosKola(cosaDir: ".")
 
+            stage("Build Metal") {
+                shwrap("cosa buildextend-metal")
+                shwrap("cosa buildextend-metal4k")
+            }
+
+            stage("Build Live") {
+                shwrap("cosa buildextend-live --fast")
+                // Test metal4k with an uncompressed image and metal with a
+                // compressed one
+                shwrap("cosa compress --artifact=metal")
+            }
+
+            try {
+                parallel metal: {
+                    shwrap("kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install --output-dir tmp/kola-testiso-metal")
+                }, metal4k: {
+                    shwrap("kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --output-dir tmp/kola-testiso-metal4k")
+                }
+            } finally {
+                shwrap("tar -cf - tmp/kola-testiso-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
+                shwrap("tar -cf - tmp/kola-testiso-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
+            }
+
             // OK, it passed kola: just push to the branch. In the future, we might be
             // fancier here; e.g. if tests fail, just open a PR, or if tests passed but a
             // package was added or removed.
