@@ -500,6 +500,38 @@ lock(resource: "build-${params.STREAM}") {
             /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
             """)
 
+            // Replace the 'next-release' field in 'release-notes.yaml' field
+            // with the real build id
+            botCreds = "github-coreosbot-token"
+            config_repo = "coreos/fedora-coreos-config"
+            release_notes_yaml = "src/config/release-notes.yaml"
+            utils.shwrap("""
+            /var/tmp/fcos-releng/coreos-release-note-generator/release-note-generator.py update \
+            --release-notes-file ${release_notes_yaml} \
+            --build-id ${buildID} \
+            --output-dir src/config
+            """)
+            shwrap("""
+            cd src/config
+            git commit -am "release-notes.yaml: replace 'next-release' with build id"
+            """)
+            withCredentials([usernamePassword(credentialsId: botCreds,
+                                                usernameVariable: 'GHUSER',
+                                                passwordVariable: 'GHTOKEN')]) {
+                // should gracefully handle race conditions here
+                sh("git push https://\${GHUSER}:\${GHTOKEN}@github.com/${config_repo} ${params.STREAM}")
+            }
+
+            // Push 'release-notes.yaml' to S3 bucket for website consumption
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-fcos-builds-bot']]) {
+                shwrap("""
+                cd src/config
+                aws s3 sync --acl public-read --cache-control 'max-age=60' \
+                    --exclude '*' --include 'release-notes.yaml' \
+                        ./ s3://fcos-builds
+                """)
+            }
+
             if (s3_stream_dir) {
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
