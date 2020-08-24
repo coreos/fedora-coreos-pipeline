@@ -41,9 +41,6 @@ parameters:
   - description: AWS S3 bucket in which to store builds (or blank for none)
     name: S3_BUCKET
     value: fcos-builds
-  - description: Whether to use KVM device plugin or legacy OCI KVM hook
-    name: KVM_SELECTOR
-    value: kvm-device-plugin
   - description: GCP GS bucket to use for image uploads (or blank for none)
     name: GCP_GS_BUCKET
     value: fedora-coreos-cloud-image-uploads
@@ -105,7 +102,6 @@ objects:
         coreos.com/source-config-ref: ${FCOS_CONFIG_REF}
         coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
         coreos.com/s3-bucket: ${S3_BUCKET}
-        coreos.com/kvm-selector: ${KVM_SELECTOR}
         coreos.com/gcp-gs-bucket: ${GCP_GS_BUCKET}
     spec:
       # note no triggers: the base pipeline is only ever triggered manually, or
