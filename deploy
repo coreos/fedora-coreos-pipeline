@@ -102,8 +102,6 @@ def parse_args():
                         help="AWS S3 bucket to use")
     parser.add_argument("--gcp-gs-bucket", metavar='GCP_GS_BUCKET',
                         help="GCP GS bucket to use for image uploads during import")
-    parser.add_argument("--kvm-selector", help="KVM selector",
-                        choices=['kvm-device-plugin', 'legacy-oci-kvm-hook'])
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
     parser.add_argument("--pvc-size", metavar='SIZE',
@@ -148,8 +146,6 @@ def process_template(args):
         params['COREOS_ASSEMBLER_IMAGE'] = args.cosa_img
     if args.pvc_size:
         params['PVC_SIZE'] = args.pvc_size
-    if args.kvm_selector:
-        params['KVM_SELECTOR'] = args.kvm_selector
     if args.gcp_gs_bucket:
         params['GCP_GS_BUCKET'] = args.gcp_gs_bucket
 

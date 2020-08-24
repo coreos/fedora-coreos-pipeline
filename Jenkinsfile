@@ -22,7 +22,6 @@ node {
     src_config_url = utils.get_pipeline_annotation('source-config-url')
     src_config_ref = utils.get_pipeline_annotation('source-config-ref')
     s3_bucket = utils.get_pipeline_annotation('s3-bucket')
-    kvm_selector = utils.get_pipeline_annotation('kvm-selector')
     gcp_gs_bucket = utils.get_pipeline_annotation('gcp-gs-bucket')
 
     // sanity check that a valid prefix is provided if in devel mode and drop
@@ -99,21 +98,6 @@ pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}M
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
 
 def podYaml = readYaml(text: pod);
-// And the KVM selector
-def cosaContainer = podYaml['spec']['containers'][1];
-switch (kvm_selector) {
-    case 'kvm-device-plugin':
-        def resources = cosaContainer['resources'];
-        def kvmres = 'devices.kubevirt.io/kvm';
-        resources['requests'][kvmres] = '1';
-        resources['limits'][kvmres] = '1';
-        break;
-    case 'legacy-oci-kvm-hook':
-        cosaContainer['nodeSelector'] = ['oci_kvm_hook': 'allowed'];
-        break;
-    default:
-        throw new Exception("Unknown KVM selector: ${kvm_selector}")
-}
 
 // And re-serialize; I couldn't figure out how to dump to a string
 // in a way allowed by the Groovy sandbox.  Tempting to just tell people

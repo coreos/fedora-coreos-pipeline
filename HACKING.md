@@ -17,7 +17,7 @@ In the following sections, the section header may indicate whether the
 section applies to the local cluster case (`[LOCAL]`) or the official
 prod case (`[PROD]`).
 
-You'll want to be sure you have KVM available in your cluster.  See
+You'll want to be sure you have kubevirt available in your cluster.  See
 [this section of the coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README.md#getting-started---prerequisites).
 
 ### Using a production OpenShift cluster
@@ -306,9 +306,6 @@ circumstances. Here are some of them:
     - Git source URL and optional git ref for pipeline Jenkinsfile.
 - `--config <URL>[@REF]`
     - Git source URL and optional git ref for FCOS config.
-- `--kvm-selector=kvm-device-plugin`:
-    - Use this if you're using the KVM device plugin (modern
-      Kubernetes/OpenShift 4+).
 - `--pvc-size <SIZE>`
     - Size of the cache PVC to create. Note that the PVC size cannot be
       changed after creation. The format is the one understood by

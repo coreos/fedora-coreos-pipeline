@@ -57,7 +57,9 @@ spec:
      resources:
        requests:
          memory: COREOS_ASSEMBLER_MEMORY_REQUEST
-       limits: {}
+         devices.kubevirt.io/kvm: '1'
+       limits:
+         devices.kubevirt.io/kvm: '1'
   volumes:
   - name: cache
     # XXX Disabled for now; we're seeing odd I/O issues possibly related to NFS:
