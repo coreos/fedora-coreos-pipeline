@@ -2,27 +2,22 @@
 # to be able to pass in more information to the Jenkins pod, such as env vars,
 # secrets, configmaps, etc...
 
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 kind: Template
 labels:
   app: fedora-coreos
   template: fedora-coreos-jenkins-template
+message: A Jenkins service has been created in your project.  Log into Jenkins with
+  your OpenShift account.  The tutorial at https://github.com/openshift/origin/blob/master/examples/jenkins/README.md
+  contains more information about using this template.
 metadata:
-  annotations:
-    description: |-
-      Jenkins service for the Fedora CoreOS pipeline.
-    iconClass: icon-jenkins
-    openshift.io/display-name: Fedora CoreOS Jenkins
-    openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/provider-display-name: Fedora CoreOS
-    tags: fcos,jenkins,fedora
   name: fedora-coreos-jenkins
 objects:
 - apiVersion: v1
   kind: Route
   metadata:
     annotations:
+      haproxy.router.openshift.io/timeout: 4m
       template.openshift.io/expose-uri: http://{.spec.host}{.spec.path}
     name: ${JENKINS_SERVICE_NAME}
   spec:
@@ -66,33 +61,40 @@ objects:
             value: ${ENABLE_OAUTH}
           - name: OPENSHIFT_ENABLE_REDIRECT_PROMPT
             value: "true"
-          - name: OPENSHIFT_JENKINS_JVM_ARCH
-            value: ${JVM_ARCH}
+          - name: DISABLE_ADMINISTRATIVE_MONITORS
+            value: ${DISABLE_ADMINISTRATIVE_MONITORS}
           - name: KUBERNETES_MASTER
             value: https://kubernetes.default:443
           - name: KUBERNETES_TRUST_CERTIFICATES
             value: "true"
+          - name: JENKINS_SERVICE_NAME
+            value: ${JENKINS_SERVICE_NAME}
           - name: JNLP_SERVICE_NAME
             value: ${JNLP_SERVICE_NAME}
+          - name: ENABLE_FATAL_ERROR_LOG_FILE
+            value: ${ENABLE_FATAL_ERROR_LOG_FILE}
+          - name: JENKINS_UC_INSECURE
+            value: ${JENKINS_UC_INSECURE}
           # DELTA: point c-as-c plugin to config map files; see below
           - name: CASC_JENKINS_CONFIG
             value: /var/lib/jenkins/configuration-as-code
           image: ' '
           imagePullPolicy: IfNotPresent
           livenessProbe:
-            failureThreshold: 30
+            failureThreshold: 2
             httpGet:
               path: /login
               port: 8080
             initialDelaySeconds: 420
-            timeoutSeconds: 3
+            periodSeconds: 360
+            timeoutSeconds: 240
           name: jenkins
           readinessProbe:
             httpGet:
               path: /login
               port: 8080
             initialDelaySeconds: 3
-            timeoutSeconds: 3
+            timeoutSeconds: 240
           resources:
             limits:
               memory: ${MEMORY_LIMIT}
@@ -212,14 +214,10 @@ parameters:
   displayName: Enable OAuth in Jenkins
   name: ENABLE_OAUTH
   value: "true"
-- description: Whether Jenkins runs with a 32 bit (i386) or 64 bit (x86_64) JVM.
-  displayName: Jenkins JVM Architecture
-  name: JVM_ARCH
-  value: i386
 - description: Maximum amount of memory the container can use.
   displayName: Memory Limit
-  # DELTA: changed from 512Mi
   name: MEMORY_LIMIT
+  # DELTA: changed from 1Gi
   value: 2Gi
 - description: Volume space available for data, e.g. 512Mi, 2Gi.
   displayName: Volume Capacity
@@ -231,9 +229,24 @@ parameters:
   displayName: Jenkins ImageStream Namespace
   name: NAMESPACE
   value: openshift
+- description: Whether to perform memory intensive, possibly slow, synchronization
+    with the Jenkins Update Center on start.  If true, the Jenkins core update monitor
+    and site warnings monitor are disabled.
+  displayName: Disable memory intensive administrative monitors
+  name: DISABLE_ADMINISTRATIVE_MONITORS
+  value: "false"
 - description: Name of the ImageStreamTag to be used for the Jenkins image.
   displayName: Jenkins ImageStreamTag
   name: JENKINS_IMAGE_STREAM_TAG
-  # DELTA: changed from jenkins:latest
-  # https://github.com/coreos/fedora-coreos-pipeline/pull/70
   value: jenkins:2
+- description: When a fatal error occurs, an error log is created with information
+    and the state obtained at the time of the fatal error.
+  displayName: Fatal Error Log File
+  name: ENABLE_FATAL_ERROR_LOG_FILE
+  value: "false"
+- description: Whether to allow use of a Jenkins Update Center that uses invalid certificate
+    (self-signed, unknown CA). If any value other than 'false', certificate check
+    is bypassed. By default, certificate check is enforced.
+  displayName: Allows use of Jenkins Update Center repository with invalid SSL certificate
+  name: JENKINS_UC_INSECURE
+  value: "false"
