@@ -36,6 +36,12 @@ properties([
     ])
 ])
 
+// no way to make a parameter required directly so manually check
+// https://issues.jenkins-ci.org/browse/JENKINS-3509
+if (params.VERSION == "") {
+    throw new Exception("Missing VERSION parameter!")
+}
+
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
 // substitute the right COSA image into the pod definition before spawning it
