@@ -32,21 +32,6 @@ objects:
 
   ### JENKINS MASTER ###
 
-  # use our own "gated" imagestream for the Jenkins master so we can test new
-  # images before upgrading
-  - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      name: jenkins-s2i
-      annotations:
-        coreos.com/deploy-default: "true"
-    spec:
-      tags:
-        - name: stable
-          from:
-            kind: DockerImage
-            # 2.204.1
-            name: docker.io/openshift/jenkins-2-centos7@sha256:9b75175c6feabfac03f39af5342b31cb4931b53ad9d077d843bb2f1e2d9eb408
   - apiVersion: v1
     kind: ImageStream
     metadata:
@@ -79,7 +64,8 @@ objects:
         sourceStrategy:
           from:
             kind: ImageStreamTag
-            name: jenkins-s2i:stable
+            name: jenkins:2
+            namespace: openshift
           forcePull: true
       output:
         to:
