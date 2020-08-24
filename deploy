@@ -72,7 +72,7 @@ def targeting_official_namespace():
     assert len(url) == 1, f"Found {len(url)} clusters named '{cluster_name}'"
     url = url[0]
 
-    return (url == "https://console.apps.ci.centos.org:8443" and
+    return (url == "https://api.ocp.ci.centos.org:6443" and
             namespace == 'fedora-coreos')
 
 

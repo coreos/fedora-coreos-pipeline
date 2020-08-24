@@ -1,4 +1,4 @@
-@Library('github.com/coreos/coreos-ci-lib@ocp3') _
+@Library('github.com/coreos/coreos-ci-lib') _
 
 repo = "coreos/fedora-coreos-config"
 branches = [
