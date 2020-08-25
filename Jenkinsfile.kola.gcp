@@ -9,10 +9,10 @@ node {
 properties([
     pipelineTriggers([]),
     parameters([
-      string(name: 'STREAM',
-             description: 'The Stream we are testing against',
-             defaultValue: '',
-             trim: true),
+      choice(name: 'STREAM',
+             // list devel first so that it's the default choice
+             choices: (streams.development + streams.production + streams.mechanical),
+             description: 'Fedora CoreOS stream to test'),
       string(name: 'VERSION',
              description: 'Fedora CoreOS Build ID to test',
              defaultValue: '',
