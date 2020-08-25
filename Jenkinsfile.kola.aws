@@ -30,8 +30,9 @@ properties([
 
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
-if (params.S3_STREAM_DIR == "") {
-    params.S3_STREAM_DIR = "fcos-builds/prod/streams/${params.STREAM}"
+def s3_stream_dir = params.S3_STREAM_DIR
+if (s3_stream_dir == "") {
+    s3_stream_dir = "fcos-builds/prod/streams/${params.STREAM}"
 }
 
 // substitute the right COSA image into the pod definition before spawning it
@@ -53,7 +54,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             utils.shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-            cosa buildprep --ostree --build=${params.VERSION} s3://${params.S3_STREAM_DIR}/builds
+            cosa buildprep --ostree --build=${params.VERSION} s3://${s3_stream_dir}/builds
             """)
 
             def basearch = utils.shwrap_capture("cosa basearch")
