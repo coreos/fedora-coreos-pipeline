@@ -30,6 +30,10 @@ properties([
 
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
+if (params.S3_STREAM_DIR == "") {
+    params.S3_STREAM_DIR = "fcos-builds/prod/streams/${params.STREAM}"
+}
+
 // substitute the right COSA image into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
 
