@@ -57,7 +57,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             utils.shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-            cosa buildprep --ostree --build=${params.VERSION} s3://${params.s3_stream_dir}/builds
+            cosa buildprep --ostree --build=${params.VERSION} s3://${s3_stream_dir}/builds
             """)
 
             def basearch = utils.shwrap_capture("cosa basearch")
