@@ -490,17 +490,12 @@ lock(resource: "build-${params.STREAM}") {
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.path_exists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
             stage('Kola:AWS') {
-                // use jnlp container in our pod, which has `oc` in it already
-                container('jnlp') {
-                    utils.shwrap("""
-                        # We consider the AWS kola tests to be a followup job
-                        # so we aren't adding a `--wait` here.
-                        oc start-build fedora-coreos-pipeline-kola-aws \
-                            -e STREAM=${params.STREAM} \
-                            -e VERSION=${newBuildID} \
-                            -e S3_STREAM_DIR=${s3_stream_dir}
-                    """)
-                }
+                // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
+                build job: 'kola-aws', wait: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: newBuildID),
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                ]
             }
         }
 
@@ -508,17 +503,12 @@ lock(resource: "build-${params.STREAM}") {
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.path_exists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
             stage('Kola:GCP') {
-                // use jnlp container in our pod, which has `oc` in it already
-                container('jnlp') {
-                    utils.shwrap("""
-                        # We consider the GCP kola tests to be a followup job
-                        # so we aren't adding a `--wait` here.
-                        oc start-build fedora-coreos-pipeline-kola-gcp \
-                            -e STREAM=${params.STREAM} \
-                            -e VERSION=${newBuildID} \
-                            -e S3_STREAM_DIR=${s3_stream_dir}
-                    """)
-                }
+                // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
+                build job: 'kola-gcp', wait: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: newBuildID),
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                ]
             }
         }
 
