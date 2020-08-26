@@ -302,7 +302,7 @@ oc set triggers bc/fedora-coreos-pipeline-mechanical --from-webhook
 First create the configmap:
 
 ```
-oc create configmap fedora-messaging-cfg --from-file=fedmsg.toml
+oc create configmap fedora-messaging-cfg --from-file=configs/fedmsg.toml
 ```
 
 Then add the client secrets:
