@@ -117,6 +117,10 @@ objects:
           - name: aws-fcos-builds-bot-creds
             mountPath: /var/run/secrets/aws-fcos-builds-bot-config
             readOnly: true
+          # DELTA: mount GitHub webhook shared secret
+          - name: github-webhook-shared-secret
+            mountPath: /var/run/secrets/github-webhook-shared-secret
+            readOnly: true
           # DELTA: mount GitHub coreosbot token
           - name: github-coreosbot-token
             mountPath: /var/run/secrets/github-coreosbot-token
@@ -142,6 +146,10 @@ objects:
           secret:
             secretName: aws-fcos-builds-bot-config
             optional: true
+        # DELTA: add the GitHub webhook shared secret
+        - name: github-webhook-shared-secret
+          secret:
+            secretName: github-webhook-shared-secret
         # DELTA: add the GitHub coreosbot token
         - name: github-coreosbot-token
           secret:
