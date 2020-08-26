@@ -312,6 +312,13 @@ oc create secret generic fedora-messaging-coreos-key \
   --from-file=coreos.crt --from-file=coreos.key
 ```
 
+### [PROD] Create coreosbot GitHub token
+
+```
+echo $coreosbot_token > token
+oc create secret generic github-coreosbot-token --from-file=token
+```
+
 ### [OPTIONAL] Set up simple-httpd
 
 When hacking locally, it might be useful to look at the contents of the
