@@ -37,18 +37,21 @@ def main():
     if args.update:
         update_resources(args, resources)
 
+        # hack the name; should extract from manifest
+        pipeline_name = "fedora-coreos-pipeline"
+        if not args.official:
+            pipeline_name = f"{args.prefix}{pipeline_name}"
+
         if args.start:
             print("Starting:")
-            out = subprocess.run(['oc', 'start-build',
-                                  # hack the name; should extract from manifest
-                                  f'{args.prefix}fedora-coreos-pipeline'],
+            out = subprocess.run(['oc', 'start-build', pipeline_name],
                                  check=True, stdout=subprocess.PIPE,
                                  encoding='utf-8')
             print(f"  {out.stdout.strip()}")
             print()
         else:
             print("You may start your developer pipeline with:")
-            print(f"  oc start-build {args.prefix}fedora-coreos-pipeline")
+            print(f"  oc start-build {pipeline_name}")
             print()
     else:
         assert args.delete_devel
