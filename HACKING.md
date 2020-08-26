@@ -166,7 +166,7 @@ Create a shared webhook secret using e.g. `uuidgen -r`:
 
 ```
 uuidgen -r > secret
-oc secret new github-webhook-shared-secret secret=secret
+oc create secret generic github-webhook-shared-secret --from-file=secret
 ```
 
 ### Create a Jenkins instance with a persistent volume backing store
