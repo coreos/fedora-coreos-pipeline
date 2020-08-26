@@ -14,7 +14,7 @@ properties([
     ])
 ])
 
-cosaPod {
+try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
     parallel branches.collectEntries { branch -> [branch, {
         shwrap("mkdir ${branch}")
         dir(branch) {
@@ -101,4 +101,11 @@ cosaPod {
             }
         }
     }] }
+}}} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    if (currentBuild.result != 'SUCCESS') {
+        slackSend(color: 'danger', message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER}>")
+    }
 }
