@@ -101,6 +101,7 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
             }
         }
     }] }
+    currentBuild.result = 'SUCCESS'
 }}} catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
