@@ -125,11 +125,6 @@ lock(resource: "build-${params.STREAM}") {
     podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
 
-        // first, print out the list of pods for debugging purposes
-        container('jnlp') {
-            utils.shwrap("oc get pods -o wide")
-        }
-
         // declare this early so we can use it in Slack
         def newBuildID
 
