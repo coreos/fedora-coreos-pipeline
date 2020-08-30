@@ -12,7 +12,7 @@ workflow. For more information on getting started, see
 [HACKING](HACKING.md).
 
 The production instance is running in
-[CentOS CI](https://jenkins-fedora-coreos.apps.ci.centos.org)
+[CentOS CI](https://jenkins-fedora-coreos.apps.ocp.ci.centos.org)
 (though note anonymous view is blocked by default). Its raw
 build output can be seen in the
 [build browser](https://builds.coreos.fedoraproject.org/browser)
@@ -24,6 +24,11 @@ To operate Jenkins (or more generally to access the
 production namespace), you must have access to the cluster
 at https://console.apps.ci.centos.org:8443 and to the projects
 "fedora-coreos" and "fedora-coreos-devel".
+
+For more information on CentOS CI, see these resources:
+
+  - https://github.com/centosci/ocp4-docs (the "new" OCP 4.4 cluster)
+  - https://wiki.centos.org/QaWiki/CI (out of date)
 
 If you need access, you can open a bug request at
 https://bugs.centos.org/ against the `Buildsys` project and
