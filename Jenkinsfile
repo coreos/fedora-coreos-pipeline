@@ -325,7 +325,7 @@ lock(resource: "build-${params.STREAM}") {
 
         if (!params.MINIMAL) {
 
-            stage("Metal")
+            stage("Metal") {
                 parallel metal: {
                     utils.shwrap("""
                     cosa buildextend-metal
