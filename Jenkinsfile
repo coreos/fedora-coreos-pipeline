@@ -379,7 +379,7 @@ lock(resource: "build-${params.STREAM}") {
             pbuilds = [:]
             ["Azure", "Exoscale", "OpenStack", "Aliyun", "Vultr", "VMware", "GCP", "DigitalOcean"].each {
                 pbuilds[it] = {
-                    cmd = it.toLowerCase()
+                    def cmd = it.toLowerCase()
                     utils.shwrap("""
                     cosa buildextend-${cmd}
                     """)
