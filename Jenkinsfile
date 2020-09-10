@@ -324,16 +324,17 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         if (!params.MINIMAL) {
-            stage('Build Metal') {
-                utils.shwrap("""
-                cosa buildextend-metal
-                """)
-            }
 
-            stage('Build Metal (4K Native)') {
-                utils.shwrap("""
-                cosa buildextend-metal4k
-                """)
+            stage("Metal") {
+                parallel metal: {
+                    utils.shwrap("""
+                    cosa buildextend-metal
+                    """)
+                }, metal4k: {
+                    utils.shwrap("""
+                    cosa buildextend-metal4k
+                    """)
+                }
             }
 
             stage('Build Live') {
@@ -374,53 +375,17 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
 
-            stage('Build Azure') {
-                utils.shwrap("""
-                cosa buildextend-azure
-                """)
+            // parallel build these artifacts
+            def pbuilds = [:]
+            ["Azure", "Exoscale", "OpenStack", "Aliyun", "Vultr", "VMware", "GCP", "DigitalOcean"].each {
+                pbuilds[it] = {
+                    def cmd = it.toLowerCase()
+                    utils.shwrap("""
+                    cosa buildextend-${cmd}
+                    """)
+                }
             }
-
-            stage('Build Exoscale') {
-                utils.shwrap("""
-                cosa buildextend-exoscale
-                """)
-            }
-
-            stage('Build Openstack') {
-                utils.shwrap("""
-                cosa buildextend-openstack
-                """)
-            }
-
-            stage('Build Aliyun') {
-                utils.shwrap("""
-                cosa buildextend-aliyun
-                """)
-            }
-
-            stage('Build Vultr') {
-                utils.shwrap("""
-                cosa buildextend-vultr
-                """)
-            }
-
-            stage('Build VMware') {
-                utils.shwrap("""
-                cosa buildextend-vmware
-                """)
-            }
-
-            stage('Build GCP') {
-                utils.shwrap("""
-                cosa buildextend-gcp
-                """)
-            }
-
-            stage('Build DigitalOcean') {
-                utils.shwrap("""
-                cosa buildextend-digitalocean
-                """)
-            }
+            parallel pbuilds
 
             // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
