@@ -340,7 +340,7 @@ lock(resource: "build-${params.STREAM}") {
             stage('Build Live') {
                 utils.shwrap("""
                 case "${params.STREAM}" in
-                testing|stable)
+                stable)
                     cosa buildextend-live --legacy-pxe
                     ;;
                 *)
