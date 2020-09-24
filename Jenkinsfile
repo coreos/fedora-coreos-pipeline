@@ -377,7 +377,7 @@ lock(resource: "build-${params.STREAM}") {
 
             // parallel build these artifacts
             def pbuilds = [:]
-            ["Aliyun", "Azure", "DigitalOcean", "Exoscale", "GCP", "OpenStack", "VMware", "Vultr"].each {
+            ["Aliyun", "AWS", "Azure", "DigitalOcean", "Exoscale", "GCP", "OpenStack", "VMware", "Vultr"].each {
                 pbuilds[it] = {
                     def cmd = it.toLowerCase()
                     utils.shwrap("""
