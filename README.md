@@ -20,7 +20,7 @@ build output can be seen in the
 be downloaded from
 [the official page](https://getfedora.org/en/coreos/download/)).
 
-To operate Jenkins (or more generally to access the
+To operate the production Jenkins (or more generally to access the
 production namespace), you must have access to the cluster
 at https://console.apps.ci.centos.org:8443 and to the projects
 "fedora-coreos" and "fedora-coreos-devel".
@@ -42,6 +42,10 @@ Please specify the requested username, RBAC for projects
 fingerprint.
 You also need one of the project admins as a sponsor, please
 reach out on Freenode `#fedora-coreos` channel.
+
+You should also be able to run this pipeline and run it in any
+OpenShift cluster that supports (potentially nested)
+virtualization.
 
 ### Terminology
 
