@@ -184,7 +184,7 @@ the Jenkins pipeline).
 Now, create the Jenkins configmap:
 
 ```
-oc create configmap jenkins-casc-cfg --from=file=jenkins/config
+oc create configmap jenkins-casc-cfg --from-file=jenkins/config
 ```
 
 ### Creating the pipeline
