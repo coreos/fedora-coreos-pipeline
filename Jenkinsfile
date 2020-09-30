@@ -339,14 +339,7 @@ lock(resource: "build-${params.STREAM}") {
 
             stage('Build Live') {
                 utils.shwrap("""
-                case "${params.STREAM}" in
-                stable)
-                    cosa buildextend-live --legacy-pxe
-                    ;;
-                *)
-                    cosa buildextend-live
-                    ;;
-                esac
+                cosa buildextend-live
                 """)
             }
 
