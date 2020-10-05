@@ -3,6 +3,10 @@ import org.yaml.snakeyaml.Yaml;
 def shwrap(cmds) {
     sh """
         set -xeuo pipefail
+        # https://pagure.io/centos-infra/issue/79
+        if [ `umask` = 0000 ]; then
+          umask 0022
+        fi
         ${cmds}
     """
 }
@@ -11,6 +15,10 @@ def shwrap(cmds) {
 def shwrap_quiet(cmds) {
     sh """
         set +x -euo pipefail
+        # https://pagure.io/centos-infra/issue/79
+        if [ `umask` = 0000 ]; then
+          umask 0022
+        fi
         ${cmds}
     """
 }
@@ -18,6 +26,10 @@ def shwrap_quiet(cmds) {
 def shwrap_capture(cmds) {
     return sh(returnStdout: true, script: """
         set -euo pipefail
+        # https://pagure.io/centos-infra/issue/79
+        if [ `umask` = 0000 ]; then
+          umask 0022
+        fi
         ${cmds}
     """).trim()
 }
@@ -25,6 +37,10 @@ def shwrap_capture(cmds) {
 def shwrap_rc(cmds) {
     return sh(returnStatus: true, script: """
         set -euo pipefail
+        # https://pagure.io/centos-infra/issue/79
+        if [ `umask` = 0000 ]; then
+          umask 0022
+        fi
         ${cmds}
     """)
 }
