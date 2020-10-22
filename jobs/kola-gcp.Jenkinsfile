@@ -41,7 +41,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE, memory: "256Mi",
     def gcp_image, gcp_image_project, gcp_project
     stage('Fetch Metadata') {
         shwrap("""
-        export AWS_CONFIG_FILE=${AWS_FCOS_BUILDS_BOT_CONFIG}/config
+        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
         cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
         cosa buildprep --ostree --build=${params.VERSION} s3://${s3_stream_dir}/builds
         """)
@@ -62,7 +62,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE, memory: "256Mi",
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
              platformArgs: """-p gce \
-                --gce-json-key=${GCP_KOLA_TESTS_CONFIG}/config \
+                --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}/config \
                 --gce-project ${gcp_project} \
                 --gce-image projects/${gcp_image_project}/global/images/${gcp_image}""")
 }
