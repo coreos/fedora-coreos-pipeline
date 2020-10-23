@@ -57,8 +57,8 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE, memory: "256Mi",
     }
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
-             platformArgs: """-p aws \
-                --aws-credentials-file \${AWS_FCOS_KOLA_BOT_CONFIG}/config \
-                --aws-ami ${ami} \
-                --aws-region ${ami_region}""")
+             platformArgs: """-p=aws \
+                --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                --aws-ami=${ami} \
+                --aws-region=${ami_region}""")
 }

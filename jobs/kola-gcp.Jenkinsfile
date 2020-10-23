@@ -61,8 +61,8 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE, memory: "256Mi",
     }
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
-             platformArgs: """-p gce \
+             platformArgs: """-p=gce \
                 --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}/config \
-                --gce-project ${gcp_project} \
-                --gce-image projects/${gcp_image_project}/global/images/${gcp_image}""")
+                --gce-project=${gcp_project} \
+                --gce-image=projects/${gcp_image_project}/global/images/${gcp_image}""")
 }
