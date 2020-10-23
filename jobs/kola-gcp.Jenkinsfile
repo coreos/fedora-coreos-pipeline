@@ -56,8 +56,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE, memory: "256Mi",
         }
 
         // pick up the project to use from the config
-        def config = readJSON file: "/run/kubernetes/secrets/gcp-kola-tests-config/config"
-        gcp_project = config.project_id
+        gcp_project = shwrapCapture("jq -r .project_id \${GCP_KOLA_TESTS_CONFIG}/config")
     }
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
