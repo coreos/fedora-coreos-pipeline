@@ -147,5 +147,10 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
               --bucket ${s3_bucket}
           """)
         }
+
+        utils.shwrap("""
+        /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+            stream.release --build ${params.VERSION} --stream ${params.STREAM}
+        """)
     }}
 }}

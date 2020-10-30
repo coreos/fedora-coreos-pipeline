@@ -268,6 +268,14 @@ lock(resource: "build-${params.STREAM}") {
                 meta["fedora-coreos.parent-commit"] = parent_commit
                 writeJSON file: meta_json, json: meta
             }
+
+            if (official) {
+                utils.shwrap("""
+                /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                    build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                    --state STARTED
+                """)
+            }
         }
 
         if (official && s3_stream_dir && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
@@ -562,6 +570,11 @@ lock(resource: "build-${params.STREAM}") {
             try {
                 if (official) {
                     slackSend(color: color, message: message)
+                    utils.shwrap("""
+                    /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                        build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                        --state FINISHED --result ${currentBuild.result}
+                    """)
                 }
             } finally {
                 echo message

@@ -8,9 +8,15 @@ properties([
     ])
 ])
 
-cosaPod {
+cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos-key"]) {
     git(url: 'https://github.com/coreos/fedora-coreos-streams', credentialsId: 'github-coreosbot-token')
     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-fcos-builds-bot']]) {
+        // XXX: update configMap to use the /run/secrets value
+        shwrap("ln -sf \${FEDORA_MESSAGING_COREOS_KEY} /run/fedora-messaging-coreos-key")
+
+        // XXX: eventually we want this as part of the pod or built into the image we use
+        shwrap("git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng")
+
         cmd = """
             aws s3 sync --acl public-read --cache-control 'max-age=60' \
                 --exclude '*' --include 'streams/*' --include 'updates/*' \
@@ -23,6 +29,10 @@ cosaPod {
         def dry_run = shwrapCapture("${cmd} --dryrun").trim()
         if (dry_run != "") {
             shwrap("${cmd}")
+            utils.shwrap("""
+            /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
+                stream.metadata.update --stream ${params.STREAM}
+            """)
         }
     }
 }
