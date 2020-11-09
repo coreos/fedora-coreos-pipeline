@@ -3,8 +3,8 @@ amqp_url = "amqps://coreos:@rabbitmq.fedoraproject.org/%2Fpubsub"
 
 [tls]
 ca_cert = "/etc/fedora-messaging/cacert.pem"
-keyfile = "/run/fedora-messaging-coreos-key/coreos.key"
-certfile = "/run/fedora-messaging-coreos-key/coreos.crt"
+keyfile = "/run/kubernetes/secrets/fedora-messaging-coreos-key/coreos.key"
+certfile = "/run/kubernetes/secrets/fedora-messaging-coreos-key/coreos.crt"
 
 [client_properties]
 app = "Fedora CoreOS Pipeline"
