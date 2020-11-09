@@ -21,21 +21,14 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
         shwrap("git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng")
 
         streams.production.each{stream ->
-            def cmd = """
-                aws s3 sync --acl public-read --cache-control 'max-age=60' \
-                    --exclude '*' --include 'streams/${stream}.json' --include 'updates/${stream}.json' \
-                        ./ s3://fcos-builds
-            """
-
-            // trim so that when we append --dryrun below, it's on the same line
-            cmd = cmd.trim()
-
-            // Do a dry run first to see if there's any work that actually needs to
-            // be done. `aws s3 sync` doesn't print anything if everything is
-            // synced up.
-            def dry_run = shwrapCapture("${cmd} --dryrun").trim()
-            if (dry_run != "") {
-                shwrap("${cmd}")
+            def changed = false
+            for (subdir in ["streams", "updates"]) {
+                def out = shwrapCapture("""aws s3 sync --acl public-read --cache-control 'max-age=60' \
+                        --exclude '*' --include '${stream}.json' ${subdir} s3://fcos-builds/${subdir}""").trim()
+                println(out)
+                changed = changed || (out != "")
+            }
+            if (changed) {
                 utils.shwrap("""
                 /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
                     stream.metadata.update --stream ${stream}
