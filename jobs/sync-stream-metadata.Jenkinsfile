@@ -14,11 +14,14 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
         // XXX: eventually we want this as part of the pod or built into the image we use
         shwrap("git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng")
 
-        cmd = """
+        def cmd = """
             aws s3 sync --acl public-read --cache-control 'max-age=60' \
                 --exclude '*' --include 'streams/*' --include 'updates/*' \
                     ./ s3://fcos-builds
         """
+
+        // trim so that when we append --dryrun below, it's on the same line
+        cmd = cmd.trim()
 
         // Do a dry run first to see if there's any work that actually needs to
         // be done. `aws s3 sync` doesn't print anything if everything is
