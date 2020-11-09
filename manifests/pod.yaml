@@ -28,6 +28,8 @@ spec:
          value: /.gcp-image-upload-config/config
        - name: GCP_KOLA_TESTS_CONFIG
          value: /.gcp-kola-tests-config/config
+       - name: OPENSTACK_KOLA_TESTS_CONFIG
+         value: /.openstack-kola-tests-config/config
      volumeMounts:
      - name: cache
        mountPath: /srv/
@@ -42,6 +44,9 @@ spec:
        readOnly: true
      - name: gcp-kola-tests-config
        mountPath: /.gcp-kola-tests-config/
+       readOnly: true
+     - name: openstack-kola-tests-config
+       mountPath: /.openstack-kola-tests-config/
        readOnly: true
      - name: github-token
        mountPath: /.github
@@ -86,6 +91,11 @@ spec:
   - name: gcp-kola-tests-config
     secret:
       secretName: gcp-kola-tests-config
+      optional: true
+  # This secret is used for running OpenStack kola tests
+  - name: openstack-kola-tests-config
+    secret:
+      secretName: openstack-kola-tests-config
       optional: true
   - name: github-token
     secret:

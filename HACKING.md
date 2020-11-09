@@ -131,6 +131,20 @@ assuming they have enough permissions.
 oc create secret generic gcp-kola-tests-config --from-file=config=/path/to/kola-secret
 ```
 
+### [OPTIONAL] Creating OpenStack credentials configs
+
+If you want to run kola tests against OpenStack images you need to
+create a secret
+([`clouds.yaml` format](https://docs.openstack.org/python-openstackclient/latest/configuration/index.html#clouds-yaml))
+for talking with the OpenStack host.
+
+Once you have the yaml file that represents the credentials for connecting
+to your OpenStack instance, create the secret in OpenShift:
+
+```
+oc create secret generic openstack-kola-tests-config --from-file=config=/path/to/clouds.yaml
+```
+
 ### [OPTIONAL] Allocating S3 storage
 
 If you want to store builds persistently, now is a good time to allocate

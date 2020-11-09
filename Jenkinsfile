@@ -510,13 +510,22 @@ lock(resource: "build-${params.STREAM}") {
                 ]
             }
         }
-
-        // Now that the metadata is uploaded go ahead and kick off some tests
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.path_exists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
             stage('Kola:GCP') {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-gcp', wait: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: newBuildID),
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                ]
+            }
+        }
+        if (!params.MINIMAL && s3_stream_dir &&
+                utils.path_exists("\${OPENSTACK_KOLA_TESTS_CONFIG}")) {
+            stage('Kola:OpenStack') {
+                // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
+                build job: 'kola-openstack', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
