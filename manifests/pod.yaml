@@ -50,7 +50,7 @@ spec:
        mountPath: /etc/fedora-messaging-cfg
        readOnly: true
      - name: fedora-messaging-coreos-key
-       mountPath: /run/fedora-messaging-coreos-key
+       mountPath: /run/kubernetes/secrets/fedora-messaging-coreos-key
        readOnly: true
      securityContext:
        privileged: false
