@@ -125,8 +125,9 @@ lock(resource: "build-${params.STREAM}") {
     podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
 
-        // declare this early so we can use it in Slack
+        // declare these early so we can use them in `finally` block
         def newBuildID
+        def basearch = utils.shwrap_capture("cosa basearch")
 
         try { timeout(time: 240, unit: 'MINUTES') {
 
@@ -155,7 +156,6 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         def developer_builddir = "/srv/devel/${developer_prefix}/build"
-        def basearch = utils.shwrap_capture("cosa basearch")
 
         stage('Init') {
 
