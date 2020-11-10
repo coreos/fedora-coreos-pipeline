@@ -20,15 +20,20 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
         // XXX: eventually we want this as part of the pod or built into the image we use
         shwrap("git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng")
 
+        // NB: we don't use `aws s3 sync` here because it's timestamp-based and
+        // so our fresh git clone will always seem newer and always get
+        // uploaded. Instead, we manually copy in the S3 versions, check if
+        // they're different from the checkout, and copy out the new versions
+        // if so
         streams.production.each{stream ->
-            def changed = false
             for (subdir in ["streams", "updates"]) {
-                def out = shwrapCapture("""aws s3 sync --acl public-read --cache-control 'max-age=60' \
-                        --exclude '*' --include '${stream}.json' ${subdir} s3://fcos-builds/${subdir}""").trim()
-                println(out)
-                changed = changed || (out != "")
+                shwrap("aws s3 cp s3://fcos-builds/${subdir}/${stream}.json ${subdir}/${stream}.json")
             }
-            if (changed) {
+            if (shwrapRc("git diff --exit-code") != 0) {
+                shwrap("git reset --hard HEAD")
+                for (subdir in ["streams", "updates"]) {
+                    shwrap("aws s3 cp ${subdir}/${stream}.json s3://fcos-builds/${subdir}/${stream}.json")
+                }
                 utils.shwrap("""
                 /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
                     stream.metadata.update --stream ${stream}
