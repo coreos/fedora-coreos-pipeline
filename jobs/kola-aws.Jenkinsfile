@@ -35,7 +35,8 @@ if (s3_stream_dir == "") {
     s3_stream_dir = "fcos-builds/prod/streams/${params.STREAM}"
 }
 
-cosaPod(image: params.COREOS_ASSEMBLER_IMAGE, memory: "256Mi",
+cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
+        memory: "256Mi", kvm: false,
         secrets: ["aws-fcos-builds-bot-config", "aws-fcos-kola-bot-config"]) {
 
     def ami, ami_region
