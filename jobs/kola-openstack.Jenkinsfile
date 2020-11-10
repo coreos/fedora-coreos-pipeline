@@ -66,17 +66,19 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         echo "${openstack_image_sha256} ${openstack_image_filepath}" | sha256sum --check
         unxz ${openstack_image_filepath}
         """)
-        // Remove '.xz` from the end of the filename and file path
-        openstack_image_filename = openstack_image_filename[0..-4]
+        // Remove '.xz` from the end of the filename in the file path
         openstack_image_filepath = openstack_image_filepath[0..-4]
-        // Prepend the image name with 'kola', in case it gets left behind
-        openstack_image_name = "kola-${openstack_image_filename}"
+        // Use a consistent image name for this stream in case it gets left behind
+        openstack_image_name = "kola-fedora-coreos-${params.STREAM}"
 
     }
 
     stage('Upload/Create Image') {
         // Create the image in OpenStack
         shwrap("""
+        # First delete it if it currently exists, then create it.
+        ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
+             delete-image --id=${openstack_image_name} || true
         ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
              create-image --file=${openstack_image_filepath} \
              --name=${openstack_image_name}
