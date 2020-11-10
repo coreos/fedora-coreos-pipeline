@@ -36,6 +36,9 @@ node {
 // Share with the Fedora testing account so we can test it afterwards
 FEDORA_AWS_TESTING_USER_ID = "013116697141"
 
+// Base URL through which to download artifacts
+BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
+
 def coreos_assembler_image
 if (official) {
     coreos_assembler_image = "coreos-assembler:master"
@@ -273,6 +276,7 @@ lock(resource: "build-${params.STREAM}") {
                 utils.shwrap("""
                 /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                     build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                    --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
                     --state STARTED
                 """)
             }
@@ -573,6 +577,7 @@ lock(resource: "build-${params.STREAM}") {
                     utils.shwrap("""
                     /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                         build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                        --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
                         --state FINISHED --result ${currentBuild.result}
                     """)
                 }
