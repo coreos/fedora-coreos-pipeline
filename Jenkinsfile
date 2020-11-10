@@ -511,7 +511,7 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
         if (!params.MINIMAL && s3_stream_dir &&
-                utils.path_exists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
+                utils.path_exists("\${GCP_KOLA_TESTS_CONFIG}")) {
             stage('Kola:GCP') {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-gcp', wait: false, parameters: [
