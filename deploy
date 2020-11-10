@@ -27,7 +27,7 @@ import subprocess
 def main():
     args = parse_args()
 
-    if targeting_official_namespace() and not args.official:
+    if targeting_official_namespace(args) and not args.official:
         eprint("Refusing to create developer resource in official namespace.")
         eprint("Use --official to create official resources.")
         return 1
@@ -44,7 +44,7 @@ def main():
 
         if args.start:
             print("Starting:")
-            out = subprocess.run(['oc', 'start-build', pipeline_name],
+            out = subprocess.run([args.oc_cmd, 'start-build', pipeline_name],
                                  check=True, stdout=subprocess.PIPE,
                                  encoding='utf-8')
             print(f"  {out.stdout.strip()}")
@@ -59,10 +59,10 @@ def main():
         delete_developer_resources(args, resources)
 
 
-def targeting_official_namespace():
-    ctx_name = subprocess.check_output(['oc', 'config', 'current-context'],
+def targeting_official_namespace(args):
+    ctx_name = subprocess.check_output([args.oc_cmd, 'config', 'current-context'],
                                        encoding='utf-8').strip()
-    cfg = yaml.safe_load(subprocess.check_output(['oc', 'config', 'view'],
+    cfg = yaml.safe_load(subprocess.check_output([args.oc_cmd, 'config', 'view'],
                                                  encoding='utf-8'))
     ctx = [c['context'] for c in cfg['contexts'] if c['name'] == ctx_name]
     assert len(ctx) == 1, f"Found {len(ctx)} contexts named '{ctx_name}'"
@@ -109,6 +109,8 @@ def parse_args():
                         help="Pullspec to use for COSA image")
     parser.add_argument("--pvc-size", metavar='SIZE',
                         help="Size of PVC to create for cache")
+    parser.add_argument("--oc-cmd", default='oc',
+                        help="The path to the oc binary")
     # XXX: to add as a mutually exclusive option with above
     # parser.add_argument("--cosa", metavar='<URL>[@REF]',
     #                     help="Repo and ref to use for COSA image",
@@ -171,7 +173,7 @@ def process_template(args):
         # and generate the --param FOO=bar ... args for this template
         param_args = gen_param_args(tparams)
         j = json.loads(subprocess.check_output(
-            ['oc', 'process', '--filename', f'manifests/{template}'] + param_args))
+            [args.oc_cmd, 'process', '--filename', f'manifests/{template}'] + param_args))
         resources += j['items']
     return resources
 
@@ -180,13 +182,13 @@ def update_resources(args, resources):
     print("Updating:")
     for resource in resources:
         if args.all or is_default_resource(resource):
-            action = resource_action(resource)
+            action = resource_action(args, resource)
             if action == 'skip':
                 continue
             if args.dry_run:
                 print(f"Would {action} {resource['kind'].lower()} {resource['metadata']['name']}")
                 continue
-            out = subprocess.run(['oc', action, '--filename', '-'],
+            out = subprocess.run([args.oc_cmd, action, '--filename', '-'],
                                  input=json.dumps(resource), encoding='utf-8',
                                  check=True, stdout=subprocess.PIPE)
             print(f"  {out.stdout.strip()}")
@@ -198,8 +200,8 @@ def is_default_resource(resource):
     return annos.get('coreos.com/deploy-default') == "true"
 
 
-def resource_action(resource):
-    if resource_exists(resource):
+def resource_action(args, resource):
+    if resource_exists(args, resource):
         # Some resources don't support being updated post-creation; let's just
         # skip those for now if they already exist.
         kind = resource['kind'].lower()
@@ -210,8 +212,8 @@ def resource_action(resource):
     return 'create'
 
 
-def resource_exists(resource):
-    return subprocess.call(['oc', 'get', resource['kind'],
+def resource_exists(args, resource):
+    return subprocess.call([args.oc_cmd, 'get', resource['kind'],
                             resource['metadata']['name']],
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL) == 0
@@ -222,7 +224,7 @@ def delete_developer_resources(args, resources):
     print("Deleting:")
     for resource in resources:
         if resource['metadata']['name'].startswith(args.prefix):
-            out = subprocess.run(['oc', 'delete', '--filename', '-'],
+            out = subprocess.run([args.oc_cmd, 'delete', '--filename', '-'],
                                  input=json.dumps(resource), encoding='utf-8',
                                  check=True, stdout=subprocess.PIPE)
             print(f"  {out.stdout.strip()}")
