@@ -12,7 +12,7 @@ spec:
   serviceAccountName: jenkins
   containers:
    - name: jnlp
-     image: jenkins-slave-base-centos7:latest
+     image: quay.io/openshift/origin-jenkins-agent-base:latest
      args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
    - name: coreos-assembler
      image: COREOS_ASSEMBLER_IMAGE
