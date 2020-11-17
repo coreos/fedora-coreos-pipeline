@@ -32,9 +32,12 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
             if (shwrapRc("git diff --exit-code") != 0) {
                 shwrap("git reset --hard HEAD")
                 for (subdir in ["streams", "updates"]) {
-                    shwrap("aws s3 cp ${subdir}/${stream}.json s3://fcos-builds/${subdir}/${stream}.json")
+                    shwrap("""
+                        aws s3 cp --acl public-read --cache-control 'max-age=60' \
+                            ${subdir}/${stream}.json s3://fcos-builds/${subdir}/${stream}.json
+                    """)
                 }
-                utils.shwrap("""
+                shwrap("""
                 /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
                     stream.metadata.update --stream ${stream}
                 """)
