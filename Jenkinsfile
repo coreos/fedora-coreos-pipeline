@@ -444,6 +444,16 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
+        // Generate KeyLime hashes for attestation on official builds
+        // This is a POC setup and will be modified over time
+        // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
+        stage('KeyLime Hash Generation') {
+            utils.shwrap("""
+            cosa generate-hashlist --release=${newBuildID} --output=builds/${newBuildID}/${basearch}/exp-hash.json
+            sha256sum builds/${newBuildID}/${basearch}/exp-hash.json > builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM
+            """)
+        }
+
         stage('Archive') {
             // lower to make sure we don't go over and account for overhead
             def xz_memlimit = cosa_memory_request_mb - 512
