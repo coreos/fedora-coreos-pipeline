@@ -2,7 +2,7 @@
 
 production = ['testing', 'stable', 'next']
 development = ['testing-devel', 'next-devel']
-mechanical = [/*'bodhi-updates', 'bodhi-updates-testing', 'branched', 'rawhide' */]
+mechanical = ['rawhide' /*'bodhi-updates', 'bodhi-updates-testing', 'branched' */]
 
 all_streams = production + development + mechanical
 
