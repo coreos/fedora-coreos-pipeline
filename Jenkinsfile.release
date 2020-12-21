@@ -81,9 +81,9 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
 
             def basearch = utils.shwrap_capture("cosa basearch")
-            meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
+            def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
-            if (meta.gcp.image) {
+            if (meta.gcp?.image) {
                 gcp_image = meta.gcp.image
             }
         }
