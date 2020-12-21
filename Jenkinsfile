@@ -83,6 +83,8 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+def is_mechanical = (params.STREAM in streams.mechanical)
+
 // Note the supermin VM just uses 2G. The really hungry part is xz, which
 // without lots of memory takes lots of time. For now we just hardcode these
 // here; we can look into making them configurable through the template if
@@ -395,7 +397,7 @@ lock(resource: "build-${params.STREAM}") {
             // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
-            if (s3_stream_dir) {
+            if (s3_stream_dir && !is_mechanical) {
                 stage('Upload AWS') {
                     def suffix = official ? "" : "--name-suffix ${developer_prefix}"
                     // XXX: hardcode us-east-1 for now
@@ -415,7 +417,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             // If there is a config for GCP then we'll upload our image to GCP
-            if (utils.path_exists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
+            if (utils.path_exists("\${GCP_IMAGE_UPLOAD_CONFIG}") && !is_mechanical) {
                 stage('Upload GCP') {
                     utils.shwrap("""
                     # pick up the project to use from the config
@@ -500,7 +502,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Now that the metadata is uploaded go ahead and kick off some tests
         if (!params.MINIMAL && s3_stream_dir &&
-                utils.path_exists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
+                utils.path_exists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
             stage('Kola:AWS') {
                 // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-aws', wait: false, parameters: [
@@ -511,7 +513,7 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
         if (!params.MINIMAL && s3_stream_dir &&
-                utils.path_exists("\${GCP_KOLA_TESTS_CONFIG}")) {
+                utils.path_exists("\${GCP_KOLA_TESTS_CONFIG}") && !is_mechanical) {
             stage('Kola:GCP') {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-gcp', wait: false, parameters: [
@@ -522,7 +524,7 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
         if (!params.MINIMAL && s3_stream_dir &&
-                utils.path_exists("\${OPENSTACK_KOLA_TESTS_CONFIG}")) {
+                utils.path_exists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
             stage('Kola:OpenStack') {
                 // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-openstack', wait: false, parameters: [
