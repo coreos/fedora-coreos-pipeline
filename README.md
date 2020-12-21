@@ -22,8 +22,8 @@ be downloaded from
 
 To operate the production Jenkins (or more generally to access the
 production namespace), you must have access to the cluster
-at https://console.apps.ci.centos.org:8443 and to the projects
-"fedora-coreos" and "fedora-coreos-devel".
+at https://console-openshift-console.apps.ocp.ci.centos.org/
+and to the "fedora-coreos" project.
 
 For more information on CentOS CI, see these resources:
 
@@ -31,20 +31,15 @@ For more information on CentOS CI, see these resources:
   - https://wiki.centos.org/QaWiki/CI (out of date)
 
 If you need access, you can open a bug request at
-https://bugs.centos.org/ against the `Buildsys` project and
-`Ci.centos.org Ecosystem Testing` category.
-Do note that the bug-tracker and OpenShift use different
-authentication backends, so you will have separate credentials
-for each.
+https://pagure.io/centos-infra with your
+[ACO credentials](https://accounts.centos.org/) similar to
+[this one](https://pagure.io/centos-infra/issue/144).
 
-Please specify the requested username, RBAC for projects
-`fedora-coreos` and `fedora-coreos-devel`, and your GPG key
-fingerprint.
 You also need one of the project admins as a sponsor, please
 reach out on Freenode `#fedora-coreos` channel.
 
-You should also be able to run this pipeline and run it in any
-OpenShift cluster that supports (potentially nested)
+You should also be able to run this pipeline and run it in
+any OpenShift cluster that supports (potentially nested)
 virtualization.
 
 ### Terminology
