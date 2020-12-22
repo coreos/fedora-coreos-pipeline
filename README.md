@@ -33,7 +33,7 @@ For more information on CentOS CI, see these resources:
 If you need access, you can open a bug request at
 https://pagure.io/centos-infra with your
 [ACO credentials](https://accounts.centos.org/) similar to
-[this one](https://pagure.io/centos-infra/issue/144).
+[this one](https://pagure.io/centos-infra/issue/176).
 
 You also need one of the project admins as a sponsor, please
 reach out on Freenode `#fedora-coreos` channel.
