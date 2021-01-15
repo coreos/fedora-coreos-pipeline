@@ -455,7 +455,7 @@ lock(resource: "build-${params.STREAM}") {
             // Run the coreos-meta-translator against the most recent build,
             // which will generate a release.json from the meta.json files
             utils.shwrap("""
-            /var/tmp/fcos-releng/coreos-meta-translator/trans.py --workdir .
+            cosa generate-release-meta --workdir .
             """)
 
             if (s3_stream_dir) {
