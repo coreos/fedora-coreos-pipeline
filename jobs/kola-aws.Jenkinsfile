@@ -21,6 +21,10 @@ properties([
              description: 'Override the Fedora CoreOS S3 stream directory',
              defaultValue: '',
              trim: true),
+      string(name: 'KOLA_TESTS',
+             description: 'Override tests to run',
+             defaultValue: "",
+             trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:master",
@@ -58,6 +62,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
     }
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
+             extraArgs: params.KOLA_TESTS,
              platformArgs: """-p=aws \
                 --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                 --aws-ami=${ami} \
