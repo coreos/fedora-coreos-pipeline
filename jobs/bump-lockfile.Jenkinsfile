@@ -7,6 +7,9 @@ branches = [
 ]
 botCreds = "github-coreosbot-token"
 
+// Base URL through which to download artifacts
+BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
+
 properties([
     pipelineTriggers([
         // we don't need to bump lockfiles any more often than daily
@@ -19,6 +22,7 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
         shwrap("mkdir ${branch}")
         dir(branch) {
             shwrap("cosa init --branch ${branch} https://github.com/${repo}")
+            shwrap("cosa buildprep ${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
             shwrap("""
               git -C src/config config --global user.name "CoreOS Bot"
