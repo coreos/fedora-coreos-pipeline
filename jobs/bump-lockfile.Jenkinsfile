@@ -95,7 +95,7 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
             // fancier here; e.g. if tests fail, just open a PR, or if tests passed but a
             // package was added or removed.
             stage("Push") {
-                shwrap("git -C src/config commit -am 'lockfiles: bump to latest'")
+                shwrap("git -C src/config commit -am 'lockfiles: bump to latest' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/master/jobs/bump-lockfile.Jenkinsfile'")
                 withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
