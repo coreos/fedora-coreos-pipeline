@@ -66,9 +66,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
              extraArgs: params.KOLA_TESTS,
-            // XXX: temporarily use --no-default-checks to work around:
-            // https://github.com/coreos/fedora-coreos-tracker/issues/751
-             platformArgs: """--no-default-checks -p=gce \
+             platformArgs: """-p=gce \
                 --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}/config \
                 --gce-project=${gcp_project} \
                 --gce-image=projects/${gcp_image_project}/global/images/${gcp_image}""")
