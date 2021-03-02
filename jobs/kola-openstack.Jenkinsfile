@@ -100,7 +100,9 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
                  build: params.VERSION, skipUpgrade: true,
                  extraArgs: params.KOLA_TESTS,
-                 platformArgs: """-p=openstack                               \
+                 // XXX: temporarily use --no-default-checks to work around:
+                 // https://github.com/coreos/fedora-coreos-tracker/issues/751
+                 platformArgs: """--no-default-checks -p=openstack                               \
                     --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
                     --openstack-flavor=v1-standard-4                         \
                     --openstack-network=private                              \

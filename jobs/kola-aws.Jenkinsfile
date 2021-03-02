@@ -63,7 +63,9 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
 
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
              extraArgs: params.KOLA_TESTS,
-             platformArgs: """-p=aws \
+            // XXX: temporarily use --no-default-checks to work around:
+            // https://github.com/coreos/fedora-coreos-tracker/issues/751
+             platformArgs: """--no-default-checks -p=aws \
                 --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                 --aws-ami=${ami} \
                 --aws-region=${ami_region}""")
