@@ -303,8 +303,10 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         stage('Kola:QEMU basic') {
+            // XXX: temporarily use --no-default-checks to work around:
+            // https://github.com/coreos/fedora-coreos-tracker/issues/751
             utils.shwrap("""
-            cosa kola run --basic-qemu-scenarios --no-test-exit-error
+            cosa kola run --basic-qemu-scenarios --no-test-exit-error --no-default-checks
             tar -cf - tmp/kola/ | xz -c9 > kola-run-basic.tar.xz
             """)
             archiveArtifacts "kola-run-basic.tar.xz"
@@ -315,9 +317,11 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Kola:QEMU') {
             // leave 512M for overhead; VMs are 1G each
+            // XXX: temporarily use --no-default-checks to work around:
+            // https://github.com/coreos/fedora-coreos-tracker/issues/751
             def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
             utils.shwrap("""
-            cosa kola run --parallel ${parallel} --no-test-exit-error
+            cosa kola run --parallel ${parallel} --no-test-exit-error --no-default-checks
             tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
             """)
             archiveArtifacts "kola-run.tar.xz"
@@ -327,8 +331,10 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         stage('Kola:QEMU upgrade') {
+            // XXX: temporarily use --no-default-checks to work around:
+            // https://github.com/coreos/fedora-coreos-tracker/issues/751
             utils.shwrap("""
-            cosa kola --upgrades --no-test-exit-error
+            cosa kola --upgrades --no-test-exit-error --no-default-checks
             tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
             """)
             archiveArtifacts "kola-run-upgrade.tar.xz"
