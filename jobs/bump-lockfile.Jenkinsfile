@@ -65,7 +65,11 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
                 shwrap("cosa build --strict")
             }
 
-            fcosKola(cosaDir: ".")
+            // need to run this in the workspace context because `fcosKola()`
+            // archives directly there but archiveArtifacts is dir-sensitive
+            dir(env.WORKSPACE) {
+                fcosKola(cosaDir: branch)
+            }
 
             stage("Build Metal") {
                 shwrap("cosa buildextend-metal")
