@@ -23,6 +23,7 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
         dir(branch) {
             shwrap("cosa init --branch ${branch} https://github.com/${repo}")
             shwrap("cosa buildprep ${BUILDS_BASE_HTTP_URL}/${branch}/builds")
+            def prevBuildID = shwrapCapture("readlink builds/latest")
 
             shwrap("""
               git -C src/config config --global user.name "CoreOS Bot"
@@ -63,6 +64,12 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
 
             stage("Build") {
                 shwrap("cosa build --strict")
+            }
+
+            def buildID = shwrapCapture("readlink builds/latest")
+            if (prevBuildID == buildID) {
+                println("No changes")
+                return
             }
 
             // need to run this in the workspace context because `fcosKola()`
