@@ -29,13 +29,16 @@ try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
               git -C src/config config --global user.email "coreosbot@fedoraproject.org"
             """)
 
+            def prevPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.*.json | sha256sum")
+
             // do a first fetch where we only fetch metadata; no point in
             // importing RPMs if nothing actually changed
             stage("Fetch Metadata") {
                 shwrap("cosa fetch --update-lockfile --dry-run")
             }
 
-            if (shwrapRc("git -C src/config diff --exit-code") == 0) {
+            def newPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.*.json | sha256sum")
+            if (newPkgChecksum == prevPkgChecksum) {
                 println("No changes")
                 return
             }
