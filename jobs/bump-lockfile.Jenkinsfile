@@ -18,16 +18,18 @@ properties([
 ])
 
 try { timeout(time: 120, unit: 'MINUTES') { cosaPod {
+
+    // set up git user upfront
+    shwrap("""
+      git config --global user.name "CoreOS Bot"
+      git config --global user.email "coreosbot@fedoraproject.org"
+    """)
+
     parallel branches.collectEntries { branch -> [branch, {
         shwrap("mkdir ${branch}")
         dir(branch) {
             shwrap("cosa init --branch ${branch} https://github.com/${repo}")
             shwrap("cosa buildprep ${BUILDS_BASE_HTTP_URL}/${branch}/builds")
-
-            shwrap("""
-              git -C src/config config --global user.name "CoreOS Bot"
-              git -C src/config config --global user.email "coreosbot@fedoraproject.org"
-            """)
 
             def prevPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.*.json | sha256sum")
 
