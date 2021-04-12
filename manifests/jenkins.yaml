@@ -78,6 +78,12 @@ objects:
           # DELTA: point c-as-c plugin to config map files; see below
           - name: CASC_JENKINS_CONFIG
             value: /var/lib/jenkins/configuration-as-code
+          # DELTA: Increase heartbeat interval so durable-task-plugin waits a
+          # bit longer for scripts to start before failing the build.
+          # https://github.com/coreos/coreos-ci/issues/28
+          - name: JENKINS_JAVA_OVERRIDES
+            value: >-
+              -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=600
           image: ' '
           imagePullPolicy: IfNotPresent
           livenessProbe:
