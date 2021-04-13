@@ -49,6 +49,9 @@ objects:
       name: ${JENKINS_SERVICE_NAME}
     strategy:
       type: Recreate
+      # DELTA: allow 20 mins for pod to be ready to account for slow NFS
+      recreateParams:
+        timeoutSeconds: 1200
     template:
       metadata:
         labels:
