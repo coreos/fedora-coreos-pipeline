@@ -326,18 +326,16 @@ lock(resource: "build-${params.STREAM}") {
             return
         }
 
-      // Unblock our builds for now because the previous run `next-devel` image
-      // signatures didn't get created.
-      //stage('Kola:QEMU upgrade') {
-      //    utils.shwrap("""
-      //    cosa kola --upgrades --no-test-exit-error
-      //    tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
-      //    """)
-      //    archiveArtifacts "kola-run-upgrade.tar.xz"
-      //}
-      //if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !utils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
-      //    return
-      //}
+        stage('Kola:QEMU upgrade') {
+            utils.shwrap("""
+            cosa kola --upgrades --no-test-exit-error
+            tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
+            """)
+            archiveArtifacts "kola-run-upgrade.tar.xz"
+        }
+        if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !utils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+            return
+        }
 
         if (!params.MINIMAL) {
 
