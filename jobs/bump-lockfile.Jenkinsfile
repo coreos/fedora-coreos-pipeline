@@ -78,7 +78,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         shwrap("cosa build --strict")
     }
 
-    fcosKola()
+    fcosKola(cosaDir: env.WORKSPACE)
 
     stage("Build Metal") {
         shwrap("cosa buildextend-metal")
