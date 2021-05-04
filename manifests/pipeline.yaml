@@ -20,7 +20,7 @@ parameters:
     value: https://github.com/coreos/fedora-coreos-pipeline
   - description: Git branch/tag reference for Jenkins jobs
     name: JENKINS_JOBS_REF
-    value: master
+    value: main
   - description: Prefix to prepend to resources
     name: DEVELOPER_PREFIX
     value:
@@ -35,9 +35,9 @@ parameters:
     value: 100Gi
   - description: Image of coreos-assembler to use
     name: COREOS_ASSEMBLER_IMAGE
-    # for now we just follow :master, but we may start freezing if things become
+    # for now we just follow :main, but we may start freezing if things become
     # too unstable
-    value: quay.io/coreos-assembler/coreos-assembler:master
+    value: quay.io/coreos-assembler/coreos-assembler:main
   - description: AWS S3 bucket in which to store builds (or blank for none)
     name: S3_BUCKET
     value: fcos-builds
@@ -62,7 +62,7 @@ objects:
         # this allows e.g. the pipeline to directly reference the imagestream
         local: true
       tags:
-        - name: master
+        - name: main
           from:
             kind: DockerImage
             name: ${COREOS_ASSEMBLER_IMAGE}
@@ -153,7 +153,7 @@ objects:
         imageChange:
           from:
             kind: ImageStreamTag
-            name: coreos-assembler:master
+            name: coreos-assembler:main
       source:
         type: Git
         git:
@@ -184,7 +184,7 @@ objects:
         imageChange:
           from:
             kind: ImageStreamTag
-            name: coreos-assembler:master
+            name: coreos-assembler:main
       source:
         type: Git
         git:

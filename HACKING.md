@@ -18,7 +18,7 @@ section applies only to the local cluster case (`[LOCAL]`) or the
 official prod case (`[PROD]`).
 
 You'll want to be sure you have kubevirt available in your cluster.  See
-[this section of the coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README.md#getting-started---prerequisites).
+[this section of the coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/main/README.md#getting-started---prerequisites).
 
 ### Using a production OpenShift cluster
 
@@ -41,7 +41,7 @@ full cluster either in libvirt or GCP (for nested virt). For more
 details, see:
 
 https://github.com/openshift/installer/tree/master/docs/dev/libvirt
-https://github.com/coreos/coreos-assembler/blob/master/doc/openshift-gcp-nested-virt.md
+https://github.com/coreos/coreos-assembler/blob/main/doc/openshift-gcp-nested-virt.md
 
 Once you have a cluster up, you will want to deploy the OpenShift CNV
 operator for access to Kubevirt:
@@ -148,7 +148,7 @@ oc create secret generic openstack-kola-tests-config --from-file=config=/path/to
 ### [OPTIONAL] Allocating S3 storage
 
 If you want to store builds persistently, now is a good time to allocate
-S3 storage.  See the [upstream coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README-design.md)
+S3 storage.  See the [upstream coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/main/README-design.md)
 around build architecture.
 
 Today, the FCOS pipeline is oriented towards having its own
