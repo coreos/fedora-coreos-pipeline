@@ -189,7 +189,7 @@ oc create secret generic github-webhook-shared-secret --from-file=secret
 oc new-app --file=manifests/jenkins.yaml --param=NAMESPACE=fedora-coreos
 ```
 
-Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
+Notice the `NAMESPACE` parameter. This makes the Jenkins controller use the
 image from our namespace, which we'll create in the next step. (The
 reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
@@ -252,8 +252,8 @@ See `./deploy --help` for more information.
 
 This will create:
 
-1. the Jenkins master imagestream,
-2. the Jenkins slave imagestream,
+1. the Jenkins controller imagestream,
+2. the Jenkins agent imagestream,
 3. the coreos-assembler imagestream,
 4. the `PersistentVolumeClaim` in which we'll cache, and
 5. the Jenkins pipeline build.
@@ -262,13 +262,13 @@ The default size of the PVC is 100Gi. There is a `--pvc-size` parameter
 one can use to make this smaller if you do not have enough space. E.g.
 `--pvc-size 30Gi`.
 
-We can now start a build of the Jenkins master:
+We can now start a build of the Jenkins controller:
 
 ```
 oc start-build --follow jenkins
 ```
 
-Once the Jenkins master image is built, Jenkins should start up (verify
+Once the Jenkins controller image is built, Jenkins should start up (verify
 with `oc get pods`). Once the pod is marked READY, you should be able to
 login to the Jenkins UI at https://jenkins-$NAMESPACE.$CLUSTER_URL/
 (`oc get route jenkins` will show the URL). As previously noted, any
