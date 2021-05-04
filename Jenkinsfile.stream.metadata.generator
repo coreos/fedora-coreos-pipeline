@@ -22,7 +22,7 @@ properties([
 
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
 
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:master")
+pod = pod.replace("COREOS_ASSEMBLER_IMAGE", "coreos-assembler:main")
 
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
@@ -61,7 +61,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // Creating the Pull Request
             utils.shwrap_quiet("""
             cd ${env.WORKSPACE}/fedora-coreos-streams/
-            curl -H "Authorization: token ${coreosbot_token}" -X POST  -d '{"title": "Stream metadata for ${params.STREAM} release ${params.VERSION}","head": "${pr_branch}","base": "master"}' https://api.github.com/repos/coreos/fedora-coreos-streams/pulls
+            curl -H "Authorization: token ${coreosbot_token}" -X POST  -d '{"title": "Stream metadata for ${params.STREAM} release ${params.VERSION}","head": "${pr_branch}","base": "main"}' https://api.github.com/repos/coreos/fedora-coreos-streams/pulls
             """)
         }
     }}

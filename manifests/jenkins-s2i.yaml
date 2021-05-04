@@ -20,13 +20,13 @@ parameters:
     value: https://github.com/coreos/fedora-coreos-pipeline
   - description: Git branch/tag reference for Jenkins S2I
     name: JENKINS_S2I_REF
-    value: master
+    value: main
   - description: Git source URI for Jenkins jobs
     name: JENKINS_JOBS_URL
     value: https://github.com/coreos/fedora-coreos-pipeline
   - description: Git branch/tag reference for Jenkins jobs
     name: JENKINS_JOBS_REF
-    value: master
+    value: main
 
 objects:
 

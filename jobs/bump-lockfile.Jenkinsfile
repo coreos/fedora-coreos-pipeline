@@ -1,4 +1,4 @@
-@Library('github.com/coreos/coreos-ci-lib') _
+@Library('github.com/coreos/coreos-ci-lib@main') _
 
 def streams
 node {
@@ -108,7 +108,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // fancier here; e.g. if tests fail, just open a PR, or if tests passed but a
     // package was added or removed.
     stage("Push") {
-        shwrap("git -C src/config commit -am 'lockfiles: bump to latest' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/master/jobs/bump-lockfile.Jenkinsfile'")
+        shwrap("git -C src/config commit -am 'lockfiles: bump to latest' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
         withCredentials([usernamePassword(credentialsId: botCreds,
                                           usernameVariable: 'GHUSER',
                                           passwordVariable: 'GHTOKEN')]) {

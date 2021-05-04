@@ -14,7 +14,7 @@ jobs:
             script('''
               node {
                 // XXX: hack, should put this in coreos-ci-lib
-                sh("curl -LO https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/master/utils.groovy")
+                sh("curl -LO https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/utils.groovy")
                 def utils = load("utils.groovy")
 
                 def url = utils.get_annotation("jenkins", "jenkins-jobs-url")

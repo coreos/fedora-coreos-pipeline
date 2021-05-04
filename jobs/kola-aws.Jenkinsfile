@@ -1,4 +1,4 @@
-@Library('github.com/coreos/coreos-ci-lib') _
+@Library('github.com/coreos/coreos-ci-lib@main') _
 
 def streams
 node {
@@ -27,7 +27,7 @@ properties([
              trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
-             defaultValue: "coreos-assembler:master",
+             defaultValue: "coreos-assembler:main",
              trim: true)
     ])
 ])
