@@ -30,7 +30,7 @@ parameters:
 
 objects:
 
-  ### JENKINS MASTER ###
+  ### JENKINS CONTROLLER ###
 
   - apiVersion: v1
     kind: ImageStream
@@ -58,7 +58,7 @@ objects:
         git:
           uri: ${JENKINS_S2I_URL}
           ref: ${JENKINS_S2I_REF}
-        contextDir: jenkins/master
+        contextDir: jenkins/controller
       strategy:
         type: Source
         sourceStrategy:
