@@ -49,6 +49,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     def newPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.*.json | sha256sum")
     if (newPkgChecksum == prevPkgChecksum) {
         println("No changes")
+        currentBuild.result = 'SUCCESS'
         currentBuild.description = "[${params.STREAM}] 💤 (no change)"
         return
     }
