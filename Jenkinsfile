@@ -41,9 +41,9 @@ BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
 
 def coreos_assembler_image
 if (official) {
-    coreos_assembler_image = "coreos-assembler:main"
+    coreos_assembler_image = "coreos-assembler:latest"
 } else {
-    coreos_assembler_image = "${developer_prefix}-coreos-assembler:main"
+    coreos_assembler_image = "${developer_prefix}-coreos-assembler:latest"
 }
 
 properties([

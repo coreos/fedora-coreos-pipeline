@@ -7,7 +7,7 @@ kind: Pod
 spec:
   containers:
    - name: coreos-assembler-sleep
-     image: coreos-assembler:main
+     image: coreos-assembler:latest
      imagePullPolicy: Always
      workingDir: /srv/
      command: ['/usr/bin/dumb-init']
