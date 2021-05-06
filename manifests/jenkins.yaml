@@ -111,9 +111,6 @@ objects:
           securityContext:
             capabilities: {}
             privileged: false
-            # DELTA: This is important to ensure the local PVC is chown'ed to a
-            # gid we have access to.
-            fsGroup: 0
           terminationMessagePath: /dev/termination-log
           volumeMounts:
           - mountPath: /var/lib/jenkins
