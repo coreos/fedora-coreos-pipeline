@@ -18,7 +18,7 @@ section applies only to the local cluster case (`[LOCAL]`) or the
 official prod case (`[PROD]`).
 
 You'll want to be sure you have kubevirt available in your cluster.  See
-[this section of the coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README.md#getting-started---prerequisites).
+[this section of the coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/main/README.md#getting-started---prerequisites).
 
 ### Using a production OpenShift cluster
 
@@ -41,7 +41,7 @@ full cluster either in libvirt or GCP (for nested virt). For more
 details, see:
 
 https://github.com/openshift/installer/tree/master/docs/dev/libvirt
-https://github.com/coreos/coreos-assembler/blob/master/doc/openshift-gcp-nested-virt.md
+https://github.com/coreos/coreos-assembler/blob/main/doc/openshift-gcp-nested-virt.md
 
 Once you have a cluster up, you will want to deploy the OpenShift CNV
 operator for access to Kubevirt:
@@ -148,7 +148,7 @@ oc create secret generic openstack-kola-tests-config --from-file=config=/path/to
 ### [OPTIONAL] Allocating S3 storage
 
 If you want to store builds persistently, now is a good time to allocate
-S3 storage.  See the [upstream coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/master/README-design.md)
+S3 storage.  See the [upstream coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/main/README-design.md)
 around build architecture.
 
 Today, the FCOS pipeline is oriented towards having its own
@@ -189,7 +189,7 @@ oc create secret generic github-webhook-shared-secret --from-file=secret
 oc new-app --file=manifests/jenkins.yaml --param=NAMESPACE=fedora-coreos
 ```
 
-Notice the `NAMESPACE` parameter. This makes the Jenkins master use the
+Notice the `NAMESPACE` parameter. This makes the Jenkins controller use the
 image from our namespace, which we'll create in the next step. (The
 reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
@@ -252,8 +252,8 @@ See `./deploy --help` for more information.
 
 This will create:
 
-1. the Jenkins master imagestream,
-2. the Jenkins slave imagestream,
+1. the Jenkins controller imagestream,
+2. the Jenkins agent imagestream,
 3. the coreos-assembler imagestream,
 4. the `PersistentVolumeClaim` in which we'll cache, and
 5. the Jenkins pipeline build.
@@ -262,13 +262,13 @@ The default size of the PVC is 100Gi. There is a `--pvc-size` parameter
 one can use to make this smaller if you do not have enough space. E.g.
 `--pvc-size 30Gi`.
 
-We can now start a build of the Jenkins master:
+We can now start a build of the Jenkins controller:
 
 ```
 oc start-build --follow jenkins
 ```
 
-Once the Jenkins master image is built, Jenkins should start up (verify
+Once the Jenkins controller image is built, Jenkins should start up (verify
 with `oc get pods`). Once the pod is marked READY, you should be able to
 login to the Jenkins UI at https://jenkins-$NAMESPACE.$CLUSTER_URL/
 (`oc get route jenkins` will show the URL). As previously noted, any

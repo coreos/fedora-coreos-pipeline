@@ -50,7 +50,7 @@ names:
 
 - `production/development/mechanical streams`: refers to the
   Fedora CoreOS streams as defined in
-  https://github.com/coreos/fedora-coreos-tracker/blob/master/stream-tooling.md
+  https://github.com/coreos/fedora-coreos-tracker/blob/main/stream-tooling.md
 - `official pipeline`: the *single* official instance of
   this pipeline code, which runs in the `fedora-coreos`
   namespace on the CentOS CI OpenShift cluster and pushes to

@@ -1,4 +1,4 @@
-@Library('github.com/coreos/coreos-ci-lib') _
+@Library('github.com/coreos/coreos-ci-lib@main') _
 
 properties([
     pipelineTriggers([
