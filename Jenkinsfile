@@ -394,6 +394,17 @@ lock(resource: "build-${params.STREAM}") {
             }
             parallel pbuilds
 
+            if (s3_stream_dir) {
+                stage('Archive') {
+                  // just upload as public-read for now, but see discussions in
+                  // https://github.com/coreos/fedora-coreos-tracker/issues/189
+                  utils.shwrap("""
+                  export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                  cosa buildupload s3 --acl=public-read ${s3_stream_dir}/builds
+                  """)
+                }
+            }
+
             // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
@@ -454,7 +465,7 @@ lock(resource: "build-${params.STREAM}") {
             """)
         }
 
-        stage('Archive') {
+        stage('Final Archive') {
             // lower to make sure we don't go over and account for overhead
             def xz_memlimit = cosa_memory_request_mb - 512
             utils.shwrap("""
@@ -468,6 +479,8 @@ lock(resource: "build-${params.STREAM}") {
             cosa generate-release-meta --workdir .
             """)
 
+            // Note we already archived all the images above; so this just
+            // updates meta.json with the AWS and GCP cloud image names.
             if (s3_stream_dir) {
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
