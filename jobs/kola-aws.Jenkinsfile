@@ -27,7 +27,7 @@ properties([
              trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
-             defaultValue: "coreos-assembler:latest",
+             defaultValue: "coreos-assembler:main",
              trim: true)
     ])
 ])

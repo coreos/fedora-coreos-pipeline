@@ -8,7 +8,7 @@
         ./deploy --update \
             --pipeline https://github.com/jlebon/fedora-coreos-pipeline \
             --config https://github.com/jlebon/fedora-coreos-config@wip \
-            --cosa-img quay.io/jlebon/coreos-assembler:latest
+            --cosa-img quay.io/jlebon/coreos-assembler:main
             # OR
             --cosa https://github.com/jlebon/coreos-assembler
 
