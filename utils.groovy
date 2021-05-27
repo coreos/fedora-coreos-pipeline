@@ -71,10 +71,6 @@ boolean checkKolaSuccess(dir, currentBuild) {
     def result = report["result"]
     print("kola result: ${result}")
     if (result != "PASS") {
-        if (report["platform"] == "qemu-unpriv") {
-            shwrap("coreos-assembler compress --compressor xz")
-            archiveArtifacts "builds/latest/**/*.qcow2.xz"
-        }
         currentBuild.result = 'FAILURE'
         return false
     }
