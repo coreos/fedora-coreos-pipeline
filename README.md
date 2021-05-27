@@ -36,7 +36,7 @@ https://pagure.io/centos-infra with your
 [this one](https://pagure.io/centos-infra/issue/176).
 
 You also need one of the project admins as a sponsor, please
-reach out on Freenode `#fedora-coreos` channel.
+reach out on Libera.Chat `#fedora-coreos` channel.
 
 You should also be able to run this pipeline and run it in
 any OpenShift cluster that supports (potentially nested)
