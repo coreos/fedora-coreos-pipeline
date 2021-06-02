@@ -326,7 +326,12 @@ oc create secret generic fedora-messaging-coreos-key \
   --from-file=coreos.crt --from-file=coreos.key
 ```
 
-### [PROD] Create coreosbot GitHub token
+### [PROD] Create coreosbot GitHub token secret
+
+Create the CoreOS Bot (coreosbot) GitHub token secret (this
+correspond to the "Fedora CoreOS pipeline" token of
+coreosbot, with just `public_repo` and `admin:repo_hook`;
+these creds are available in BitWarden):
 
 ```
 echo $coreosbot_token > token
