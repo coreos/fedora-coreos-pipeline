@@ -48,9 +48,6 @@ spec:
      - name: openstack-kola-tests-config
        mountPath: /.openstack-kola-tests-config/
        readOnly: true
-     - name: github-token
-       mountPath: /.github
-       readOnly: true
      - name: fedora-messaging-cfg
        mountPath: /etc/fedora-messaging-cfg
        readOnly: true
@@ -96,10 +93,6 @@ spec:
   - name: openstack-kola-tests-config
     secret:
       secretName: openstack-kola-tests-config
-      optional: true
-  - name: github-token
-    secret:
-      secretName: coreosbot-github-token
       optional: true
   # These two here are used for signing with RoboSignatory
   - name: fedora-messaging-cfg
