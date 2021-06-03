@@ -1,11 +1,13 @@
-def utils, streams, s3_bucket
+@Library('github.com/coreos/coreos-ci-lib@main') _
+
+def pipeutils, streams, s3_bucket
 node {
     checkout scm
-    utils = load("utils.groovy")
+    pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
     pod = readFile(file: "manifests/pod.yaml")
 
-    s3_bucket = utils.get_pipeline_annotation('s3-bucket')
+    s3_bucket = pipeutils.get_pipeline_annotation('s3-bucket')
 }
 
 properties([
@@ -68,19 +70,19 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         // Clone the automation repo, which contains helper scripts. In the
         // future, we'll probably want this either part of the cosa image, or
         // in a derivative of cosa for pipeline needs.
-        utils.shwrap("""
+        shwrap("""
         git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
         """)
 
         // Fetch metadata for the build we are interested in
         stage('Fetch Metadata') {
-            utils.shwrap("""
+            shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
             cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
             """)
 
-            def basearch = utils.shwrap_capture("cosa basearch")
+            def basearch = shwrapCapture("cosa basearch")
             def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
             if (meta.gcp?.image) {
@@ -90,9 +92,9 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
         // For production streams, import the OSTree into the prod
         // OSTree repo.
-        if ((params.STREAM in streams.production) && utils.path_exists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+        if ((params.STREAM in streams.production) && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
             stage("OSTree Import: Prod Repo") {
-                utils.shwrap("""
+                shwrap("""
                 /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
                     --build=${params.VERSION} --s3=${s3_stream_dir} --repo=prod \
                     --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
@@ -105,7 +107,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         // all others. `ore gcloud promote-image` does this for us.
         if (params.STREAM in streams.production) {
             stage('GCP: Image Promotion') {
-                utils.shwrap("""
+                shwrap("""
                 # pick up the project to use from the config
                 gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
                 ore gcloud promote-image \
@@ -126,7 +128,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // We have to re-run the coreos-meta-translator as aws-replicate
             // only modifies the meta.json
             stage('Replicate AWS AMI') {
-                utils.shwrap("""
+                shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                 cosa aws-replicate --build=${params.VERSION} --log-level=INFO
                 cosa generate-release-meta --build-id ${params.VERSION} --workdir .
@@ -139,7 +141,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
           // Run plume to publish official builds; This will handle modifying
           // object ACLs, modifying AMI image attributes,
           // and creating/modifying the releases.json metadata index
-          utils.shwrap("""
+          shwrap("""
           export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
           plume release --distro fcos \
               --version ${params.VERSION} \
@@ -148,7 +150,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
           """)
         }
 
-        utils.shwrap("""
+        shwrap("""
         /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
             stream.release --build ${params.VERSION} --stream ${params.STREAM}
         """)
