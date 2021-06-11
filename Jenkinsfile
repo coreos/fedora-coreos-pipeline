@@ -130,6 +130,11 @@ lock(resource: "build-${params.STREAM}") {
     podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') {
 
+        // print out details of the cosa image to help debugging
+        utils.shwrap("""
+        cat /cosa/coreos-assembler-git.json
+        """)
+
         // declare these early so we can use them in `finally` block
         def newBuildID
         def basearch = utils.shwrap_capture("cosa basearch")
