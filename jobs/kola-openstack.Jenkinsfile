@@ -7,6 +7,8 @@ node {
 }
 
 properties([
+    // we only want to run one test at a time so we don't hit VexxHost resource limits
+    disableConcurrentBuilds(),
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
