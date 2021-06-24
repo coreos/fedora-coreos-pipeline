@@ -40,7 +40,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     shwrap("cosa buildprep ${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
     def prevPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.x86_64.json | sha256sum")
-    def prevPkgTimestamp = shwrapCapture("jq -c .metadata.generated src/config/manifest-lock.x86_64.json | xargs -I{} date --date={} +%s")
+    def prevPkgTimestamp = shwrapCapture("jq -c .metadata.generated src/config/manifest-lock.x86_64.json | xargs -I{} date --date={} +%s") as Integer
 
     // do a first fetch where we only fetch metadata; no point in
     // importing RPMs if nothing actually changed
@@ -49,7 +49,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     }
 
     def newPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.x86_64.json | sha256sum")
-    def newPkgTimestamp = shwrapCapture("jq -c .metadata.generated src/config/manifest-lock.x86_64.json | xargs -I{} date --date={} +%s")
+    def newPkgTimestamp = shwrapCapture("jq -c .metadata.generated src/config/manifest-lock.x86_64.json | xargs -I{} date --date={} +%s") as Integer
     if (newPkgChecksum == prevPkgChecksum) {
         println("No changes")
         if ((newPkgTimestamp - prevPkgTimestamp) > (2*24*60*60)) {
