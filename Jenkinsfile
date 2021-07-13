@@ -378,7 +378,6 @@ lock(resource: "build-${params.STREAM}") {
                         utils.shwrap("kola testiso -SP --qemu-native-4k --output-dir tmp/kola-metal4k")
                     }
                 } catch (Throwable e) {
-                    archiveArtifacts "builds/latest/**/*.iso"
                     throw e
                 } finally {
                     utils.shwrap("tar -cf - tmp/kola-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
