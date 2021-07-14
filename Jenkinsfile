@@ -84,6 +84,9 @@ properties([
 ])
 
 def is_mechanical = (params.STREAM in streams.mechanical)
+// If we are a mechanical stream then we can pin packages but we
+// don't maintin complete lockfiles so we can't build in strict mode.
+def strict_build_param = is_mechanical ? "" : "--strict"
 
 // Note the supermin VM just uses 2G. The really hungry part is xz, which
 // without lots of memory takes lots of time. For now we just hardcode these
@@ -231,7 +234,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             utils.shwrap("""
-            cosa fetch --strict
+            cosa fetch ${strict_build_param}
             """)
         }
 
@@ -255,7 +258,7 @@ lock(resource: "build-${params.STREAM}") {
                 version = "--version ${new_version}"
             }
             utils.shwrap("""
-            cosa build ostree --strict --skip-prune ${force} ${version} ${parent_arg}
+            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
             """)
         }
 
