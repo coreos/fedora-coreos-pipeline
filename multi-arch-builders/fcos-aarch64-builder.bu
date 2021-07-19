@@ -1,0 +1,148 @@
+# This butane config will do the following:
+#
+# - Allow dustymabe and jlebon to log in as the core user
+# - Allow the builder user to log in with the associated ssh key
+#   which is shared with the pipeline. Used a ed25519 key so we
+#   don't have to worry about https://github.com/golang/go/issues/37278
+# - Set up the podman socket for the builder user (podman remote)
+# - Build coreos-assembler on the first boot and once a day
+# - Configure zincati to allow updates at a specific time (early Monday)
+# - Enable linger for builder (so processes can run even if user hasn't
+#   logged in)
+# - Set a hostname
+# - Configure zram
+#
+variant: fcos
+version: 1.3.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD2v0AVNJauAmerBvsbz/y2/lyTqkE0s71ZPd2MNRhYRlx7nn5fhIh7OptqUSbHUQXm+K2pBHWz5/cILGpcdWOpG97AwAsFvJP3EJqAMRLstLPuziBckkc6QV5ZSwfTW3fabKcU4gaF51LFQlDo/Fi2QfQ1O2lOCQDKWlHR5metN7iVdYzQGO9DWAYMX1RoRhdtVsrPU8+qLpx8zdBdeZDLXvou+gkrnI2taMptoi7afcfIR1KYNlYQGb1TlLG5reJPADHRqnjbpItbZ8IfWULedGjp7DhPYzCyv1g869XQerFRqR8T7WTppyfZLtrOUC2hB6pFtux8KdAVsIu0juWv dustymabe@fedoraproject.org
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1IXvPWcfgEVhRCwZe5WZNemqsEL8zGUfKdoCA5ZSR557Oi/TnL/3v+oLvH1o2iKo69D/7nkSjP+PuHkjEBtyG7riIpTmsRsRNwJcMXS+wl3iWw855Bl97S1D9krY3D1szF0CI9E57EgDwccmAHixQMrFrzG3OBttzawhI2y74QdcGeJtIa/kENIziInM/sPwPL9M6eKeQjuMyb6ZyvkgaQlr7PJrHqs3Y0j6RFa/ns2ViOSZYIj0VxNy+hiTbCWnbE6qpzJJysB3YinwStmotrPk33XgBpDdEunhrEywk7eAc1ZoFvmVtYR/CcDktpAz9VhjQEz43nE6pZc0fjjGb jlebon@lux
+    - name: builder
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILJJquUOL/NRZEIRrMLW0T8H/zmBQA4XMZxoI0ElwvGp builder@fcos-aarch64-builder
+storage:
+  directories:
+    - path: /home/builder/.config
+      user:
+        name: builder
+      group:
+        name: builder
+    - path: /home/builder/.config/systemd
+      user:
+        name: builder
+      group:
+        name: builder
+    - path: /home/builder/.config/systemd/user
+      user:
+        name: builder
+      group:
+        name: builder
+    - path: /home/builder/.config/systemd/user/default.target.wants
+      user:
+        name: builder
+      group:
+        name: builder
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: fcos-aarch64-builder
+    - path: /etc/systemd/zram-generator.conf
+      mode: 0644
+      contents:
+        inline: |
+          # This config file enables a /dev/zram0 device with the default settings
+          [zram0]
+    - path: /etc/zincati/config.d/51-updates-early-monday-morning.toml
+      contents:
+        inline: |
+          [updates]
+          strategy = "periodic"
+          [[updates.periodic.window]]
+          days = [ "Mon" ]
+          start_time = "07:00"
+          length_minutes = 60
+    - path: /var/lib/systemd/linger/builder
+      mode: 0644
+    - path: /home/builder/.config/systemd/user/build-cosa.service
+      mode: 0644
+      user:
+        name: builder
+      group:
+        name: builder
+      contents:
+        inline: |
+          [Unit]
+          Description=Build COSA container
+          After=network-online.target
+          Wants=network-online.target
+          [Service]
+          # Give time for the build to complete
+          TimeoutStartSec=180m
+          Type=oneshot
+          ExecStartPre=mkdir -p /home/builder/coreos-assembler/
+          ExecStartPre=-git clone --depth=1 https://github.com/coreos/coreos-assembler.git /home/builder/coreos-assembler/
+          ExecStartPre=git -C /home/builder/coreos-assembler/ pull
+          ExecStartPre=-podman pull registry.fedoraproject.org/fedora:34
+          ExecStartPre=podman build -t localhost/cosa-buildroot:latest -f ci/Dockerfile /home/builder/coreos-assembler/
+          ExecStart=podman build -t localhost/coreos-assembler:latest --from localhost/cosa-buildroot:latest /home/builder/coreos-assembler/
+          # Can't use image prune yet because it prunes intermediate images
+          # (for caching) and we want to take advantage of caching.
+          # https://github.com/containers/podman/issues/10832
+          #ExecStartPost=-podman image prune --force
+    - path: /home/builder/.config/systemd/user/build-cosa-firstboot.service
+      mode: 0644
+      user:
+        name: builder
+      group:
+        name: builder
+      contents:
+        inline: |
+            [Unit]
+            Description=Build COSA on first boot
+            ConditionFirstBoot=yes
+            [Service]
+            # Give time for the build to complete
+            TimeoutStartSec=180m
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=systemctl --user start build-cosa.service
+            [Install]
+            WantedBy=default.target
+    - path: /home/builder/.config/systemd/user/build-cosa.timer
+      mode: 0644
+      user:
+        name: builder
+      group:
+        name: builder
+      contents:
+        inline: |
+            [Timer]
+            OnCalendar=daily
+            AccuracySec=30m
+            Persistent=true
+            [Install]
+            WantedBy=timers.target
+  links:
+    - path: /home/builder/.config/systemd/user/default.target.wants/build-cosa-firstboot.service
+      target: /home/builder/.config/systemd/user/build-cosa-firstboot.service
+      user:
+        name: builder
+      group:
+        name: builder
+    - path: /home/builder/.config/systemd/user/timers.target.wants/build-cosa.timer
+      target: /home/builder/.config/systemd/user/build-cosa.timer
+      user:
+        name: builder
+      group:
+        name: builder
+    # enable podman socket (used by podman remote) for the user
+    - path: /home/builder/.config/systemd/user/sockets.target.wants/podman.socket
+      target: /usr/lib/systemd/user/podman.socket
+      user:
+        name: builder
+      group:
+        name: builder
