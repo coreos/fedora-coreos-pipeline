@@ -135,6 +135,9 @@ objects:
           - name: github-coreosbot-token
             mountPath: /var/run/secrets/github-coreosbot-token
             readOnly: true
+          - name: fcos-aarch64-builder
+            mountPath: /var/run/secrets/fcos-aarch64-builder
+            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -165,6 +168,10 @@ objects:
         - name: github-coreosbot-token
           secret:
             secretName: github-coreosbot-token
+            optional: true
+        - name: fcos-aarch64-builder
+          secret:
+            secretName: fcos-aarch64-builder
             optional: true
     triggers:
     - imageChangeParams:

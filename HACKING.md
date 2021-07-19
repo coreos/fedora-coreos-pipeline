@@ -174,6 +174,26 @@ $ oc create secret generic slack-api-token --from-file=token=slack-token
 You can obtain a token when creating a new instance of the Jenkins CI
 app in your Slack workspace.
 
+### [OPTIONAL] Creating a secret for multi-arch builders
+
+We can farm off builds to machines of other architectures. We use
+SSH for this. To create a secret for one of these you can first
+create files with your secret content:
+
+```
+mkdir dir
+echo '18.233.54.49' > dir/host
+echo 'builder'      > dir/user
+echo '1001'         > dir/uid
+cat /path/to/sshkey > dir/sshkey
+```
+
+Then create the secret in OpenShift:
+
+```
+oc create secret generic fcos-aarch64-builder --from-file=dir
+```
+
 ### [PROD] GitHub webhook shared secret
 
 Create a shared webhook secret using e.g. `uuidgen -r`:
