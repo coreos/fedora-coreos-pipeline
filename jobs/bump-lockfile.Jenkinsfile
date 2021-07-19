@@ -65,19 +65,19 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         }
     }
 
-    if (!timestampOnly) { 
-        // sanity-check only base lockfiles were changed
-        shwrap("""
-          # do this separately so set -e kicks in if it fails
-          files=\$(git -C src/config ls-files --modified --deleted)
-          for f in \${files}; do
-            if ! [[ \${f} =~ ^manifest-lock\\.[0-9a-z_]+\\.json ]]; then
-              echo "Unexpected modified file \${f}"
-              exit 1
-            fi
-          done
-        """)
+    // sanity-check only base lockfiles were changed
+    shwrap("""
+      # do this separately so set -e kicks in if it fails
+      files=\$(git -C src/config ls-files --modified --deleted)
+      for f in \${files}; do
+        if ! [[ \${f} =~ ^manifest-lock\\.[0-9a-z_]+\\.json ]]; then
+          echo "Unexpected modified file \${f}"
+          exit 1
+        fi
+      done
+    """)
 
+    if (!timestampOnly) {
         stage("Fetch") {
             // XXX: hack around subtle lockfile bug (jlebon to submit an
             // rpm-ostree issue or patch about this)
