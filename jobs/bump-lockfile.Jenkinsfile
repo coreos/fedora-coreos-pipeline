@@ -1,9 +1,10 @@
 @Library('github.com/coreos/coreos-ci-lib@main') _
 
-def streams
+def streams, gp
 node {
     checkout scm
     streams = load("streams.groovy")
+    gp = load("gp.groovy")
 }
 
 repo = "coreos/fedora-coreos-config"
@@ -25,6 +26,19 @@ properties([
 echo "Waiting for bump-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
+def getLockfileInfo(lockfile) {
+    def pkgChecksum, pkgTimestamp
+    if (utils.pathExists(lockfile)) {
+        pkgChecksum = shwrapCapture("jq -c .packages ${lockfile} | sha256sum")
+        pkgTimestamp = shwrapCapture("jq -c .metadata.generated ${lockfile} | xargs -I{} date --date={} +%s") as Integer
+    } else {
+        // lockfile doesn't exist. Give some braindead, but valid values
+        pkgChecksum = ""
+        pkgTimestamp = 1
+    }
+    return [pkgChecksum, pkgTimestamp]
+}
+
 try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { cosaPod {
     currentBuild.description = "[${params.STREAM}] Running"
 
@@ -35,34 +49,57 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     """)
 
     def branch = params.STREAM
-    def timestampOnly = false
+    def forceTimestamp = false
+    def haveChanges = false
     shwrap("cosa init --branch ${branch} https://github.com/${repo}")
     shwrap("cosa buildprep ${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
-    def prevPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.x86_64.json | sha256sum")
-    def prevPkgTimestamp = shwrapCapture("jq -c .metadata.generated src/config/manifest-lock.x86_64.json | xargs -I{} date --date={} +%s") as Integer
+    def lockfile, pkgChecksum, pkgTimestamp
+    def archinfo = [x86_64: [:], aarch64: [:]]
+    for (arch in archinfo.keySet()) {
+        lockfile = "src/config/manifest-lock.${arch}.json"
+        (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
+        archinfo[arch]['prevPkgChecksum'] = pkgChecksum
+        archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
+    }
 
     // do a first fetch where we only fetch metadata; no point in
     // importing RPMs if nothing actually changed
     stage("Fetch Metadata") {
-        shwrap("cosa fetch --update-lockfile --dry-run")
+        parallel x86_64: {
+            shwrap("cosa fetch --update-lockfile --dry-run")
+        }, aarch64: {
+            def appendFlags = "--git-ref=${params.STREAM}"
+            appendFlags += " --git-url=https://github.com/${repo}"
+            appendFlags += " --returnFiles=src/config/manifest-lock.aarch64.json"
+            gp.gangplankArchWrapper([cmd: "cosa fetch --update-lockfile --dry-run",
+                                     arch: "aarch64", appendFlags: appendFlags])
+            shwrap("cp builds/cache/src/config/manifest-lock.aarch64.json src/config/manifest-lock.aarch64.json")
+        }
     }
 
-    def newPkgChecksum = shwrapCapture("jq -c .packages src/config/manifest-lock.x86_64.json | sha256sum")
-    def newPkgTimestamp = shwrapCapture("jq -c .metadata.generated src/config/manifest-lock.x86_64.json | xargs -I{} date --date={} +%s") as Integer
-    if (newPkgChecksum == prevPkgChecksum) {
-        println("No changes")
-        if ((newPkgTimestamp - prevPkgTimestamp) > (2*24*60*60)) {
+    for (arch in archinfo.keySet()) {
+        lockfile = "src/config/manifest-lock.${arch}.json"
+        (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
+        archinfo[arch]['newPkgChecksum'] = pkgChecksum
+        archinfo[arch]['newPkgTimestamp'] = pkgTimestamp
+
+        if (archinfo[arch]['newPkgChecksum'] != archinfo[arch]['prevPkgChecksum']) {
+            haveChanges = true
+        }
+        if ((archinfo[arch]['newPkgTimestamp'] - archinfo[arch]['prevPkgTimestamp']) > (2*24*60*60)) {
             // Let's update the timestamp after two days even if no packages were updated.
             // This will bump the date in the version number for FCOS, which is an indicator
             // of how fresh the package set is.
             println("2 days and no package updates. Pushing anyway to update timestamps.")
-            timestampOnly = true
-        } else {
-            currentBuild.result = 'SUCCESS'
-            currentBuild.description = "[${params.STREAM}] 💤 (no change)"
-            return
+            forceTimestamp = true
         }
+    }
+
+    if (!haveChanges && !forceTimestamp) {
+        currentBuild.result = 'SUCCESS'
+        currentBuild.description = "[${params.STREAM}] 💤 (no change)"
+        return
     }
 
     // sanity-check only base lockfiles were changed
@@ -77,44 +114,68 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
       done
     """)
 
-    if (!timestampOnly) {
-        stage("Fetch") {
-            // XXX: hack around subtle lockfile bug (jlebon to submit an
-            // rpm-ostree issue or patch about this)
-            shwrap("cp src/config/fedora-coreos-pool.repo{,.bak}")
-            shwrap("echo cost=500 >> src/config/fedora-coreos-pool.repo")
-            shwrap("cosa fetch --strict")
-            shwrap("cp src/config/fedora-coreos-pool.repo{.bak,}")
-        }
-
-        stage("Build") {
-            shwrap("cosa build --strict")
-        }
-
-        fcosKola(cosaDir: env.WORKSPACE)
-
-        stage("Build Metal") {
-            shwrap("cosa buildextend-metal")
-            shwrap("cosa buildextend-metal4k")
-        }
-
-        stage("Build Live") {
-            shwrap("cosa buildextend-live --fast")
-            // Test metal4k with an uncompressed image and metal with a
-            // compressed one
-            shwrap("cosa compress --artifact=metal")
-        }
-
-        try {
-            parallel metal: {
-                shwrap("kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install --output-dir tmp/kola-testiso-metal")
-            }, metal4k: {
-                shwrap("kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --output-dir tmp/kola-testiso-metal4k")
+    // The bulk of the work (build, test, etc) is done in the following.
+    // We only need to do that work if we have changes.
+    if (haveChanges) {
+        parallel "Fetch/Build/Test aarch64": {
+            shwrap("""
+               cat <<'EOF' > spec.spec
+job:
+  strict: true
+  miniocfgfile: ""
+recipe:
+  git_ref: ${params.STREAM}
+  git_url: https://github.com/${repo}
+stages:
+- id: ExecOrder 1 Stage
+  execution_order: 1
+  description: Stage 1 execution base
+  build_artifacts: [base]
+  post_commands:
+    - cosa kola run --basic-qemu-scenarios
+delay_meta_merge: false
+EOF
+                   """)
+            gp.gangplankArchWrapper([spec: "spec.spec", arch: "aarch64"])
+        }, x86_64: {
+            stage("Fetch") {
+                // XXX: hack around subtle lockfile bug (jlebon to submit an
+                // rpm-ostree issue or patch about this)
+                shwrap("cp src/config/fedora-coreos-pool.repo{,.bak}")
+                shwrap("echo cost=500 >> src/config/fedora-coreos-pool.repo")
+                shwrap("cosa fetch --strict")
+                shwrap("cp src/config/fedora-coreos-pool.repo{.bak,}")
             }
-        } finally {
-            shwrap("tar -cf - tmp/kola-testiso-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
-            shwrap("tar -cf - tmp/kola-testiso-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
+
+            stage("Build") {
+                shwrap("cosa build --strict")
+            }
+
+            fcosKola(cosaDir: env.WORKSPACE)
+
+            stage("Build Metal") {
+                shwrap("cosa buildextend-metal")
+                shwrap("cosa buildextend-metal4k")
+            }
+
+            stage("Build Live") {
+                shwrap("cosa buildextend-live --fast")
+                // Test metal4k with an uncompressed image and metal with a
+                // compressed one
+                shwrap("cosa compress --artifact=metal")
+            }
+
+            try {
+                parallel metal: {
+                    shwrap("kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install --output-dir tmp/kola-testiso-metal")
+                }, metal4k: {
+                    shwrap("kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --output-dir tmp/kola-testiso-metal4k")
+                }
+            } finally {
+                shwrap("tar -cf - tmp/kola-testiso-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
+                shwrap("tar -cf - tmp/kola-testiso-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
+            }
         }
     }
 
@@ -123,7 +184,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // package was added or removed.
     stage("Push") {
         def message="lockfiles: bump to latest"
-        if (timestampOnly) {
+        if (!haveChanges && forceTimestamp) {
             message="lockfiles: bump timestamp"
         }
         shwrap("git -C src/config commit -am '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
@@ -134,7 +195,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
           sh("git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}")
         }
     }
-    if (timestampOnly) {
+    if (!haveChanges && forceTimestamp) {
         currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
     } else {
         currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
