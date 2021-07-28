@@ -133,6 +133,7 @@ stages:
   build_artifacts: [base]
   post_commands:
     - cosa kola run --basic-qemu-scenarios
+    - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
 delay_meta_merge: false
 EOF
                    """)
