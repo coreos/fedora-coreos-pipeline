@@ -1,7 +1,6 @@
-def utils, streams
+def streams
 node {
     checkout scm
-    utils = load("utils.groovy")
     streams = load("streams.groovy")
 }
 
