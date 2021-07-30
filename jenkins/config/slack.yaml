@@ -11,4 +11,4 @@ unclassified:
   slackNotifier:
     teamDomain: coreos
     tokenCredentialId: slack-token
-    room: "#jenkins-coreos"
+    room: "#jenkins-fedora-coreos"
