@@ -70,6 +70,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
         def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
+        def ostree_prod_refs = [:]
 
         // Clone the automation repo, which contains helper scripts. In the
         // future, we'll probably want this either part of the cosa image, or
@@ -103,6 +104,8 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                         --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
                     """)
                 }
+
+                ostree_prod_refs[meta.ref] = meta["ostree-commit"]
             }
 
             // For production streams, promote the GCP image so that it
@@ -169,6 +172,38 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                     /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                         stream.release --build ${params.VERSION} --basearch ${basearch} --stream ${params.STREAM}
                     """)
+                }
+            }
+        }
+
+        if (ostree_prod_refs.size() > 0) {
+            stage("OSTree Import: Wait and Verify") {
+                def tmpd = shwrapCapture("mktemp -d")
+
+                shwrap("""
+                cd ${tmpd}
+                ostree init --mode=archive --repo=.
+                # add official repo config, which enforces signature checking
+                cat /etc/ostree/remotes.d/fedora.conf >> config
+                """)
+
+                // We do this in a loop because it takes time for the import to
+                // complete and the updated summary file to propagate. But it
+                // shouldn't normally take more than 20 minutes.
+                timeout(time: 20, unit: 'MINUTES') {
+                    for (ref in ostree_prod_refs) {
+                        shwrap("""
+                        cd ${tmpd}
+                        while true; do
+                            ostree pull --commit-metadata-only fedora:${ref.key}
+                            chksum=\$(ostree rev-parse fedora:${ref.key})
+                            if [ "\${chksum}" == "${ref.value}" ]; then
+                                break
+                            fi
+                            sleep 30
+                        done
+                        """)
+                    }
                 }
             }
         }
