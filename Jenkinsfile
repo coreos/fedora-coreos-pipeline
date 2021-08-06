@@ -211,10 +211,13 @@ lock(resource: "build-${params.STREAM}") {
                 if (utils.pathExists("tmp/releases.json")) {
                     def releases = readJSON file: "tmp/releases.json"
                     // check if there's a previous release we should use as parent
-                    if (releases["releases"].size() > 0) {
-                        def commit_obj = releases["releases"][-1]["commits"].find{ commit -> commit["architecture"] == basearch }
-                        parent_commit = commit_obj["checksum"]
-                        parent_version = releases["releases"][-1]["version"]
+                    for (release in releases["releases"].reverse()) {
+                        def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
+                        if (commit_obj != null) {
+                            parent_commit = commit_obj["checksum"]
+                            parent_version = release["version"]
+                            break
+                        }
                     }
                 }
 
