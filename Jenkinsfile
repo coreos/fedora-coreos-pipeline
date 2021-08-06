@@ -592,6 +592,7 @@ lock(resource: "build-${params.STREAM}") {
                     shwrap("""
                     oc start-build --wait fedora-coreos-pipeline-release \
                         -e STREAM=${params.STREAM} \
+                        -e ARCHES=${basearch} \
                         -e VERSION=${newBuildID} \
                         -e AWS_REPLICATION=${params.AWS_REPLICATION}
                     """)
