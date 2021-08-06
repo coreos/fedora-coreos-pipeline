@@ -56,4 +56,33 @@ except botocore.exceptions.ClientError as e:
     ' '${src}' '${dest}'""")
 }
 
+def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
+    // Bump the remote builds json with the specified build and
+    // update the local builds.json. The workflow is:
+    //
+    // lock
+    //      1. download remote builds.json
+    //      2. insert build for specified architecture
+    //      3. update the local copy
+    //      4. upload updated builds.json to the remote
+    // unlock
+    lock(resource: "bump-builds-json-${stream}") {
+        def remotejson = "s3://${s3_stream_dir}/builds/builds.json"
+        aws_s3_cp_allow_noent(remotejson, './remote-builds.json')
+        shwrap("""
+        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+        # If no remote json exists then this is the first run
+        # and we'll just upload the local builds.json
+        if [ -f ./remote-builds.json ]; then
+            TMPD=\$(mktemp -d) && mkdir \$TMPD/builds
+            mv ./remote-builds.json \$TMPD/builds/builds.json
+            source /usr/lib/coreos-assembler/cmdlib.sh
+            insert_build ${buildid} \$TMPD ${arch}
+            cp \$TMPD/builds/builds.json builds/builds.json
+        fi
+        aws s3 cp builds/builds.json s3://${s3_stream_dir}/builds/builds.json
+        """)
+    }
+}
+
 return this
