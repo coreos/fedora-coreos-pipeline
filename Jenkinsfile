@@ -494,12 +494,6 @@ lock(resource: "build-${params.STREAM}") {
             cosa compress --compressor xz
             """)
 
-            // Run the coreos-meta-translator against the most recent build,
-            // which will generate a release.json from the meta.json files
-            shwrap("""
-            cosa generate-release-meta --workdir .
-            """)
-
             if (s3_stream_dir) {
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
