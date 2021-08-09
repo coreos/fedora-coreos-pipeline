@@ -17,6 +17,10 @@ properties([
              description: 'Fedora CoreOS Build ID to test',
              defaultValue: '',
              trim: true),
+      string(name: 'ARCH',
+             description: 'Target architecture',
+             defaultValue: 'x86_64',
+             trim: true),
       string(name: 'S3_STREAM_DIR',
              description: 'Override the Fedora CoreOS S3 stream directory',
              defaultValue: '',
@@ -32,7 +36,7 @@ properties([
     ])
 ])
 
-currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
+currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
 
 def s3_stream_dir = params.S3_STREAM_DIR
 if (s3_stream_dir == "") {
@@ -43,21 +47,26 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         memory: "256Mi", kvm: false,
         secrets: ["aws-fcos-builds-bot-config", "aws-fcos-kola-bot-config"]) {
 
-    def ami, ami_region
+    def ami, ami_region, instance_type_arg
     stage('Fetch Metadata') {
         shwrap("""
         export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
         cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-        cosa buildprep --ostree --build=${params.VERSION} s3://${s3_stream_dir}/builds
+        cosa buildprep --ostree --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
         """)
 
-        def basearch = shwrapCapture("cosa basearch")
-        def meta = readJSON file: "builds/${params.VERSION}/${basearch}/meta.json"
+        def meta = readJSON file: "builds/${params.VERSION}/${params.ARCH}/meta.json"
         if (meta.amis.size() > 0) {
             ami = meta['amis'][0]['hvm']
             ami_region = meta['amis'][0]['name']
         } else {
             throw new Exception("No AMI found in metadata for ${params.VERSION}")
+        }
+
+        // Need to override the instance type if we're AARCH64
+        instance_type_arg = ""
+        if (params.ARCH == "aarch64") {
+            instance_type_arg = "--aws-type=c6g.xlarge"
         }
     }
 
@@ -66,5 +75,6 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
              platformArgs: """-p=aws \
                 --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                 --aws-ami=${ami} \
-                --aws-region=${ami_region}""")
+                --aws-region=${ami_region} \
+                ${instance_type_arg}""")
 }
