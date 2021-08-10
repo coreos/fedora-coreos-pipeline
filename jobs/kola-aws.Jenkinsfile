@@ -47,34 +47,18 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         memory: "256Mi", kvm: false,
         secrets: ["aws-fcos-builds-bot-config", "aws-fcos-kola-bot-config"]) {
 
-    def ami, ami_region, instance_type_arg
     stage('Fetch Metadata') {
         shwrap("""
         export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
         cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
         cosa buildprep --ostree --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
         """)
-
-        def meta = readJSON file: "builds/${params.VERSION}/${params.ARCH}/meta.json"
-        if (meta.amis.size() > 0) {
-            ami = meta['amis'][0]['hvm']
-            ami_region = meta['amis'][0]['name']
-        } else {
-            throw new Exception("No AMI found in metadata for ${params.VERSION}")
-        }
-
-        // Need to override the instance type if we're AARCH64
-        instance_type_arg = ""
-        if (params.ARCH == "aarch64") {
-            instance_type_arg = "--aws-type=c6g.xlarge"
-        }
     }
 
-    fcosKola(cosaDir: env.WORKSPACE, parallel: 5, build: params.VERSION,
+    fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+             build: params.VERSION, arch: params.ARCH,
              extraArgs: params.KOLA_TESTS,
              platformArgs: """-p=aws \
                 --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
-                --aws-ami=${ami} \
-                --aws-region=${ami_region} \
-                ${instance_type_arg}""")
+                --aws-region=us-east-1""")
 }
