@@ -123,7 +123,7 @@ echo "Final podspec: ${pod}"
 def pod_label = "cosa-${UUID.randomUUID().toString()}"
 
 
-echo "Waiting for build-${params.STREAM} lock"
+echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] Waiting"
 
 lock(resource: "build-${params.STREAM}-${params.ARCH}") {
