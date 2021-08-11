@@ -90,7 +90,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
             insert_build ${buildid} \$TMPD ${arch}
             cp \$TMPD/builds/builds.json builds/builds.json
         fi
-        aws s3 cp builds/builds.json s3://${s3_stream_dir}/builds/builds.json
+        aws s3 cp --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
         """)
     }
 }
