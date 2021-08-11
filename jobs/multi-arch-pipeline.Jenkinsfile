@@ -2,7 +2,7 @@
 
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, official_jenkins, developer_prefix, repo, src_config_url, src_config_ref, s3_bucket, gp
+def pipeutils, streams, official, developer_prefix, repo, src_config_url, src_config_ref, s3_bucket, gp
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -13,9 +13,7 @@ node {
 
 
     // just autodetect if we're in the official prod Jenkins or not
-    official_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ocp.ci.centos.org/')
-    def official_job = (env.JOB_NAME == 'fedora-coreos/fedora-coreos-fedora-coreos-pipeline')
-    official = (official_jenkins && official_job)
+    official = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ocp.ci.centos.org/')
 
     if (official) {
         echo "Running in official (prod) mode."
