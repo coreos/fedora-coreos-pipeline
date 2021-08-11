@@ -266,8 +266,7 @@ EOF
                 cosa sign --build=${newBuildID} --arch=${basearch} \
                     robosignatory --s3 ${s3_stream_dir}/builds \
                     --extra-fedmsg-keys stream=${params.STREAM} \
-                    --ostree --arch=${basearch} \
-                    --gpgkeypath /etc/pki/rpm-gpg \
+                    --ostree --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
                 """)
             }
@@ -393,8 +392,7 @@ EOF
                 cosa sign --build=${newBuildID} --arch=${basearch} \
                     robosignatory --s3 ${s3_stream_dir}/builds \
                     --extra-fedmsg-keys stream=${params.STREAM} \
-                    --images --arch=${basearch} \
-                    --gpgkeypath /etc/pki/rpm-gpg \
+                    --images --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
                 """)
             }
