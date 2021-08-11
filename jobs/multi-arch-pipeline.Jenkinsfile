@@ -263,7 +263,8 @@ EOF
             stage('Sign OSTree') {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                cosa sign --build=${newBuildID} --arch=${basearch} \
+                    robosignatory --s3 ${s3_stream_dir}/builds \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --ostree --arch=${basearch} \
                     --gpgkeypath /etc/pki/rpm-gpg \
@@ -389,7 +390,8 @@ EOF
             stage('Sign Images') {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                cosa sign --build=${newBuildID} --arch=${basearch} \
+                    robosignatory --s3 ${s3_stream_dir}/builds \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --images --arch=${basearch} \
                     --gpgkeypath /etc/pki/rpm-gpg \

@@ -301,7 +301,8 @@ lock(resource: "build-${params.STREAM}") {
             stage('Sign OSTree') {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                cosa sign --build=${newBuildID} --arch=${basearch} \
+                    robosignatory --s3 ${s3_stream_dir}/builds \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --ostree --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
@@ -532,7 +533,8 @@ lock(resource: "build-${params.STREAM}") {
             stage('Sign Images') {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa sign robosignatory --s3 ${s3_stream_dir}/builds \
+                cosa sign --build=${newBuildID} --arch=${basearch} \
+                    robosignatory --s3 ${s3_stream_dir}/builds \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --images --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
