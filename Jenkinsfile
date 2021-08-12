@@ -492,8 +492,10 @@ lock(resource: "build-${params.STREAM}") {
         // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
         stage('KeyLime Hash Generation') {
             shwrap("""
-            cosa generate-hashlist --release=${newBuildID} --output=builds/${newBuildID}/${basearch}/exp-hash.json
-            sha256sum builds/${newBuildID}/${basearch}/exp-hash.json > builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM
+            cosa generate-hashlist --arch=${basearch} --release=${newBuildID} \
+                --output=builds/${newBuildID}/${basearch}/exp-hash.json
+            sha256sum builds/${newBuildID}/${basearch}/exp-hash.json \
+                > builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM
             """)
         }
 
