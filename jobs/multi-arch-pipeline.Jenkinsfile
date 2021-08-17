@@ -285,13 +285,20 @@ stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
   description: Stage 1 execution base
-  build_artifacts: [qemu]
-  require_artifacts: [ostree]
   prep_commands:
     - cat /cosa/coreos-assembler-git.json
+  require_artifacts: [ostree]
   post_commands:
-    - cosa kola run --basic-qemu-scenarios
+    - cosa buildextend-qemu
+    - cosa kola run --basic-qemu-scenarios --output-dir tmp/kola-basic
+    - cosa kola run --parallel 4 --output-dir tmp/kola
+    - cosa buildextend-metal
+    - cosa buildextend-metal4k
+    - cosa buildextend-live
+    - kola testiso -S --output-dir tmp/kola-metal
+    - kola testiso -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
     - cosa buildextend-aws
+    - cosa buildextend-openstack
     - cosa compress --compressor xz
 delay_meta_merge: false
 EOF
