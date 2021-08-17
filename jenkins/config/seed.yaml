@@ -14,6 +14,14 @@ jobs:
             script('''
               @Library('github.com/coreos/coreos-ci-lib@main') _
 
+              properties([
+                parameters([
+                  booleanParam(name: 'FORCE',
+                               defaultValue: false,
+                               description: 'Whether to redefine existing jobs (make sure to rerun all jobs with triggers to re-activate them)'),
+                ])
+              ])
+
               node {
                 // XXX: hack, should put this in coreos-ci-lib
                 sh("curl -LO https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/utils.groovy")
@@ -27,7 +35,7 @@ jobs:
                   def split = file.name.split("\\\\.")
                   assert split[1] == "Jenkinsfile"
                   def jobName = split[0]
-                  jobDsl scriptText: """
+                  jobDsl ignoreExisting: !params.FORCE, scriptText: """
                     pipelineJob("^${jobName}") {
                       definition {
                         cpsScm {
