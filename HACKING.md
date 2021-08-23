@@ -218,6 +218,13 @@ uuidgen -r > secret
 oc create secret generic github-webhook-shared-secret --from-file=secret
 ```
 
+### [PROD] Create quay.io image push secret
+
+This secret is used to push the resulting OCI image to Quay.io
+
+1. Obtain the file `oscontainer-secret` from BitWarden.
+2. Run: `$ oc create secret generic oscontainer-secret --from-file=dockercfg=oscontainer-secret`.
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 For CentOS CI:
