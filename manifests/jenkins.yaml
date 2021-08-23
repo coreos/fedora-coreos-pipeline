@@ -138,6 +138,9 @@ objects:
           - name: fcos-aarch64-builder
             mountPath: /var/run/secrets/fcos-aarch64-builder
             readOnly: true
+          - name: oscontainer-secret
+            mountPath: /var/run/secrets/oscontainer-secret
+            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -172,6 +175,10 @@ objects:
         - name: fcos-aarch64-builder
           secret:
             secretName: fcos-aarch64-builder
+            optional: true
+        - name: oscontainer-secret
+          secret:
+            secretName: oscontainer-secret
             optional: true
     triggers:
     - imageChangeParams:

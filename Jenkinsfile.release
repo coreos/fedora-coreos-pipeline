@@ -60,6 +60,10 @@ echo "Final podspec: ${pod}"
 // use a unique label to force Kubernetes to provision a separate pod per run
 def pod_label = "cosa-${UUID.randomUUID().toString()}"
 
+// Destination for OCI image push
+// TODO: Change this to quay.io/fedora/coreos per https://fedoraproject.org/wiki/Changes/OstreeNativeContainer
+def quay_registry = "quay.io/coreos-assembler/fcos"
+
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
 // *does*, this makes sure they're run serially.
@@ -83,9 +87,17 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-            cosa buildfetch --build=${params.VERSION} \
+            cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds
             """)
+        }
+
+        stage('Sync oscontainer to quay.io') {
+            withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
+                shwrap("""
+                skopeo copy --authfile="${OSCONTAINER_SECRET}" "oci-archive://\$(cosa meta --image-path ostree)" "docker://${quay_registry}:${params.STREAM}"
+                """)
+            }
         }
 
         for (basearch in params.ARCHES.split()) {
