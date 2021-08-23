@@ -83,9 +83,20 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-            cosa buildprep --build=${params.VERSION} \
+            cosa buildprep --ostree --build=${params.VERSION} \
                 --arch=all s3://${s3_stream_dir}/builds
             """)
+        }
+
+        def oscontainer_secret = "/run/kubernetes/secrets/oscontainer-registry/dockercfg";
+        if (utils.pathExists(oscontainer_secret)) {
+        stage('Sync oscontainer to quay.io') {
+            shwrap("""ociarchive=\$(cosa meta --image-path ostree)
+                    case \${ociarchive} in
+                      *ociarchive) skopeo copy --authfile=$oscontainer_secret oci-archive://\${ociarchive} docker://quay.io/cgwalters/fcos:${params.STREAM};;
+                      *) echo Build not configured as oci ;;
+                    esac""")
+        }
         }
 
         for (basearch in params.ARCHES.split()) {

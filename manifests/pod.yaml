@@ -54,6 +54,9 @@ spec:
      - name: fedora-messaging-coreos-key
        mountPath: /run/kubernetes/secrets/fedora-messaging-coreos-key
        readOnly: true
+     - name: oscontainer-registry
+       mountPath: /run/kubernetes/secrets/oscontainer-registry
+       readOnly: true
      securityContext:
        privileged: false
      resources:
@@ -102,4 +105,8 @@ spec:
   - name: fedora-messaging-coreos-key
     secret:
       secretName: fedora-messaging-coreos-key
+      optional: true
+  - name: oscontainer-registry
+    secret:
+      secretName: oscontainer-registry
       optional: true
