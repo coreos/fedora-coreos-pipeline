@@ -274,8 +274,9 @@ EOF
 
         def kolaSuccess = true
         stage('Build/Test Remaining') {
-            shwrap("""
-               cat <<'EOF' > spec.spec
+            try {
+                shwrap("""
+                   cat <<'EOF' > spec.spec
 job:
   strict: true
   miniocfgfile: ""
@@ -289,40 +290,32 @@ stages:
   prep_commands:
     - cat /cosa/coreos-assembler-git.json
   require_artifacts: [ostree]
-  post_commands:
+  commands:
     - cosa buildextend-qemu
-    - cosa kola run --no-test-exit-error --basic-qemu-scenarios --output-dir tmp/kola-basic
-    - cosa kola run --no-test-exit-error --parallel 4 --output-dir tmp/kola
+    - cosa kola run --basic-qemu-scenarios --output-dir tmp/kola-basic
+    - cosa kola run --parallel 4 --output-dir tmp/kola
     - cosa buildextend-metal
     - cosa buildextend-metal4k
     - cosa buildextend-live
-    - kola testiso --no-test-exit-error -S --output-dir tmp/kola-metal
-    - kola testiso --no-test-exit-error -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
+    - kola testiso -S --output-dir tmp/kola-metal
+    - kola testiso -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
     - cosa buildextend-aws
     - cosa buildextend-openstack
+  post_commands:
+    - ls -d tmp/kola{,-basic,-metal,-metal4k} 2>/dev/null | xargs tar --xz -cf tmp/kola.tar.xz
     - cosa compress --compressor xz
-    - tar --xz -cf tmp/kola.tar.xz tmp/kola-basic tmp/kola tmp/kola-metal4k tmp/kola-metal
+  post_always: true
 delay_meta_merge: false
 EOF
-                   """)
-            gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch])
-            archiveArtifacts "builds/${newBuildID}/${basearch}/logs/kola.tar.xz"
-
-            // Check the results of the kola tests.
-            def kolatmpdir = shwrapCapture("mktemp --dir --tmpdir=\$PWD/tmp")
-            shwrap("tar xf builds/${newBuildID}/${basearch}/logs/kola.tar.xz -C ${kolatmpdir}")
-            for (koladir in ["tmp/kola-basic", "tmp/kola",
-                             "tmp/kola-metal", "tmp/kola-metal4k"]) {
-                if (!pipeutils.checkKolaSuccess("${kolatmpdir}/${koladir}", currentBuild)) {
-                    kolaSuccess = false
-                }
+                """)
+                gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch])
+            } catch (Throwable e) {
+                throw e
+            } finally {
+                archiveArtifacts allowEmptyArchive: true, artifacts: "builds/${newBuildID}/${basearch}/logs/kola.tar.xz"
+                // Now that the logs are archived remove them from the builds dir
+                shwrap("rm -rf builds/${newBuildID}/${basearch}/logs")
             }
-            // Now that the logs are archived and checked, remove them from the
-            // builds dir and from the tmpdir we created.
-            shwrap("rm -rf ${kolatmpdir} builds/${newBuildID}/${basearch}/logs")
-        }
-        if (!kolaSuccess) {
-            return
         }
 
 
