@@ -125,8 +125,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             }
 
 
-            // No AMI replication for aarch64 until we figure out AMI booting issues
-            if ((basearch in ['x86_64']) && (params.AWS_REPLICATION == 'true')) {
+            if ((basearch in ['aarch64', 'x86_64']) && (params.AWS_REPLICATION == 'true')) {
                 // Replicate AMI to other regions.
                 stage("Replicate ${basearch} AWS AMI") {
                     shwrap("""
