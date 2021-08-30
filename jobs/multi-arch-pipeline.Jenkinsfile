@@ -302,8 +302,8 @@ stages:
     - cosa buildextend-aws
     - cosa buildextend-openstack
   post_commands:
-    - ls -d tmp/kola{,-basic,-metal,-metal4k} 2>/dev/null | xargs tar --xz -cf tmp/kola.tar.xz
     - cosa compress --compressor xz
+    - tar --xz -cf tmp/kola{-basic,,-metal,-metal4k} || true
   post_always: true
 delay_meta_merge: false
 EOF
