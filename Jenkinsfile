@@ -2,7 +2,8 @@
 
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, official_jenkins, developer_prefix, src_config_url, src_config_ref, s3_bucket
+def pipeutils, streams, official, official_jenkins, developer_prefix
+def src_config_url, src_config_ref, s3_bucket, config_git_commit
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -194,6 +195,9 @@ lock(resource: "build-${params.STREAM}") {
             ln -s ${cache_img} cache/cache.qcow2
             """)
 
+            // Capture the exact git commit used. Will pass to multi-arch pipeline runs.
+            config_git_commit=shwrapCapture("git -C src/config rev-parse HEAD")
+
             // If the cache img is larger than 7G, then nuke it. Otherwise
             // it'll just keep growing and we'll hit ENOSPC. It'll get rebuilt.
             shwrap("""
@@ -378,6 +382,7 @@ lock(resource: "build-${params.STREAM}") {
                 build job: 'multi-arch-pipeline', wait: false, parameters: [
                     booleanParam(name: 'FORCE', value: params.FORCE),
                     booleanParam(name: 'MINIMAL', value: params.MINIMAL),
+                    string(name: 'CONFIG_GIT_COMMIT', value: config_git_commit),
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'ARCH', value: 'aarch64')

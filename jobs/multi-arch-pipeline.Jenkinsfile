@@ -82,6 +82,10 @@ properties([
              description: 'The target architecture',
              defaultValue: 'aarch64',
              trim: true),
+      string(name: 'CONFIG_GIT_COMMIT',
+             description: 'The exact config repo git commit to build against',
+             defaultValue: '',
+             trim: true),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '60',
@@ -177,8 +181,12 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                 ref = src_config_ref
             }
 
+            def commitopt = ''
+            if (params.CONFIG_GIT_COMMIT != '') {
+                commitopt = "--commit=${params.CONFIG_GIT_COMMIT}"
+            }
             shwrap("""
-            cosa init --force --branch ${ref} ${src_config_url}
+            cosa init --force --branch ${ref} ${commitopt} ${src_config_url}
             """)
 
         }
@@ -235,6 +243,7 @@ job:
 recipe:
   git_ref: ${params.STREAM}
   git_url: https://github.com/${repo}
+  git_commit: ${params.CONFIG_GIT_COMMIT}
 stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
@@ -283,6 +292,7 @@ job:
 recipe:
   git_ref: ${params.STREAM}
   git_url: https://github.com/${repo}
+  git_commit: ${params.CONFIG_GIT_COMMIT}
 stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
