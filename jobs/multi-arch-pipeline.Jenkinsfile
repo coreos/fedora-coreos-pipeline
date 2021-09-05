@@ -309,8 +309,9 @@ stages:
     - cosa buildextend-live
     - kola testiso -S --output-dir tmp/kola-metal
     - kola testiso -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
-    - cosa buildextend-aws
     - cosa buildextend-openstack
+    - echo 'ZGlmZiAtLWdpdCBhL3Vzci9saWIvY29yZW9zLWFzc2VtYmxlci9nZi1wbGF0Zm9ybWlkIGIvdXNyL2xpYi9jb3Jlb3MtYXNzZW1ibGVyL2dmLXBsYXRmb3JtaWQKaW5kZXggMjkxMmIzMjJjLi4zNmQwODk2NTEgMTAwNzU1Ci0tLSBhL3Vzci9saWIvY29yZW9zLWFzc2VtYmxlci9nZi1wbGF0Zm9ybWlkCisrKyBiL3Vzci9saWIvY29yZW9zLWFzc2VtYmxlci9nZi1wbGF0Zm9ybWlkCkBAIC00Niw3ICs0NiwxMSBAQCBibHNjZmdfcGF0aD0kKGNvcmVvc19nZiBnbG9iLWV4cGFuZCAvYm9vdC9sb2FkZXIvZW50cmllcy9vc3RyZWUtKi5jb25mKQogY29yZW9zX2dmIGRvd25sb2FkICIke2Jsc2NmZ19wYXRofSIgIiR7dG1wZH0iL2Jscy5jb25mCiAjIFJlbW92ZSBhbnkgcGxhdGZvcm1pZCBjdXJyZW50bHkgdGhlcmUKIHNlZCAtaSAtZSAncywgaWduaXRpb24ucGxhdGZvcm0uaWQ9W2EtekEtWjAtOV0qLCxnJyAiJHt0bXBkfSIvYmxzLmNvbmYKLXNlZCAtaSAtZSAncyxeXChvcHRpb25zIC4qXCksXDEgaWduaXRpb24ucGxhdGZvcm0uaWQ9JyIke3BsYXRmb3JtaWR9IicsJyAiJHt0bXBkfSIvYmxzLmNvbmYKK2lmIFsgIiR7cGxhdGZvcm1pZH0iID09ICdhd3MnIF07IHRoZW4KKyAgICBzZWQgLWkgLWUgJ3N8Xlwob3B0aW9ucyAuKlwpfFwxIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInIGNvbnNvbGU9dHR5UzAsMTE1MjAwbjh8JyAiJHt0bXBkfSIvYmxzLmNvbmYKK2Vsc2UKKyAgICBzZWQgLWkgLWUgJ3MsXlwob3B0aW9ucyAuKlwpLFwxIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInLCcgIiR7dG1wZH0iL2Jscy5jb25mCitmaQogY29yZW9zX2dmIHVwbG9hZCAiJHt0bXBkfSIvYmxzLmNvbmYgIiR7YmxzY2ZnX3BhdGh9IgogCiBpZiBbICIkYmFzZWFyY2giID0gInMzOTB4IiBdIDsgdGhlbiAK' | base64 --decode | sudo patch /usr/lib/coreos-assembler/gf-platformid
+    - cosa buildextend-aws
   post_commands:
     - cosa compress --compressor xz
     - tar --xz -cf tmp/kola.tar.xz tmp/kola{-basic,,-metal,-metal4k} || true
