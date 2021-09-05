@@ -334,8 +334,7 @@ EOF
         // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
         // to S3, we also take that to mean we should upload an AMI. We could
         // split this into two separate developer knobs in the future.
-        // XXX disable AWS upload for now until AMI boot issue is fixed
-        if (false && s3_stream_dir && !is_mechanical) {
+        if (s3_stream_dir && !is_mechanical) {
             stage('Upload AWS') {
                 def suffix = official ? "" : "--name-suffix ${developer_prefix}"
                 // pick up the AWS compressed vmdk and uncompress it
@@ -439,8 +438,7 @@ EOF
         }
 
         // Now that the metadata is uploaded go ahead and kick off some tests
-        // XXX disable AWS testing for now until AMI boot issue is fixed
-        if (false && !params.MINIMAL && s3_stream_dir &&
+        if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
             stage('Kola:AWS') {
                 // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
