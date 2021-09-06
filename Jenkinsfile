@@ -375,19 +375,15 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
-        // Don't run the multi-arch-pipeline for prod streams just
-        // yet. We're still working out all the details.
-        if (!official || !(params.STREAM in streams.production)) {
-            stage('Fork AARCH64 Pipeline') {
-                build job: 'multi-arch-pipeline', wait: false, parameters: [
-                    booleanParam(name: 'FORCE', value: params.FORCE),
-                    booleanParam(name: 'MINIMAL', value: params.MINIMAL),
-                    string(name: 'CONFIG_GIT_COMMIT', value: config_git_commit),
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'VERSION', value: newBuildID),
-                    string(name: 'ARCH', value: 'aarch64')
-                ]
-            }
+        stage('Fork AARCH64 Pipeline') {
+            build job: 'multi-arch-pipeline', wait: false, parameters: [
+                booleanParam(name: 'FORCE', value: params.FORCE),
+                booleanParam(name: 'MINIMAL', value: params.MINIMAL),
+                string(name: 'CONFIG_GIT_COMMIT', value: config_git_commit),
+                string(name: 'STREAM', value: params.STREAM),
+                string(name: 'VERSION', value: newBuildID),
+                string(name: 'ARCH', value: 'aarch64')
+            ]
         }
 
         if (!params.MINIMAL) {
