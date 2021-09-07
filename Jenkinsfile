@@ -420,12 +420,17 @@ lock(resource: "build-${params.STREAM}") {
                         shwrap("kola testiso -S --output-dir tmp/kola-metal")
                     }, metal4k: {
                         shwrap("kola testiso -SP --qemu-native-4k --output-dir tmp/kola-metal4k")
+                    }, uefi: {
+                        shwrap("mkdir -p tmp/kola-uefi")
+                        shwrap("kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-uefi/insecure")
+                        shwrap("kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-uefi/secure")
                     }
                 } catch (Throwable e) {
                     throw e
                 } finally {
                     shwrap("tar -cf - tmp/kola-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
                     shwrap("tar -cf - tmp/kola-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
+                    shwrap("tar -cf - tmp/kola-uefi/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-uefi.tar.xz")
                     archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
                 }
             }
