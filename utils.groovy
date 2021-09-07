@@ -76,6 +76,8 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
     //      3. update the local copy
     //      4. upload updated builds.json to the remote
     // unlock
+    //
+    // XXX: should fold this into `cosa buildupload` somehow
     lock(resource: "bump-builds-json-${stream}") {
         def remotejson = "s3://${s3_stream_dir}/builds/builds.json"
         aws_s3_cp_allow_noent(remotejson, './remote-builds.json')
@@ -90,7 +92,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
             insert_build ${buildid} \$TMPD ${arch}
             cp \$TMPD/builds/builds.json builds/builds.json
         fi
-        aws s3 cp --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
+        aws s3 cp --cache-control=max-age=300 --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
         """)
     }
 }
