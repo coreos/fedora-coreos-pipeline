@@ -9,3 +9,4 @@ configuration-as-code-groovy:1.1
 timestamper:1.11.8
 build-token-root:1.7
 github:1.33.1
+workflow-api:2.46
