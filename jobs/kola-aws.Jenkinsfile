@@ -58,6 +58,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
              build: params.VERSION, arch: params.ARCH,
              extraArgs: params.KOLA_TESTS,
+             skipBasicScenarios: true,
              platformArgs: """-p=aws \
                 --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                 --aws-region=us-east-1""")

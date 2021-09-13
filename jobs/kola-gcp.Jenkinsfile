@@ -62,6 +62,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
     fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
              build: params.VERSION, arch: params.ARCH,
              extraArgs: params.KOLA_TESTS,
+             skipBasicScenarios: true,
              platformArgs: """-p=gce \
                 --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}/config \
                 --gce-project=${gcp_project}""")
