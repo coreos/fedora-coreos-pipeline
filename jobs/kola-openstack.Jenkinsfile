@@ -102,6 +102,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
                  build: params.VERSION, skipUpgrade: true,
                  extraArgs: params.KOLA_TESTS,
+                 skipBasicScenarios: true,
                  platformArgs: """-p=openstack                               \
                     --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
                     --openstack-flavor=v1-standard-4                         \
