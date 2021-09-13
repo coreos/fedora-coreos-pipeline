@@ -149,7 +149,7 @@ EOF
             }
 
             stage("Build") {
-                shwrap("cosa build --strict")
+                shwrap("cosa build --force --strict")
             }
 
             fcosKola(cosaDir: env.WORKSPACE)
