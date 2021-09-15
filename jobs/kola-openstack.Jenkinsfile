@@ -105,7 +105,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
                  skipBasicScenarios: true,
                  platformArgs: """-p=openstack                               \
                     --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
-                    --openstack-flavor=v1-standard-4                         \
+                    --openstack-flavor=v3-starter-4                          \
                     --openstack-network=private                              \
                     --openstack-floating-ip-network=public                   \
                     --openstack-image=${openstack_image_name}""")
