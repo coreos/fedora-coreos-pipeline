@@ -11,7 +11,8 @@ properties([
         githubPush(),
         // also run every 15 mins as a fallback in case webhooks are down
         pollSCM('H/15 * * * *')
-    ])
+    ]),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos-key"]) {

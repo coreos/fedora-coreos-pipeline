@@ -5,7 +5,8 @@ node {
 }
 
 properties([
-    pipelineTriggers(streams.get_push_trigger())
+    pipelineTriggers(streams.get_push_trigger()),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 node {

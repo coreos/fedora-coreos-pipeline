@@ -39,7 +39,8 @@ properties([
              description: 'Override coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
              trim: true)
-    ])
+    ]),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 // no way to make a parameter required directly so manually check

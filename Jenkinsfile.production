@@ -6,7 +6,8 @@ node {
 
 properties([
     // no triggers; we'll drive production releases manually in the short-term
-    pipelineTriggers([])
+    pipelineTriggers([]),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 node {
