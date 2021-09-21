@@ -31,7 +31,8 @@ properties([
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
              trim: true)
-    ])
+    ]),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"

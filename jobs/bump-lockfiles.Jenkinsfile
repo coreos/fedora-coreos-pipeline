@@ -4,7 +4,8 @@ properties([
     pipelineTriggers([
         // we don't need to bump lockfiles any more often than daily
         cron("H H * * *")
-    ])
+    ]),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 node {

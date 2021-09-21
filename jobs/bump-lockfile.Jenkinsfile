@@ -20,7 +20,8 @@ properties([
         choice(name: 'STREAM',
                choices: streams.development,
                description: 'Fedora CoreOS development stream to bump'),
-    ])
+    ]),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 echo "Waiting for bump-${params.STREAM} lock"

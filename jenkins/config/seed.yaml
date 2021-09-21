@@ -19,7 +19,8 @@ jobs:
                   booleanParam(name: 'FORCE',
                                defaultValue: false,
                                description: 'Whether to redefine existing jobs (make sure to rerun all jobs with triggers to re-activate them)'),
-                ])
+                ]),
+                durabilityHint('PERFORMANCE_OPTIMIZED')
               ])
 
               node {
