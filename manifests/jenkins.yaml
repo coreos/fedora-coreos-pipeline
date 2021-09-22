@@ -86,7 +86,7 @@ objects:
           # https://github.com/coreos/coreos-ci/issues/28
           - name: JENKINS_JAVA_OVERRIDES
             value: >-
-              -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=600
+              -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=900
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true
           image: ' '
           imagePullPolicy: IfNotPresent
