@@ -97,7 +97,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
     
     // In VexxHost we'll use the network called "private" for the
     // instance NIC, attach a floating IP from the "public" network and
-    // use the v1-standard-4 instance (ram=4GiB, disk=100GiB, CPUs=4).
+    // use the v3-starter-4 instance (ram=8GiB, CPUs=4).
     // The clouds.yaml config should be located at ${OPENSTACK_KOLA_TESTS_CONFIG}/config.
     //
     // Since we don't have permanent images uploaded to VexxHost we'll
