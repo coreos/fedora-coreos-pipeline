@@ -19,6 +19,10 @@ properties([
              description: 'Fedora CoreOS Build ID to test',
              defaultValue: '',
              trim: true),
+      string(name: 'ARCH',
+             description: 'Target architecture',
+             defaultValue: 'x86_64',
+             trim: true),
       string(name: 'S3_STREAM_DIR',
              description: 'Override the Fedora CoreOS S3 stream directory',
              defaultValue: '',
@@ -35,7 +39,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-currentBuild.description = "[${params.STREAM}] - ${params.VERSION}"
+currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
 
 def s3_stream_dir = params.S3_STREAM_DIR
 if (s3_stream_dir == "") {
@@ -51,17 +55,16 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         shwrap("""
         export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
         cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-        cosa buildprep --build=${params.VERSION} s3://${s3_stream_dir}/builds
+        cosa buildprep --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
         """)
 
-        def basearch = shwrapCapture("cosa basearch")
-        def meta = readJSON file: "builds/${params.VERSION}/${basearch}/meta.json"
+        def meta = readJSON file: "builds/${params.VERSION}/${params.ARCH}/meta.json"
         if (meta.images.openstack) {
             openstack_image_filename = meta.images.openstack.path
             openstack_image_sha256 = meta.images.openstack.sha256
-            openstack_image_filepath = "builds/${params.VERSION}/${basearch}/${openstack_image_filename}"
+            openstack_image_filepath = "builds/${params.VERSION}/${params.ARCH}/${openstack_image_filename}"
         } else {
-            throw new Exception("No OpenStack artifacts found in metadata for ${params.VERSION}")
+            throw new Exception("No OpenStack artifacts found in metadata for ${params.VERSION}/${params.ARCH}")
         }
 
         // Copy down the openstack image from S3, verify, uncompress
@@ -76,7 +79,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
         // Remove '.xz` from the end of the filename in the file path
         openstack_image_filepath = openstack_image_filepath[0..-4]
         // Use a consistent image name for this stream in case it gets left behind
-        openstack_image_name = "kola-fedora-coreos-${params.STREAM}"
+        openstack_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}"
 
     }
 
@@ -88,7 +91,7 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
              delete-image --id=${openstack_image_name} || true
         ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
              create-image --file=${openstack_image_filepath} \
-             --name=${openstack_image_name}
+             --name=${openstack_image_name} --arch=${params.ARCH}
         """)
     }
     
@@ -101,9 +104,10 @@ cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
     // skip the upgrade test.
     try {
         fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                 build: params.VERSION, skipUpgrade: true,
+                 build: params.VERSION, arch: params.ARCH,
                  extraArgs: params.KOLA_TESTS,
                  skipBasicScenarios: true,
+                 skipUpgrade: true,
                  platformArgs: """-p=openstack                               \
                     --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
                     --openstack-flavor=v3-starter-4                          \
