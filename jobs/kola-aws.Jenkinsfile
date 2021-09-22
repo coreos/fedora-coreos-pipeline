@@ -44,23 +44,34 @@ if (s3_stream_dir == "") {
     s3_stream_dir = "fcos-builds/prod/streams/${params.STREAM}"
 }
 
-cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-        memory: "256Mi", kvm: false,
-        secrets: ["aws-fcos-builds-bot-config", "aws-fcos-kola-bot-config"]) {
+try { timeout(time: 90, unit: 'MINUTES') {
+    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
+            memory: "256Mi", kvm: false,
+            secrets: ["aws-fcos-builds-bot-config", "aws-fcos-kola-bot-config"]) {
 
-    stage('Fetch Metadata') {
-        shwrap("""
-        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
-        cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-        cosa buildprep --ostree --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
-        """)
+        stage('Fetch Metadata') {
+            shwrap("""
+            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
+            cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
+            cosa buildprep --ostree --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
+            """)
+        }
+
+        fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+                 build: params.VERSION, arch: params.ARCH,
+                 extraArgs: params.KOLA_TESTS,
+                 skipBasicScenarios: true,
+                 platformArgs: """-p=aws \
+                    --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                    --aws-region=us-east-1""")
+
+        currentBuild.result = 'SUCCESS'
     }
-
-    fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-             build: params.VERSION, arch: params.ARCH,
-             extraArgs: params.KOLA_TESTS,
-             skipBasicScenarios: true,
-             platformArgs: """-p=aws \
-                --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
-                --aws-region=us-east-1""")
+}} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    if (currentBuild.result != 'SUCCESS') {
+        slackSend(color: 'danger', message: ":fcos: :aws: :trashfire: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][params.ARCH]")
+    }
 }
