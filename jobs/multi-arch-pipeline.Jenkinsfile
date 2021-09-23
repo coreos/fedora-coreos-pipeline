@@ -454,6 +454,19 @@ EOF
                 ]
             }
         }
+        if (!params.MINIMAL && s3_stream_dir &&
+                utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
+            stage('Kola:OpenStack') {
+                // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
+                build job: 'kola-openstack', wait: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: newBuildID),
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                    string(name: 'ARCH', value: basearch),
+                    string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
+                ]
+            }
+        }
 
         // For now, we auto-release all non-production streams builds. That
         // way, we can e.g. test testing-devel AMIs easily.
