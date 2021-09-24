@@ -72,6 +72,6 @@ try { timeout(time: 90, unit: 'MINUTES') {
     throw e
 } finally {
     if (currentBuild.result != 'SUCCESS') {
-        slackSend(color: 'danger', message: ":fcos: :aws: :trashfire: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][params.ARCH]")
+        slackSend(color: 'danger', message: ":fcos: :aws: :trashfire: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}]")
     }
 }

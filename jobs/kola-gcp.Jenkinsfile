@@ -76,6 +76,6 @@ try { timeout(time: 30, unit: 'MINUTES') {
     throw e
 } finally {
     if (currentBuild.result != 'SUCCESS') {
-        slackSend(color: 'danger', message: ":fcos: :gcp: :trashfire: kola-gcp <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][params.ARCH]")
+        slackSend(color: 'danger', message: ":fcos: :gcp: :trashfire: kola-gcp <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}]")
     }
 }
