@@ -132,6 +132,6 @@ try { timeout(time: 60, unit: 'MINUTES') {
     throw e
 } finally {
     if (currentBuild.result != 'SUCCESS') {
-        slackSend(color: 'danger', message: ":fcos: :openstack: :trashfire: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}]")
+        slackSend(color: 'danger', message: ":fcos: :openstack: :trashfire: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
     }
 }
