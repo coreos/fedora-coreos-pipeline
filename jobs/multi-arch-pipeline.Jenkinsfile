@@ -82,7 +82,7 @@ properties([
              description: 'The target architecture',
              defaultValue: 'aarch64',
              trim: true),
-      string(name: 'CONFIG_GIT_COMMIT',
+      string(name: 'FCOS_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',
              defaultValue: '',
              trim: true),
@@ -182,8 +182,8 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             }
 
             def commitopt = ''
-            if (params.CONFIG_GIT_COMMIT != '') {
-                commitopt = "--commit=${params.CONFIG_GIT_COMMIT}"
+            if (params.FCOS_CONFIG_COMMIT != '') {
+                commitopt = "--commit=${params.FCOS_CONFIG_COMMIT}"
             }
             shwrap("""
             cosa init --force --branch ${ref} ${commitopt} ${src_config_url}
@@ -243,7 +243,7 @@ job:
 recipe:
   git_ref: ${params.STREAM}
   git_url: https://github.com/${repo}
-  git_commit: ${params.CONFIG_GIT_COMMIT}
+  git_commit: ${params.FCOS_CONFIG_COMMIT}
 stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
@@ -292,7 +292,7 @@ job:
 recipe:
   git_ref: ${params.STREAM}
   git_url: https://github.com/${repo}
-  git_commit: ${params.CONFIG_GIT_COMMIT}
+  git_commit: ${params.FCOS_CONFIG_COMMIT}
 stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
@@ -449,7 +449,7 @@ EOF
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                     string(name: 'ARCH', value: basearch),
-                    string(name: 'CONFIG_GIT_COMMIT', value: params.CONFIG_GIT_COMMIT)
+                    string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
                 ]
             }
         }

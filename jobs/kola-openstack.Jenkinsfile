@@ -35,7 +35,7 @@ properties([
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
              trim: true),
-      string(name: 'CONFIG_GIT_COMMIT',
+      string(name: 'FCOS_CONFIG_COMMIT',
              description: 'The exact config repo git commit to run tests against',
              defaultValue: '',
              trim: true),
@@ -58,8 +58,8 @@ try { timeout(time: 60, unit: 'MINUTES') {
         def openstack_image_filename, openstack_image_name, openstack_image_sha256, openstack_image_filepath
         stage('Fetch Metadata/Image') {
             def commitopt = ''
-            if (params.CONFIG_GIT_COMMIT != '') {
-                commitopt = "--commit=${params.CONFIG_GIT_COMMIT}"
+            if (params.FCOS_CONFIG_COMMIT != '') {
+                commitopt = "--commit=${params.FCOS_CONFIG_COMMIT}"
             }
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
