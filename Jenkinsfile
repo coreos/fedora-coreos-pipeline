@@ -569,7 +569,8 @@ lock(resource: "build-${params.STREAM}") {
                 build job: 'kola-aws', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
-                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                    string(name: 'CONFIG_GIT_COMMIT', value: config_git_commit)
                 ]
             }
         }
@@ -580,7 +581,8 @@ lock(resource: "build-${params.STREAM}") {
                 build job: 'kola-gcp', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
-                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                    string(name: 'CONFIG_GIT_COMMIT', value: config_git_commit)
                 ]
             }
         }
@@ -591,7 +593,8 @@ lock(resource: "build-${params.STREAM}") {
                 build job: 'kola-openstack', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
-                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                    string(name: 'CONFIG_GIT_COMMIT', value: config_git_commit)
                 ]
             }
         }

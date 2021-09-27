@@ -32,7 +32,11 @@ properties([
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
-             trim: true)
+             trim: true),
+      string(name: 'CONFIG_GIT_COMMIT',
+             description: 'The exact config repo git commit to run tests against',
+             defaultValue: '',
+             trim: true),
     ]),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
@@ -51,9 +55,13 @@ try { timeout(time: 30, unit: 'MINUTES') {
 
         def gcp_project
         stage('Fetch Metadata') {
+            def commitopt = ''
+            if (params.CONFIG_GIT_COMMIT != '') {
+                commitopt = "--commit=${params.CONFIG_GIT_COMMIT}"
+            }
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
-            cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
+            cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
             cosa buildprep --ostree --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
             """)
 
