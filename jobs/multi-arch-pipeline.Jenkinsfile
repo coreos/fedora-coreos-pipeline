@@ -448,8 +448,8 @@ EOF
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                    string(name: 'ARCH', value: basearch)
-
+                    string(name: 'ARCH', value: basearch),
+                    string(name: 'CONFIG_GIT_COMMIT', value: params.CONFIG_GIT_COMMIT)
                 ]
             }
         }
