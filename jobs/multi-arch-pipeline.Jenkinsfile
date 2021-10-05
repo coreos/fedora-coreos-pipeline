@@ -89,7 +89,7 @@ properties([
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '60',
-        artifactNumToKeepStr: '3'
+        artifactNumToKeepStr: '20'
     )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
