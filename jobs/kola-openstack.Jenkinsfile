@@ -106,7 +106,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
         
         // In VexxHost we'll use the network called "private" for the
         // instance NIC, attach a floating IP from the "public" network and
-        // use the v2-highcpu-4 instance (ram=4GiB, CPUs=4).
+        // use the v3-starter-4 instance (ram=8GiB, CPUs=4).
         // The clouds.yaml config should be located at ${OPENSTACK_KOLA_TESTS_CONFIG}/config.
         //
         // Since we don't have permanent images uploaded to VexxHost we'll
@@ -119,8 +119,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                      skipUpgrade: true,
                      platformArgs: """-p=openstack                               \
                         --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
-                        --openstack-flavor=v2-highcpu-4                          \
-                        --openstack-region=sjc1                                  \
+                        --openstack-flavor=v3-starter-4                          \
                         --openstack-network=private                              \
                         --openstack-floating-ip-network=public                   \
                         --openstack-image=${openstack_image_name}""")
