@@ -244,6 +244,7 @@ recipe:
   git_ref: ${params.STREAM}
   git_url: https://github.com/${repo}
   git_commit: ${params.FCOS_CONFIG_COMMIT}
+copy-build: ${parent_version}
 stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
