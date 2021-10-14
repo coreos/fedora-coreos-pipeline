@@ -11,3 +11,4 @@ build-token-root:1.7
 github:1.33.1
 workflow-api:2.46
 ssh-credentials:1.19
+pipeline-github:2.8-138.d766e30bb08b
