@@ -4,6 +4,7 @@
 # - Allow the builder user to log in with the associated ssh key
 #   which is shared with the pipeline. Used a ed25519 key so we
 #   don't have to worry about https://github.com/golang/go/issues/37278
+# - disable kernel mitigations (not a shared instance)
 # - Set up the podman socket for the builder user (podman remote)
 # - Build coreos-assembler on the first boot and once a day
 # - Configure zincati to allow updates at a specific time (early Monday)
@@ -13,7 +14,7 @@
 # - Configure zram
 #
 variant: fcos
-version: 1.3.0
+version: 1.4.0
 passwd:
   users:
     - name: core
@@ -23,6 +24,11 @@ passwd:
     - name: builder
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILJJquUOL/NRZEIRrMLW0T8H/zmBQA4XMZxoI0ElwvGp builder@fcos-aarch64-builder
+kernel_arguments:
+  should_exist:
+    - mitigations=off
+  should_not_exist:
+    - mitigations=auto,nosmt
 storage:
   directories:
     - path: /home/builder/.config
