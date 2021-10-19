@@ -94,10 +94,7 @@ storage:
           ExecStartPre=-podman pull registry.fedoraproject.org/fedora:34
           ExecStartPre=podman build -t localhost/cosa-buildroot:latest -f ci/Dockerfile /home/builder/coreos-assembler/
           ExecStart=podman build -t localhost/coreos-assembler:latest --from localhost/cosa-buildroot:latest /home/builder/coreos-assembler/
-          # Can't use image prune yet because it prunes intermediate images
-          # (for caching) and we want to take advantage of caching.
-          # https://github.com/containers/podman/issues/10832
-          #ExecStartPost=-podman image prune --force
+          ExecStartPost=-podman image prune --force
     - path: /home/builder/.config/systemd/user/build-cosa-firstboot.service
       mode: 0644
       user:
