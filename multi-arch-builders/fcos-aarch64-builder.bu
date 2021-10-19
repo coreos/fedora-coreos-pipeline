@@ -83,12 +83,11 @@ storage:
         inline: |
           [Unit]
           Description=Build COSA container
-          After=network-online.target
-          Wants=network-online.target
           [Service]
           # Give time for the build to complete
           TimeoutStartSec=180m
           Type=oneshot
+          ExecStartPre=nm-online --timeout=30
           ExecStartPre=mkdir -p /home/builder/coreos-assembler/
           ExecStartPre=-git clone --depth=1 https://github.com/coreos/coreos-assembler.git /home/builder/coreos-assembler/
           ExecStartPre=git -C /home/builder/coreos-assembler/ pull
