@@ -53,7 +53,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     def forceTimestamp = false
     def haveChanges = false
     shwrap("cosa init --branch ${branch} https://github.com/${repo}")
-    shwrap("cosa buildprep ${BUILDS_BASE_HTTP_URL}/${branch}/builds")
+    shwrap("cosa buildfetch --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
     def lockfile, pkgChecksum, pkgTimestamp
     def archinfo = [x86_64: [:], aarch64: [:]]

@@ -227,18 +227,18 @@ lock(resource: "build-${params.STREAM}") {
 
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa buildprep s3://${s3_stream_dir}/builds
+                cosa buildfetch --url s3://${s3_stream_dir}/builds
                 """)
                 if (parent_version != "") {
                     // also fetch the parent version; this is used by cosa to do the diff
                     shwrap("""
                     export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                    cosa buildprep s3://${s3_stream_dir}/builds --build ${parent_version}
+                    cosa buildfetch --url s3://${s3_stream_dir}/builds --build ${parent_version}
                     """)
                 }
             } else if (!official && utils.pathExists(developer_builddir)) {
                 shwrap("""
-                cosa buildprep ${developer_builddir}
+                cosa buildfetch --url ${developer_builddir}
                 """)
             }
 

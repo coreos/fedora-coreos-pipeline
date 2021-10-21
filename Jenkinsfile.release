@@ -85,8 +85,8 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-            cosa buildprep --build=${params.VERSION} \
-                --arch=all s3://${s3_stream_dir}/builds
+            cosa buildfetch --build=${params.VERSION} \
+                --arch=all --url=s3://${s3_stream_dir}/builds
             """)
         }
 
