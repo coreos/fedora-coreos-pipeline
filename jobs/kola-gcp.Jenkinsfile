@@ -62,7 +62,8 @@ try { timeout(time: 30, unit: 'MINUTES') {
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
             cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
-            cosa buildprep --ostree --build=${params.VERSION} --arch=${params.ARCH} s3://${s3_stream_dir}/builds
+            cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
             """)
 
             // pick up the project to use from the config

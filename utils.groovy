@@ -43,7 +43,7 @@ boolean checkKolaSuccess(dir, currentBuild) {
 }
 
 def aws_s3_cp_allow_noent(src, dest) {
-    // see similar code in `cosa buildprep`
+    // see similar code in `cosa buildfetch`
     shwrap("""
     export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
     python3 -c '
