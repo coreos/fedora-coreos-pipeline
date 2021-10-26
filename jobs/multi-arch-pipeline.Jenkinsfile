@@ -461,7 +461,7 @@ EOF
                 build job: 'kola-openstack', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
-                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir)
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                     string(name: 'ARCH', value: basearch),
                     string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
                 ]
