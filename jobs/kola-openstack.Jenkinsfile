@@ -1,9 +1,10 @@
 @Library('github.com/coreos/coreos-ci-lib@main') _
 
-def streams
+def streams, pipeutils
 node {
     checkout scm
     streams = load("streams.groovy")
+    pipeutils = load("utils.groovy")
 }
 
 properties([
@@ -39,11 +40,19 @@ properties([
              description: 'The exact config repo git commit to run tests against',
              defaultValue: '',
              trim: true),
+      string(name: 'LEAK_ON_FAIL',
+             description: 'Enable KOLA_LEAK_ON_FAIL to debug failures. You likely want to use this with `KOLA_TESTS`. Use "default" for CoreOS Debug key (available in OpenShift secret).',
+             defaultValue: '',
+             trim: true),
     ]),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
+
+if (params.LEAK_ON_FAIL == 'default') {
+    params.LEAK_ON_FAIL = pipeutils.coreosDebugKey
+}
 
 def s3_stream_dir = params.S3_STREAM_DIR
 if (s3_stream_dir == "") {
@@ -109,6 +118,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
             fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
                      build: params.VERSION, arch: params.ARCH,
                      extraArgs: params.KOLA_TESTS,
+                     leakOnFail: params.LEAK_ON_FAIL,
                      skipBasicScenarios: true,
                      skipUpgrade: true,
                      platformArgs: """-p=openstack                               \

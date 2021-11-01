@@ -4,6 +4,7 @@ import org.yaml.snakeyaml.Yaml
 
 // Only add pipeline-specific things here. Otherwise add to coreos-ci-lib
 // instead.
+coreosDebugKey = 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBAzvwSRhIh7x1lUerIbPeJQB1TsQLSHcBxk6V9ihQRzSgBMn8XR78KglW3hdt7OgNMYDt8el6hZVsg1DTdovpvU= core-debug@default'
 
 def get_annotation(anno) {
     // This works off the assumption that either there's only one
