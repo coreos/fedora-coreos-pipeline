@@ -267,8 +267,6 @@ lock(resource: "build-${params.STREAM}") {
                 version = "--version ${new_version}"
             }
             shwrap("""
-            umask
-            find src/config/ -type f,d -perm /2000 | xargs ls -l
             cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
             """)
         }
