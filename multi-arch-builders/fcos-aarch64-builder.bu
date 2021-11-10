@@ -92,8 +92,7 @@ storage:
           ExecStartPre=-git clone --depth=1 https://github.com/coreos/coreos-assembler.git /home/builder/coreos-assembler/
           ExecStartPre=git -C /home/builder/coreos-assembler/ pull
           ExecStartPre=-podman pull registry.fedoraproject.org/fedora:34
-          ExecStartPre=podman build -t localhost/cosa-buildroot:latest -f ci/Dockerfile /home/builder/coreos-assembler/
-          ExecStart=podman build -t localhost/coreos-assembler:latest --from localhost/cosa-buildroot:latest /home/builder/coreos-assembler/
+          ExecStart=podman build -t localhost/coreos-assembler:latest /home/builder/coreos-assembler/
           ExecStartPost=-podman image prune --force
     - path: /home/builder/.config/systemd/user/build-cosa-firstboot.service
       mode: 0644
