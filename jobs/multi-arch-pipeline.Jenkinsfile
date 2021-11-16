@@ -145,6 +145,23 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         def newBuildID = params.VERSION
         def basearch = params.ARCH
 
+        // We currently have a limitation where we aren't building and
+        // pushing multi-arch COSA containers to quay. For multi-arch
+        // we're currently building images once a day on the local
+        // multi-arch builders. See https://github.com/coreos/coreos-assembler/issues/2470
+        //
+        // Until #2470 is resolved let's do the best thing we can do
+        // which is derive the multi-arch container name from the
+        // given x86_64 COSA container. We'll translate
+        // quay.io/coreos-assembler/coreos-assembler:$tag -> localhost/coreos-assembler:$tag
+        // This assumes that the desired tagged image has been built
+        // on the multi-arch builder already, which most likely means
+        // someone did it manually.
+        def image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
+                "quay.io/coreos-assembler/coreos-assembler:",
+                "localhost/coreos-assembler:"
+        )
+
         try { timeout(time: 240, unit: 'MINUTES') {
 
         // Clone the automation repo, which contains helper scripts. In the
@@ -257,7 +274,7 @@ stages:
 delay_meta_merge: false
 EOF
                    """)
-            gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch])
+            gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch, image: image])
             // and insert the parent info into meta.json so we can display it in
             // the release browser and for sanity checking
             if (parent_commit && parent_version) {
@@ -322,7 +339,7 @@ stages:
 delay_meta_merge: false
 EOF
                 """)
-                gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch])
+                gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch, image: image])
             } catch (Throwable e) {
                 throw e
             } finally {
