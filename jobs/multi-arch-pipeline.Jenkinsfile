@@ -157,10 +157,13 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         // This assumes that the desired tagged image has been built
         // on the multi-arch builder already, which most likely means
         // someone did it manually.
-        def image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
+        def image = "localhost/coreos-assembler:latest"
+        if (params.COREOS_ASSEMBLER_IMAGE.startsWith("quay.io/coreos-assembler/coreos-assembler:")) {
+            image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
                 "quay.io/coreos-assembler/coreos-assembler:",
                 "localhost/coreos-assembler:"
-        )
+            )
+        }
 
         try { timeout(time: 240, unit: 'MINUTES') {
 
