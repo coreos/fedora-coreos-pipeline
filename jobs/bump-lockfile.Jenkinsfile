@@ -1,5 +1,3 @@
-@Library('github.com/coreos/coreos-ci-lib@main') _
-
 def streams, gp
 node {
     checkout scm

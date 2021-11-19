@@ -12,8 +12,6 @@ jobs:
           cps {
             sandbox(true)
             script('''
-              @Library('github.com/coreos/coreos-ci-lib@main') _
-
               properties([
                 parameters([
                   booleanParam(name: 'FORCE',

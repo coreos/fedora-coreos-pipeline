@@ -1,5 +1,3 @@
-@Library('github.com/coreos/coreos-ci-lib@main') _
-
 properties([
     pipelineTriggers([
         // we don't need to bump lockfiles any more often than daily

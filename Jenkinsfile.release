@@ -1,5 +1,3 @@
-@Library('github.com/coreos/coreos-ci-lib@main') _
-
 def pipeutils, streams, s3_bucket
 node {
     checkout scm
