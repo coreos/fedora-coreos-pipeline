@@ -380,7 +380,7 @@ lock(resource: "build-${params.STREAM}") {
                 booleanParam(name: 'FORCE', value: params.FORCE),
                 booleanParam(name: 'MINIMAL', value: params.MINIMAL),
                 string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
-                string(name: 'COREOS_ASSEMBLER_IMAGE', params.COREOS_ASSEMBLER_IMAGE),
+                string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
                 string(name: 'STREAM', value: params.STREAM),
                 string(name: 'VERSION', value: newBuildID),
                 string(name: 'ARCH', value: 'aarch64')
