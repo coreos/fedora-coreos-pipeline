@@ -46,7 +46,16 @@ https://github.com/coreos/coreos-assembler/blob/main/doc/openshift-gcp-nested-vi
 Once you have a cluster up, you will want to deploy the OpenShift CNV
 operator for access to Kubevirt:
 
-https://docs.openshift.com/container-platform/4.4/cnv/cnv_install/installing-container-native-virtualization.html#cnv-deploying-cnv_installing-container-native-virtualization
+Install the operator using the web console:
+https://docs.openshift.com/container-platform/4.9/virt/install/installing-virt-web.html#installing-virt-web
+
+Altenatively, you can install the operator using the CLI:
+https://docs.openshift.com/container-platform/4.9/virt/install/installing-virt-cli.html#installing-virt-cli 
+
+You can learn more about the OpenShift CNV operator here:
+https://docs.openshift.com/container-platform/4.9/virt/virt-learn-more-about-openshift-virtualization.html
+
+### [LOCAL] Create your project
 
 It is preferable to match the project name used for prod in CentOS CI
 (`fedora-coreos`), but feel free to use a different project name like
