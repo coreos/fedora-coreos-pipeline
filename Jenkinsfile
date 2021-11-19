@@ -1,5 +1,3 @@
-@Library('github.com/coreos/coreos-ci-lib@main') _
-
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, streams, official, official_jenkins, developer_prefix

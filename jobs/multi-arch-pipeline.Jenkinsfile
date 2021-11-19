@@ -1,5 +1,3 @@
-@Library('github.com/coreos/coreos-ci-lib@main') _
-
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, streams, official, developer_prefix, repo, src_config_url, src_config_ref, s3_bucket, gp

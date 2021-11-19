@@ -1,5 +1,3 @@
-@Library('github.com/coreos/coreos-ci-lib@main') _
-
 import org.yaml.snakeyaml.Yaml
 
 // Only add pipeline-specific things here. Otherwise add to coreos-ci-lib

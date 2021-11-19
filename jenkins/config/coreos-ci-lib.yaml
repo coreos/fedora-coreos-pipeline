@@ -1,0 +1,11 @@
+unclassified:
+  globalLibraries:
+    libraries:
+      - name: "coreos-ci-lib"
+        defaultVersion: main
+        implicit: true
+        retriever:
+          modernSCM:
+            scm:
+              git:
+                remote: "https://github.com/coreos/coreos-ci-lib.git"
