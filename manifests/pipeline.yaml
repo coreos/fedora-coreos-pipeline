@@ -68,6 +68,8 @@ objects:
             name: ${COREOS_ASSEMBLER_IMAGE}
           importPolicy:
             scheduled: true
+          referencePolicy:
+            type: local
 
   ### PVC ###
 
