@@ -69,7 +69,7 @@ objects:
           importPolicy:
             scheduled: true
           referencePolicy:
-            type: local
+            type: Local
 
   ### PVC ###
 
