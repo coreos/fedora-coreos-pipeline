@@ -165,10 +165,13 @@ bucket; this will likely be fixed in the future.  But using your
 credentials, you should now do e.g.:
 
 ```
-$ aws s3 mb my-fcos-bucket
+$ aws s3 mb s3://my-fcos-bucket
 ```
 
-And provide it to `--bucket` below.
+And provide it to `--bucket` below when creating the pipeline with the `deploy` script.
+
+To install the aws CLI needed for this steps see [installing or updating the latest version of the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+To configure the aws CLI with your credentials see [quick configuration with aws configure](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
 
 ### [OPTIONAL] Slack integration
 
@@ -308,7 +311,9 @@ It may be a good idea to set the Kubernetes plugin to
 
 ### Running the pipeline
 
-Once Jenkins is ready, we can now start the Fedora CoreOS pipeline!
+Once Jenkins is ready, make sure that the seed job has been run successfully.
+
+Once the seed job on Jenkins finishes successfully we can now start the Fedora CoreOS pipeline!
 
 ```
 oc start-build fedora-coreos-pipeline
