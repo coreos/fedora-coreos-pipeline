@@ -131,7 +131,7 @@ stages:
   description: Stage 1 execution base
   build_artifacts: [base]
   post_commands:
-    - cosa kola run --basic-qemu-scenarios
+    - cosa kola run --rerun --basic-qemu-scenarios
     - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
 delay_meta_merge: false
 EOF

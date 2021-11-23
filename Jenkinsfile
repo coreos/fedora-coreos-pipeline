@@ -320,7 +320,7 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Kola:QEMU basic') {
             shwrap("""
-            cosa kola run --basic-qemu-scenarios --no-test-exit-error
+            cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
             tar -cf - tmp/kola/ | xz -c9 > kola-run-basic.tar.xz
             """)
             archiveArtifacts "kola-run-basic.tar.xz"
@@ -333,7 +333,7 @@ lock(resource: "build-${params.STREAM}") {
             // leave 512M for overhead; VMs are 1G each
             def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
             shwrap("""
-            cosa kola run --parallel ${parallel} --no-test-exit-error
+            cosa kola run --rerun --parallel ${parallel} --no-test-exit-error
             tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
             """)
             archiveArtifacts "kola-run.tar.xz"
@@ -344,7 +344,7 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Kola:QEMU upgrade') {
             shwrap("""
-            cosa kola --upgrades --no-test-exit-error
+            cosa kola --rerun --upgrades --no-test-exit-error
             tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
             """)
             archiveArtifacts "kola-run-upgrade.tar.xz"
