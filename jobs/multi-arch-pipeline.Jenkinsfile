@@ -172,6 +172,15 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
         """)
 
+        if (official) {
+            shwrap("""
+            /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                --state STARTED
+            """)
+        }
+
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
