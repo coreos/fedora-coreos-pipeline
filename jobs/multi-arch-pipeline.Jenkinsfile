@@ -321,8 +321,8 @@ stages:
   require_artifacts: [ostree]
   commands:
     - cosa buildextend-qemu
-    - cosa kola run --basic-qemu-scenarios --output-dir tmp/kola-basic
-    - cosa kola run --parallel 4 --output-dir tmp/kola
+    - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
+    - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
     - cosa buildextend-metal
     - cosa buildextend-metal4k
     - cosa buildextend-live
