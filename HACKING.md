@@ -184,7 +184,10 @@ $ oc create secret generic slack-api-token --from-file=token=slack-token
 ```
 
 You can obtain a token when creating a new instance of the Jenkins CI
-app in your Slack workspace.
+app in your Slack workspace. The token used for the `coreos.slack.com`
+workspace is available by going to the [Jenkins CI
+app](https://slack.com/apps/A0F7VRFKN-jenkins-ci) then to
+"Configuration" and "FCOS Pipeline".
 
 ### [OPTIONAL] Creating a secret for multi-arch builders
 
