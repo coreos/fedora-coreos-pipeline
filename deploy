@@ -27,7 +27,7 @@ import subprocess
 def main():
     args = parse_args()
 
-    if targeting_official_namespace(args) and not args.official:
+    if targeting_official_namespace(args) and not args.official and not args.force_official:
         eprint("Refusing to create developer resource in official namespace.")
         eprint("Use --official to create official resources.")
         return 1
@@ -89,6 +89,8 @@ def parse_args():
     parser.add_argument("--official", action='store_true',
                         help="Whether to update official resources "
                              "(implies --all)")
+    parser.add_argument("--force-official", action='store_true',
+                        help="Force update official resources")
     parser.add_argument("--all", action='store_true',
                         help="Whether to update all resources")
     parser.add_argument("--dry-run", action='store_true',
