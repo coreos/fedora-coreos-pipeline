@@ -37,6 +37,7 @@ objects:
     resources:
       requests:
         storage: ${VOLUME_CAPACITY}
+    storageClassName: ocs-storagecluster-ceph-rbd
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
