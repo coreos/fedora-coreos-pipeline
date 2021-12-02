@@ -9,7 +9,8 @@ node {
     pod = readFile(file: "manifests/pod.yaml")
 
     // just autodetect if we're in the official prod Jenkins or not
-    official_jenkins = (env.JENKINS_URL == 'https://jenkins-fedora-coreos.apps.ocp.ci.centos.org/')
+    official_jenkins = (env.JENKINS_URL in ['https://jenkins-fedora-coreos.apps.ocp.ci.centos.org/',
+                                            'https://jenkins-fedora-coreos.apps.ocp.stg.fedoraproject.org/'])
     def official_job = (env.JOB_NAME == 'fedora-coreos/fedora-coreos-fedora-coreos-pipeline')
     official = (official_jenkins && official_job)
 
