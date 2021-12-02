@@ -363,6 +363,8 @@ oc create secret generic fedora-messaging-coreos-key \
   --from-file=coreos.crt --from-file=coreos.key
 ```
 
+You can obtain `coreos.crt` and `coreos.key` from BitWarden.
+
 ### [PROD] Create coreosbot GitHub token secret
 
 Create the CoreOS Bot (coreosbot) GitHub token secret (this
