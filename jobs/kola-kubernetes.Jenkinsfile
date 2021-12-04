@@ -65,6 +65,7 @@ try { timeout(time: 60, unit: 'MINUTES') {
         fcosKola(cosaDir: env.WORKSPACE,
                  build: params.VERSION, arch: params.ARCH,
                  extraArgs: "--tag k8s",
+                 skipUpgrade: true,
                  skipBasicScenarios: true,
                  platformArgs: """-p=aws \
                     --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
