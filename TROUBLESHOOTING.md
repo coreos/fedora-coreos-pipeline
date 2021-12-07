@@ -1,6 +1,6 @@
-### issue for plugins not being up to date
+### Issue for plugins not being up to date
 
-If you are getting stacktraces from jenkins you may have a version
+If you are getting stacktraces from Jenkins you may have a version
 mismatch between different pieces (plugins) that are talking to each
 other.
 
@@ -17,7 +17,7 @@ In the future it would be nice to have this automated. See
 [this stackoverflow issue](https://stackoverflow.com/questions/7709993/how-can-i-update-jenkins-plugins-from-the-terminal)
 for some ideas.
 
-### issue for jenkins dns names
+### Issue for Jenkins DNS names
 
 If you blow away your jenkins instance in kubernetes/openshift and it
 gets recreated but you use the same backing store you may end up with
