@@ -385,6 +385,17 @@ lock(resource: "build-${params.STREAM}") {
             ]
         }
 
+	stage('Fork S390X Pipeline') {
+            build job: 'multi-arch-pipeline', wait: false, parameters: [
+                booleanParam(name: 'FORCE', value: params.FORCE),
+                booleanParam(name: 'MINIMAL', value: params.MINIMAL),
+                string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
+                string(name: 'STREAM', value: params.STREAM),
+                string(name: 'VERSION', value: newBuildID),
+                string(name: 'ARCH', value: 's390x')
+            ]
+        }
+
         if (!params.MINIMAL) {
 
             stage("Metal") {
