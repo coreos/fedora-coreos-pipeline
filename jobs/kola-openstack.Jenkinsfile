@@ -46,12 +46,9 @@ lock(resource: "kola-openstack-${params.ARCH}") {
 
     currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
 
-    def region = "ams1"
-    if (params.ARCH == "x86_64") {
-        region = "ams1"
-    } else if (params.ARCH == "aarch64") {
-        region = "ca-ymq-1"
-    }
+    // Use ca-ymq-1 for everything right now since we're having trouble with
+    // image uploads to ams1.
+    def region = "ca-ymq-1"
 
     def s3_stream_dir = params.S3_STREAM_DIR
     if (s3_stream_dir == "") {
