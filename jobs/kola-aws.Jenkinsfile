@@ -73,11 +73,12 @@ try { timeout(time: 90, unit: 'MINUTES') {
                     --aws-region=us-east-1""")
 
         if (params.ARCH == "x86_64") {
+            def tests = params.KOLA_TESTS
+            if (tests == "") {
+                tests = "basic"
+            }
             stage('Xen') {
-                def tests = params.KOLA_TESTS
-                if (tests == "") {
-                    tests = "basic"
-                }
+                // https://github.com/coreos/fedora-coreos-tracker/issues/997
                 fcosKola(cosaDir: env.WORKSPACE,
                          build: params.VERSION, arch: params.ARCH,
                          extraArgs: tests,
@@ -86,6 +87,17 @@ try { timeout(time: 90, unit: 'MINUTES') {
                          platformArgs: """-p=aws \
                             --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                             --aws-region=us-east-1 --aws-type=m4.large""")
+            }
+            stage('m6i') {
+                // https://github.com/coreos/fedora-coreos-tracker/issues/1004
+                fcosKola(cosaDir: env.WORKSPACE,
+                         build: params.VERSION, arch: params.ARCH,
+                         extraArgs: tests,
+                         skipUpgrade: true,
+                         skipBasicScenarios: true,
+                         platformArgs: """-p=aws \
+                            --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                            --aws-region=us-east-1 --aws-type=m6i.large""")
             }
         }
 
