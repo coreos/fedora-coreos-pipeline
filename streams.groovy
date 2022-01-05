@@ -1,7 +1,9 @@
 // Canonical definition of all our streams and their type.
 
+next_devel = load("next-devel/status.groovy")
+
 production = ['testing', 'stable', 'next']
-development = ['testing-devel' /* 'next-devel' */]
+development = ['testing-devel'] + next_devel.streams
 mechanical = ['rawhide' /* 'branched', 'bodhi-updates', 'bodhi-updates-testing' */]
 
 all_streams = production + development + mechanical
