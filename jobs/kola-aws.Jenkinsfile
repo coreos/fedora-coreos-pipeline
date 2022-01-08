@@ -84,6 +84,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                          extraArgs: tests,
                          skipUpgrade: true,
                          skipBasicScenarios: true,
+                         marker: "kola-m4",
                          platformArgs: """-p=aws \
                             --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                             --aws-region=us-east-1 --aws-type=m4.large""")
@@ -94,6 +95,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                          extraArgs: tests,
                          skipUpgrade: true,
                          skipBasicScenarios: true,
+                         marker: "kola-m6i",
                          platformArgs: """-p=aws \
                             --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                             --aws-region=us-east-1 --aws-type=m6i.large""")
