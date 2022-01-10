@@ -1,9 +1,11 @@
 // Canonical definition of all our streams and their type.
 
-next_devel = load("next-devel/status.groovy")
+// Contains 'next-devel' when that stream is enabled.
+// Automatically edited by next-devel/manage.py.
+next_devel = []
 
 production = ['testing', 'stable', 'next']
-development = ['testing-devel'] + next_devel.streams
+development = ['testing-devel'] + next_devel
 mechanical = ['rawhide' /* 'branched', 'bodhi-updates', 'bodhi-updates-testing' */]
 
 all_streams = production + development + mechanical

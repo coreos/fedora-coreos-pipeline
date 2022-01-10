@@ -21,5 +21,5 @@ Run `./manage.py {enable|disable}`, then PR the result.
 ## Available metadata
 
 - [status.json](https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/next-devel/status.json) - whether `next-devel` is currently enabled
-- [status.groovy](https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/next-devel/status.groovy) - array containing `next-devel` if the stream is enabled
 - [badge.json](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/next-devel/badge.json) - endpoint for shields.io badge showing whether `next-devel` is enabled
+- [streams.groovy](https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/streams.groovy) - includes `next-devel` when the stream is enabled
