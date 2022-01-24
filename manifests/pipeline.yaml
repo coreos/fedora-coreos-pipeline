@@ -71,21 +71,6 @@ objects:
           referencePolicy:
             type: Local
 
-  ### PVC ###
-
-  - apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      name: coreos-assembler-claim2
-      annotations:
-        coreos.com/deploy-default: "true"
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: ${PVC_SIZE}
-
   ### FEDORA COREOS BUILD PIPELINE ###
 
   - kind: BuildConfig
