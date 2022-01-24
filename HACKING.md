@@ -231,7 +231,7 @@ For Fedora:
 
 ```
 oc new-app --file=manifests/jenkins.yaml \
-  --param=NAMESPACE=fedora-coreos \
+  --param=NAMESPACE=fedora-coreos-pipeline \
   --param=STORAGE_CLASS_NAME=ocs-storagecluster-ceph-rbd
 ```
 
