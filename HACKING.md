@@ -377,25 +377,6 @@ echo $coreosbot_token > token
 oc create secret generic github-coreosbot-token --from-file=token
 ```
 
-### [OPTIONAL] Set up simple-httpd
-
-When hacking locally, it might be useful to look at the contents of the
-PV to see the builds if one isn't uploading to S3. One alternative to
-creating a "sleeper" pod with the PV mounted is to expose a simple httpd
-server:
-
-```
-oc create -f manifests/simple-httpd.yaml
-```
-
-You'll then be able to browse the contents of the PV at:
-
-```
-http://simple-httpd-fedora-coreos.$CLUSTER_URL
-```
-
-(Or simply check the output of `oc get route simple-httpd`).
-
 ### Nuking everything
 
 One can leverage Kubernetes labels to delete all objects

@@ -31,7 +31,7 @@ spec:
        - name: OPENSTACK_KOLA_TESTS_CONFIG
          value: /.openstack-kola-tests-config/config
      volumeMounts:
-     - name: cache
+     - name: srv
        mountPath: /srv/
      - name: aws-fcos-builds-bot-config
        mountPath: /.aws-fcos-builds-bot-config/
@@ -63,11 +63,7 @@ spec:
        limits:
          devices.kubevirt.io/kvm: '1'
   volumes:
-  - name: cache
-    # XXX Disabled for now; we're seeing odd I/O issues possibly related to NFS:
-    # https://github.com/coreos/fedora-coreos-pipeline/issues/212
-    #persistentVolumeClaim:
-    #  claimName: coreos-assembler-claim2
+  - name: srv
     emptyDir: {}
   # This secret is used for uploading to AWS
   - name: aws-fcos-builds-bot-config
