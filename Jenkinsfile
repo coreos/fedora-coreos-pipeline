@@ -10,8 +10,9 @@ node {
 
     // just autodetect if we're in the official prod Jenkins or not
     official_jenkins = (env.JENKINS_URL in ['https://jenkins-fedora-coreos.apps.ocp.ci.centos.org/',
-                                            'https://jenkins-fedora-coreos.apps.ocp.fedoraproject.org/'])
-    def official_job = (env.JOB_NAME == 'fedora-coreos/fedora-coreos-fedora-coreos-pipeline')
+                                            'https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])
+    def official_job = (env.JOB_NAME in ['fedora-coreos/fedora-coreos-fedora-coreos-pipeline',
+                                         'fedora-coreos-pipeline/fedora-coreos-pipeline-fedora-coreos-pipeline'])
     official = (official_jenkins && official_job)
 
     if (official) {
