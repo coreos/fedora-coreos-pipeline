@@ -220,8 +220,19 @@ oc create secret generic github-webhook-shared-secret --from-file=secret
 
 ### Create a Jenkins instance with a persistent volume backing store
 
+For CentOS CI:
+
 ```
-oc new-app --file=manifests/jenkins.yaml --param=NAMESPACE=fedora-coreos
+oc new-app --file=manifests/jenkins.yaml \
+  --param=NAMESPACE=fedora-coreos
+```
+
+For Fedora:
+
+```
+oc new-app --file=manifests/jenkins.yaml \
+  --param=NAMESPACE=fedora-coreos \
+  --param=STORAGE_CLASS_NAME=ocs-storagecluster-ceph-rbd
 ```
 
 Notice the `NAMESPACE` parameter. This makes the Jenkins controller use the
@@ -229,6 +240,11 @@ image from our namespace, which we'll create in the next step. (The
 reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
+
+The `STORAGE_CLASS_NAME` may be required depending on the cluster. If
+using a development cluster or the CentOS CI cluster, it normally isn't,
+and you can drop it. For the Fedora prod cluster, use
+`ocs-storagecluster-ceph-rbd` as shown above.
 
 Now, create the Jenkins configmap:
 
