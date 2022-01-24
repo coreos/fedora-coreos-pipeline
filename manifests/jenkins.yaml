@@ -37,6 +37,8 @@ objects:
     resources:
       requests:
         storage: ${VOLUME_CAPACITY}
+    # DELTA: support specifying storage class
+    storageClassName: "${STORAGE_CLASS_NAME}"
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -285,3 +287,8 @@ parameters:
   displayName: Allows use of Jenkins Update Center repository with invalid SSL certificate
   name: JENKINS_UC_INSECURE
   value: "false"
+# DELTA: support specifying storage class
+- description: The storage class to use for the Jenkins PVC. By default, no
+    storage class is specified.
+  name: STORAGE_CLASS_NAME
+  value: ""
