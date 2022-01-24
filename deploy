@@ -23,6 +23,12 @@ import yaml
 import argparse
 import subprocess
 
+# the code supports multiple prod pipelines for easing migrations
+PROD_CLUSTERS = {
+    "https://api.ocp.ci.centos.org:6443": "fedora-coreos",
+    "https://api.ocp.fedoraproject.org:6443": "fedora-coreos-pipeline"
+}
+
 
 def main():
     args = parse_args()
@@ -75,8 +81,9 @@ def targeting_official_namespace(args):
     assert len(url) == 1, f"Found {len(url)} clusters named '{cluster_name}'"
     url = url[0]
 
-    return (url == "https://api.ocp.ci.centos.org:6443" and
-            namespace == 'fedora-coreos')
+    if url not in PROD_CLUSTERS:
+        return False
+    return namespace == PROD_CLUSTERS[url]
 
 
 def parse_args():
