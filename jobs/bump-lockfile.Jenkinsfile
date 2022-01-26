@@ -131,7 +131,13 @@ stages:
   description: Stage 1 execution base
   build_artifacts: [base]
   post_commands:
-    - cosa kola run --rerun --basic-qemu-scenarios
+    - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
+    - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
+    - cosa buildextend-metal
+    - cosa buildextend-metal4k
+    - cosa buildextend-live
+    - kola testiso -S --output-dir tmp/kola-metal
+    - kola testiso -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
     - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
 delay_meta_merge: false
 EOF
