@@ -19,6 +19,10 @@ properties([
                choices: streams.development,
                description: 'Fedora CoreOS development stream to bump'),
     ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '100',
+        artifactNumToKeepStr: '100'
+    )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
