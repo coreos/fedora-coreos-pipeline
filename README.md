@@ -12,7 +12,7 @@ workflow. For more information on getting started, see
 [HACKING](HACKING.md).
 
 The production instance is running in
-[CentOS CI](https://jenkins-fedora-coreos.apps.ocp.ci.centos.org)
+an [OpenShift cluster](https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/) in Fedora's infrastructure
 (though note anonymous view is blocked by default). Its raw
 build output can be seen in the
 [build browser](https://builds.coreos.fedoraproject.org/browser)
@@ -22,21 +22,21 @@ be downloaded from
 
 To operate the production Jenkins (or more generally to access the
 production namespace), you must have access to the cluster
-at https://console-openshift-console.apps.ocp.ci.centos.org/
+at https://console-openshift-console.apps.ocp.fedoraproject.org/
 and to the "fedora-coreos" project.
 
-For more information on CentOS CI, see these resources:
-
-  - https://github.com/centosci/ocp4-docs (the "new" OCP 4.4 cluster)
-  - https://wiki.centos.org/QaWiki/CI (out of date)
-
-If you need access, you can open a bug request at
-https://pagure.io/centos-infra with your
-[ACO credentials](https://accounts.centos.org/) similar to
-[this one](https://pagure.io/centos-infra/issue/176).
+If you need access, you can open a pull request to 
+https://pagure.io/fedora-infra/ansible/blob/main/f/playbooks/openshift-apps/fedora-coreos-pipeline.yml
+with your [Fedora Account System username](https://accounts.fedoraproject.org/) similar to
+[this one](https://pagure.io/fedora-infra/ansible/pull-request/949).
 
 You also need one of the project admins as a sponsor, please
 reach out on Libera.Chat `#fedora-coreos` channel.
+
+Finally you will need to run the Ansible playbook from [batcave](https://docs.fedoraproject.org/en-US/infra/sysadmin_guide/sshaccess/).
+```
+sudo rbac-playbook -l os_control openshift-apps/fedora-coreos-pipeline.yml
+```
 
 You should also be able to run this pipeline and run it in
 any OpenShift cluster that supports (potentially nested)
