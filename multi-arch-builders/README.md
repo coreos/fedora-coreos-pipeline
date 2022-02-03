@@ -28,7 +28,7 @@ aws ec2 run-instances                     \
     --security-group-ids $SECURITY_GROUPS \
     --user-data "file://${USERDATA}"      \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${NAME}}]" \
-    --block-device-mappings "VirtualName=/dev/xvda,DeviceName=/dev/xvda,Ebs={VolumeSize=${DISK}}" \
+    --block-device-mappings "VirtualName=/dev/xvda,DeviceName=/dev/xvda,Ebs={VolumeSize=${DISK},VolumeType=gp3}" \
     > out.json
 ```
 
