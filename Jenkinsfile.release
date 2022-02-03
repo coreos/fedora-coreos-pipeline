@@ -93,9 +93,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         }
 
         stage('Sync oscontainer to quay.io') {
+            def image_path = shwrapCapture("cosa meta --build=${params.VERSION} --image-path ostree")
             withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
-                withEnv(["DEST_IMAGE=docker://${quay_registry}:${params.STREAM}"]) {
-                    sh('skopeo copy --authfile=${OSCONTAINER_SECRET} oci-archive://$(cosa meta --image-path ostree) ${DEST_IMAGE}')
+                withEnv(["SRC_IMAGE=${image_path}",
+                         "DEST_IMAGE=docker://${quay_registry}:${params.STREAM}"]) {
+                    sh('skopeo copy --authfile=${OSCONTAINER_SECRET} oci-archive://${SRC_IMAGE} ${DEST_IMAGE}')
                 }
             }
         }
