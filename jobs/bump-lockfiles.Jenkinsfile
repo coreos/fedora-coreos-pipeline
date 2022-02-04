@@ -3,6 +3,10 @@ properties([
         // we don't need to bump lockfiles any more often than daily
         cron("H H * * *")
     ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '100',
+        artifactNumToKeepStr: '100'
+    )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 

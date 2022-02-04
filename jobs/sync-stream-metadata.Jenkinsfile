@@ -10,6 +10,10 @@ properties([
         // also run every 15 mins as a fallback in case webhooks are down
         pollSCM('H/15 * * * *')
     ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '100',
+        artifactNumToKeepStr: '100'
+    )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
