@@ -64,7 +64,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                 memory: "256Mi", kvm: false,
                 secrets: ["aws-fcos-builds-bot-config", "openstack-kola-tests-config"]) {
 
-            def openstack_image_filename, openstack_image_name, openstack_image_sha256, openstack_image_filepath
+            def openstack_image_name, openstack_image_filepath
             stage('Fetch Metadata/Image') {
                 def commitopt = ''
                 if (params.FCOS_CONFIG_COMMIT != '') {
@@ -76,20 +76,12 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                 cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
                 cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                     --url=s3://${s3_stream_dir}/builds --artifact=openstack
+                cosa decompress --build=${params.VERSION} --artifact=openstack
+                """)
+                openstack_image_filepath = shwrapCapture("""
+                cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path openstack
                 """)
 
-                def meta = readJSON file: "builds/${params.VERSION}/${params.ARCH}/meta.json"
-                if (meta.images.openstack) {
-                    openstack_image_filename = meta.images.openstack.path
-                    openstack_image_filepath = "builds/${params.VERSION}/${params.ARCH}/${openstack_image_filename}"
-                } else {
-                    throw new Exception("No OpenStack artifacts found in metadata for ${params.VERSION}/${params.ARCH}")
-                }
-
-                // Uncompress the image
-                shwrap("unxz ${openstack_image_filepath}")
-                // Remove '.xz` from the end of the filename in the file path
-                openstack_image_filepath = openstack_image_filepath[0..-4]
                 // Use a consistent image name for this stream in case it gets left behind
                 openstack_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}"
 
