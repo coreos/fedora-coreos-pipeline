@@ -40,12 +40,6 @@ objects:
     apiVersion: v1
     metadata:
       name: jenkins
-      annotations:
-        # These annotations will allow Jenkins to know from where to seed its
-        # jobs once it comes up. Note that it can be from a different git repo
-        # than where the S2I repo is defined.
-        coreos.com/jenkins-jobs-url: ${JENKINS_JOBS_URL}
-        coreos.com/jenkins-jobs-ref: ${JENKINS_JOBS_REF}
     # Note no triggers: we don't want e.g. git pushes/config changes to restart
     # Jenkins. Let's just require manual restarts here. XXX: Should investigate
     # if there's an easy way to auto-redeploy during downtimes.
