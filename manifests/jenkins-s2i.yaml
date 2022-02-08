@@ -36,14 +36,11 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins
-      annotations:
-        coreos.com/deploy-default: "true"
   - kind: BuildConfig
     apiVersion: v1
     metadata:
       name: jenkins
       annotations:
-        coreos.com/deploy-default: "true"
         # These annotations will allow Jenkins to know from where to seed its
         # jobs once it comes up. Note that it can be from a different git repo
         # than where the S2I repo is defined.
@@ -82,8 +79,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-slave-base-centos7
-      annotations:
-        coreos.com/deploy-default: "true"
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
