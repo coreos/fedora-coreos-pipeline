@@ -1,7 +1,7 @@
 ## Setting up the pipeline
 
 There are multiple ways to set up the pipeline. There is a single
-official prod mode, which can only be instantiated in CentOS CI under
+official prod mode, which can only be instantiated in Fedora under
 the `fedora-coreos` namespace. However, one can set up everything
 equally well in a separate namespace (such as `fedora-coreos-devel`), or
 a separate cluster entirely.
@@ -57,12 +57,12 @@ https://docs.openshift.com/container-platform/4.9/virt/virt-learn-more-about-ope
 
 ### [LOCAL] Create your project
 
-It is preferable to match the project name used for prod in CentOS CI
-(`fedora-coreos`), but feel free to use a different project name like
-`fedora-coreos-devel` if you'd like.
+It is preferable to match the project name used for prod in Fedora
+(`fedora-coreos-pipeline`), but feel free to use a different project
+name like `fedora-coreos-devel` if you'd like.
 
 ```
-oc new-project fedora-coreos
+oc new-project fedora-coreos-pipeline
 ```
 
 ### [LOCAL] Fork the repo
@@ -256,15 +256,6 @@ oc create secret generic github-coreosbot-token --from-file=token
 
 ### Create a Jenkins instance with a persistent volume backing store
 
-For CentOS CI:
-
-```
-oc new-app --file=manifests/jenkins.yaml \
-  --param=NAMESPACE=fedora-coreos
-```
-
-For Fedora:
-
 ```
 oc new-app --file=manifests/jenkins.yaml \
   --param=NAMESPACE=fedora-coreos-pipeline \
@@ -278,9 +269,9 @@ automatically instantiate Jenkins with default parameters when creating
 the Jenkins pipeline).
 
 The `STORAGE_CLASS_NAME` may be required depending on the cluster. If
-using a development cluster or the CentOS CI cluster, it normally isn't,
-and you can drop it. For the Fedora prod cluster, use
-`ocs-storagecluster-ceph-rbd` as shown above.
+using a development cluster, it normally isn't, and you can drop it. For
+the Fedora prod cluster, use `ocs-storagecluster-ceph-rbd` as shown
+above.
 
 Now, create the Jenkins configmap:
 
