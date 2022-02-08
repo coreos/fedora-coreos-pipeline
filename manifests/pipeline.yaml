@@ -104,27 +104,6 @@ objects:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile
 
-  ### FEDORA COREOS BUILD PROD PIPELINE ###
-
-  - kind: BuildConfig
-    apiVersion: "build.openshift.io/v1"
-    metadata:
-      name: fedora-coreos-pipeline-production
-      annotations:
-        coreos.com/deploy-default: "false"
-    spec:
-      # note no triggers: the prod pipeline is only ever triggered by GitHub
-      # pushes to one of the prod branches
-      source:
-        type: Git
-        git:
-          uri: ${JENKINS_JOBS_URL}
-          ref: ${JENKINS_JOBS_REF}
-      strategy:
-        jenkinsPipelineStrategy:
-          type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.production
-
   ### FEDORA COREOS BUILD DEVEL PIPELINE ###
 
   - kind: BuildConfig
