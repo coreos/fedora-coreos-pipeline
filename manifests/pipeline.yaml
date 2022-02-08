@@ -103,26 +103,3 @@ objects:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile
-
-  ### FEDORA COREOS STREAM PIPELINE ###
-
-  - kind: BuildConfig
-    apiVersion: "build.openshift.io/v1"
-    metadata:
-      name: fedora-coreos-pipeline-stream-metadata-generator
-      annotations:
-        coreos.com/deploy-default: "false"
-    spec:
-      triggers:
-      - type: Generic
-        generic:
-          secret: regenerate
-      source:
-        type: Git
-        git:
-          uri: ${JENKINS_JOBS_URL}
-          ref: ${JENKINS_JOBS_REF}
-      strategy:
-        jenkinsPipelineStrategy:
-          type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.stream.metadata.generator
