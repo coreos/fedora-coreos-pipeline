@@ -104,32 +104,6 @@ objects:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile
 
-  ### FEDORA COREOS BUILD DEVEL PIPELINE ###
-
-  - kind: BuildConfig
-    apiVersion: "build.openshift.io/v1"
-    metadata:
-      name: fedora-coreos-pipeline-development
-      annotations:
-        coreos.com/deploy-default: "false"
-    spec:
-      triggers:
-      - type: ConfigChange
-      - type: imageChange
-        imageChange:
-          from:
-            kind: ImageStreamTag
-            name: coreos-assembler:main
-      source:
-        type: Git
-        git:
-          uri: ${JENKINS_JOBS_URL}
-          ref: ${JENKINS_JOBS_REF}
-      strategy:
-        jenkinsPipelineStrategy:
-          type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.development
-
   ### FEDORA COREOS BUILD MECHANICAL PIPELINE ###
 
   - kind: BuildConfig
