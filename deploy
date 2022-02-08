@@ -42,23 +42,6 @@ def main():
 
     if args.update:
         update_resources(args, resources)
-
-        # hack the name; should extract from manifest
-        pipeline_name = "fedora-coreos-pipeline"
-        if not args.official:
-            pipeline_name = f"{args.prefix}{pipeline_name}"
-
-        if args.start:
-            print("Starting:")
-            out = subprocess.run([args.oc_cmd, 'start-build', pipeline_name],
-                                 check=True, stdout=subprocess.PIPE,
-                                 encoding='utf-8')
-            print(f"  {out.stdout.strip()}")
-            print()
-        else:
-            print("You may start your developer pipeline with:")
-            print(f"  oc start-build {pipeline_name}")
-            print()
     else:
         assert args.delete_devel
 
@@ -102,8 +85,6 @@ def parse_args():
                         help="Only print what would happen")
     parser.add_argument("--prefix", help="Developer prefix for resources",
                         default=get_username())
-    parser.add_argument("--start", action='store_true',
-                        help="Start pipeline after updating it")
     parser.add_argument("--pipeline", metavar='<URL>[@REF]',
                         help="Repo and ref to use for pipeline code")
     parser.add_argument("--config", metavar='<URL>[@REF]',
