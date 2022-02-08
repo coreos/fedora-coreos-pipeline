@@ -69,7 +69,7 @@ def quay_registry = "quay.io/coreos-assembler/fcos"
 // *does*, this makes sure they're run serially.
 lock(resource: "release-${params.STREAM}") {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
-    node(pod_label) { container('coreos-assembler') {
+    node(pod_label) { container('coreos-assembler') { try {
 
         def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
@@ -220,5 +220,12 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 }
             }
         }
-    }}
+    } catch (e) {
+        currentBuild.result = 'FAILURE'
+        throw e
+    } finally {
+        if (currentBuild.result != 'SUCCESS') {
+            slackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
+        }
+    }}}
 }}
