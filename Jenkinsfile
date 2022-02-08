@@ -618,7 +618,7 @@ lock(resource: "build-${params.STREAM}") {
         // to true, overriding the default (false).
         if (official && !(params.STREAM in streams.production)) {
             stage('Publish') {
-                build job: 'release', wait: true, parameters: [
+                build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'ARCHES', value: basearch),
                     string(name: 'VERSION', value: newBuildID),
