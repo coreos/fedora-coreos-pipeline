@@ -104,37 +104,6 @@ objects:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile
 
-  ### FEDORA COREOS BUILD MECHANICAL PIPELINE ###
-
-  - kind: BuildConfig
-    apiVersion: "build.openshift.io/v1"
-    metadata:
-      name: fedora-coreos-pipeline-mechanical
-      annotations:
-        coreos.com/deploy-default: "false"
-    spec:
-      triggers:
-      - type: ConfigChange
-      # for fedmsg-based triggers
-      # use `oc set triggers --from-webhook` to update token to be unique
-      - type: Generic
-        generic:
-          secret: regenerate
-      - type: imageChange
-        imageChange:
-          from:
-            kind: ImageStreamTag
-            name: coreos-assembler:main
-      source:
-        type: Git
-        git:
-          uri: ${JENKINS_JOBS_URL}
-          ref: ${JENKINS_JOBS_REF}
-      strategy:
-        jenkinsPipelineStrategy:
-          type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.mechanical
-
   ### FEDORA COREOS RELEASE PIPELINE ###
 
   - kind: BuildConfig

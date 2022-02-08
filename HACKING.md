@@ -365,12 +365,6 @@ value from the `manifests/pipeline.yaml` OpenShift template. This is
 currently as designed (see
 [#65](https://github.com/coreos/fedora-coreos-pipeline/issues/65)).
 
-### [PROD] Update the "secret" token value in the webhook to be unique
-
-```
-oc set triggers bc/fedora-coreos-pipeline-mechanical --from-webhook
-```
-
 ### [PROD] Create fedora-messaging configuration
 
 First create the configmap:
