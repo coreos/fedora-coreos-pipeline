@@ -225,6 +225,35 @@ This secret is used to push the resulting OCI image to Quay.io
 1. Obtain the file `oscontainer-secret` from BitWarden.
 2. Run: `$ oc create secret generic oscontainer-secret --from-file=dockercfg=oscontainer-secret`.
 
+### [PROD] Create fedora-messaging configuration
+
+First create the configmap:
+
+```
+oc create configmap fedora-messaging-cfg --from-file=configs/fedmsg.toml
+```
+
+Then add the client secrets:
+
+```
+oc create secret generic fedora-messaging-coreos-key \
+  --from-file=coreos.crt --from-file=coreos.key
+```
+
+You can obtain `coreos.crt` and `coreos.key` from BitWarden.
+
+### [PROD] Create coreosbot GitHub token secret
+
+Create the CoreOS Bot (coreosbot) GitHub token secret (this
+correspond to the "Fedora CoreOS pipeline" token of
+coreosbot, with just `public_repo` and `admin:repo_hook`;
+these creds are available in BitWarden):
+
+```
+echo $coreosbot_token > token
+oc create secret generic github-coreosbot-token --from-file=token
+```
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 For CentOS CI:
@@ -347,35 +376,6 @@ Note any value you don't pass to `deploy` will be reset to its default
 value from the `manifests/pipeline.yaml` OpenShift template. This is
 currently as designed (see
 [#65](https://github.com/coreos/fedora-coreos-pipeline/issues/65)).
-
-### [PROD] Create fedora-messaging configuration
-
-First create the configmap:
-
-```
-oc create configmap fedora-messaging-cfg --from-file=configs/fedmsg.toml
-```
-
-Then add the client secrets:
-
-```
-oc create secret generic fedora-messaging-coreos-key \
-  --from-file=coreos.crt --from-file=coreos.key
-```
-
-You can obtain `coreos.crt` and `coreos.key` from BitWarden.
-
-### [PROD] Create coreosbot GitHub token secret
-
-Create the CoreOS Bot (coreosbot) GitHub token secret (this
-correspond to the "Fedora CoreOS pipeline" token of
-coreosbot, with just `public_repo` and `admin:repo_hook`;
-these creds are available in BitWarden):
-
-```
-echo $coreosbot_token > token
-oc create secret generic github-coreosbot-token --from-file=token
-```
 
 ### Nuking everything
 
