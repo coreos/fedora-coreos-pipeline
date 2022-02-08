@@ -52,9 +52,9 @@ names:
   Fedora CoreOS streams as defined in
   https://github.com/coreos/fedora-coreos-tracker/blob/main/stream-tooling.md
 - `official pipeline`: the *single* official instance of
-  this pipeline code, which runs in the `fedora-coreos`
-  namespace on the CentOS CI OpenShift cluster and pushes to
-  the `fcos-builds` bucket.
+  this pipeline code, which runs in the
+  `fedora-coreos-pipeline` namespace on the Fedora OpenShift
+  cluster and pushes to the `fcos-builds` bucket.
 - `developer pipeline`: a pipeline stood up by a developer
   running in a separate cluster/namespace
 
