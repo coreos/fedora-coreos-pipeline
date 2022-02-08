@@ -330,17 +330,9 @@ It may be a good idea to set the Kubernetes plugin to
 
 Once Jenkins is ready, make sure that the seed job has been run successfully.
 
-Once the seed job on Jenkins finishes successfully we can now start the Fedora CoreOS pipeline!
-
-```
-oc start-build fedora-coreos-pipeline
-```
-
-(Or if running as a developer pipeline, it would be e.g.
-`jlebon-fedora-coreos-pipeline`).
-
-You can verify the build status using `oc get builds` or by checking the
-logs in the web UI.
+Once the seed job on Jenkins finishes successfully we can now start the
+Fedora CoreOS pipeline! Go into the Jenkins UI and start the `build`
+job.
 
 ### Updating the pipeline
 
