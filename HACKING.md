@@ -309,7 +309,7 @@ This will create:
 1. the Jenkins controller imagestream,
 2. the Jenkins agent imagestream,
 3. the coreos-assembler imagestream, and
-4. the Jenkins pipeline build.
+4. the pipeline-config configmap.
 
 We can now start a build of the Jenkins controller:
 

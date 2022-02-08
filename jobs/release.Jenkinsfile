@@ -5,7 +5,7 @@ node {
     streams = load("streams.groovy")
     pod = readFile(file: "manifests/pod.yaml")
 
-    s3_bucket = pipeutils.get_pipeline_annotation('s3-bucket')
+    s3_bucket = pipeutils.get_config('s3-bucket')
 }
 
 properties([

@@ -72,18 +72,6 @@ objects:
     apiVersion: "build.openshift.io/v1"
     metadata:
       name: ${DEVELOPER_PREFIX}fedora-coreos-pipeline
-      # We use annotations as a way to pass information from the bc (and thus
-      # from `oc new-app/process` time) to the Groovy code. This allows us to
-      # centralize all the major knobs in this file for easier management.
-      # Could also use `oc start-build -e FOO=BAR` for this, but we'd still need
-      # to redefine the bc for setting the right repo to the pipeline itself.
-      # https://docs.okd.io/latest/dev_guide/builds/build_strategies.html#mapping-buildconfig-jenkins
-      annotations:
-        coreos.com/source-config-url: ${FCOS_CONFIG_URL}
-        coreos.com/source-config-ref: ${FCOS_CONFIG_REF}
-        coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
-        coreos.com/s3-bucket: ${S3_BUCKET}
-        coreos.com/gcp-gs-bucket: ${GCP_GS_BUCKET}
     spec:
       # note no triggers: the base pipeline is only ever triggered manually, or
       # by one of the stream-specific pipelines
@@ -97,3 +85,16 @@ objects:
         jenkinsPipelineStrategy:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile
+
+  ### PIPELINE CONFIG ###
+
+  - kind: ConfigMap
+    apiVersion: v1
+    metadata:
+      name: ${DEVELOPER_PREFIX}pipeline-config
+    data:
+      source-config-url: ${FCOS_CONFIG_URL}
+      source-config-ref: ${FCOS_CONFIG_REF}
+      developer-prefix: ${DEVELOPER_PREFIX}
+      s3-bucket: ${S3_BUCKET}
+      gcp-gs-bucket: ${GCP_GS_BUCKET}
