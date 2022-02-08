@@ -52,8 +52,6 @@ objects:
     kind: ImageStream
     metadata:
       name: ${DEVELOPER_PREFIX}coreos-assembler
-      annotations:
-        coreos.com/deploy-default: "true"
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -81,7 +79,6 @@ objects:
       # to redefine the bc for setting the right repo to the pipeline itself.
       # https://docs.okd.io/latest/dev_guide/builds/build_strategies.html#mapping-buildconfig-jenkins
       annotations:
-        coreos.com/deploy-default: "true"
         coreos.com/source-config-url: ${FCOS_CONFIG_URL}
         coreos.com/source-config-ref: ${FCOS_CONFIG_REF}
         coreos.com/developer-prefix: ${DEVELOPER_PREFIX}
