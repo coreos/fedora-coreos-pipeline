@@ -220,6 +220,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 }
             }
         }
+        currentBuild.result = 'SUCCESS'
     } catch (e) {
         currentBuild.result = 'FAILURE'
         throw e
