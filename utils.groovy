@@ -5,7 +5,7 @@ import org.yaml.snakeyaml.Yaml
 
 def get_config(key) {
     return shwrapCapture("""
-        oc get buildconfig -n ${env.PROJECT_NAME} -o json pipeline-config | jq -r '.data["${key}"]'
+        oc get configmap -n ${env.PROJECT_NAME} -o json pipeline-config | jq -r '.data["${key}"]'
     """)
 }
 
