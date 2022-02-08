@@ -30,9 +30,6 @@ parameters:
   - description: Git branch/tag reference for FCOS config
     name: FCOS_CONFIG_REF
     value: # empty -> based on stream
-  - description: Size of the PVC to create
-    name: PVC_SIZE
-    value: 100Gi
   - description: Image of coreos-assembler to use
     name: COREOS_ASSEMBLER_IMAGE
     # for now we just follow :main, but we may start freezing if things become

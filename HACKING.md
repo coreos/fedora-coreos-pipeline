@@ -286,10 +286,6 @@ circumstances. Here are some of them:
     - Git source URL and optional git ref for pipeline Jenkinsfile.
 - `--config <URL>[@REF]`
     - Git source URL and optional git ref for FCOS config.
-- `--pvc-size <SIZE>`
-    - Size of the cache PVC to create. Note that the PVC size cannot be
-      changed after creation. The format is the one understood by
-      Kubernetes, e.g. `30Gi`.
 - `--cosa-img <FQIN>`
     - Image of coreos-assembler to use.
 - `--bucket BUCKET`
@@ -312,13 +308,8 @@ This will create:
 
 1. the Jenkins controller imagestream,
 2. the Jenkins agent imagestream,
-3. the coreos-assembler imagestream,
-4. the `PersistentVolumeClaim` in which we'll cache, and
-5. the Jenkins pipeline build.
-
-The default size of the PVC is 100Gi. There is a `--pvc-size` parameter
-one can use to make this smaller if you do not have enough space. E.g.
-`--pvc-size 30Gi`.
+3. the coreos-assembler imagestream, and
+4. the Jenkins pipeline build.
 
 We can now start a build of the Jenkins controller:
 

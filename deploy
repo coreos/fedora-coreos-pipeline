@@ -114,8 +114,6 @@ def parse_args():
                         help="GCP GS bucket to use for image uploads during import")
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
-    parser.add_argument("--pvc-size", metavar='SIZE',
-                        help="Size of PVC to create for cache")
     parser.add_argument("--oc-cmd", default='oc',
                         help="The path to the oc binary")
     # XXX: to add as a mutually exclusive option with above
@@ -156,8 +154,6 @@ def process_template(args):
         params['S3_BUCKET'] = args.bucket
     if args.cosa_img:
         params['COREOS_ASSEMBLER_IMAGE'] = args.cosa_img
-    if args.pvc_size:
-        params['PVC_SIZE'] = args.pvc_size
     if args.gcp_gs_bucket:
         params['GCP_GS_BUCKET'] = args.gcp_gs_bucket
 
