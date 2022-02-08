@@ -78,3 +78,5 @@ objects:
       developer-prefix: ${DEVELOPER_PREFIX}
       s3-bucket: ${S3_BUCKET}
       gcp-gs-bucket: ${GCP_GS_BUCKET}
+      jenkins-jobs-url: ${JENKINS_JOBS_URL}
+      jenkins-jobs-ref: ${JENKINS_JOBS_REF}
