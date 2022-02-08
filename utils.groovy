@@ -3,28 +3,10 @@ import org.yaml.snakeyaml.Yaml
 // Only add pipeline-specific things here. Otherwise add to coreos-ci-lib
 // instead.
 
-def get_annotation(anno) {
-    // This works off the assumption that either there's only one
-    // buildconfig in the project that has the annotations we're looking
-    // for OR the annotation value is the same for all BCs that have it.
-    //
-    // Explanation:
-    //  - starts with [] to generate a list
-    //  - iterates over the items[] and selects the metadata.annotations
-    //  - in the given objects finds the value of "coreos.com/${anno}"
-    //  - filters out null values (objects without given annotation)
-    //  - trims it down to a list of unique entries (should be single item in list)
-    //  - selects first item in list [0]
+def get_config(key) {
     return shwrapCapture("""
-        oc get buildconfig -n ${env.PROJECT_NAME} -o json | \
-            jq -r '[.items[].metadata.annotations | .["coreos.com/${anno}"] | select(. != null)] | unique'[0]
+        oc get buildconfig -n ${env.PROJECT_NAME} -o json pipeline-config | jq -r '.data["${key}"]'
     """)
-}
-
-def get_pipeline_annotation(anno) {
-    // should probably cache this, but meh... I'd rather
-    // hide this goop here than in the main pipeline code
-    return get_annotation(anno)
 }
 
 // Parse and handle the result of Kola

@@ -20,11 +20,11 @@ node {
         echo "Running in developer mode on ${env.JENKINS_URL}."
     }
 
-    developer_prefix = pipeutils.get_pipeline_annotation('developer-prefix')
-    src_config_url = pipeutils.get_pipeline_annotation('source-config-url')
-    src_config_ref = pipeutils.get_pipeline_annotation('source-config-ref')
-    s3_bucket = pipeutils.get_pipeline_annotation('s3-bucket')
-    gcp_gs_bucket = pipeutils.get_pipeline_annotation('gcp-gs-bucket')
+    developer_prefix = pipeutils.get_config('developer-prefix')
+    src_config_url = pipeutils.get_config('source-config-url')
+    src_config_ref = pipeutils.get_config('source-config-ref')
+    s3_bucket = pipeutils.get_config('s3-bucket')
+    gcp_gs_bucket = pipeutils.get_config('gcp-gs-bucket')
 
     // sanity check that a valid prefix is provided if in devel mode and drop
     // the trailing '-' in the devel prefix

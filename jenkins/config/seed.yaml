@@ -25,8 +25,8 @@ jobs:
                 // XXX: hack, should put this in coreos-ci-lib
                 sh("curl -LO https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/utils.groovy")
                 def pipeutils = load("utils.groovy")
-                def url = pipeutils.get_annotation("jenkins-jobs-url")
-                def ref = pipeutils.get_annotation("jenkins-jobs-ref")
+                def url = pipeutils.get_config("jenkins-jobs-url")
+                def ref = pipeutils.get_config("jenkins-jobs-ref")
                 shwrap("rm -rf source")
                 shwrap("git clone -b ^${ref} ^${url} source")
 
