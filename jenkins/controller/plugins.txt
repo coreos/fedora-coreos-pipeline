@@ -9,7 +9,7 @@ configuration-as-code-groovy:1.1
 timestamper:1.11.8
 build-token-root:1.7
 github:1.33.1
-workflow-api:2.46
+workflow-api:1136.v7f5f1759dc16
 ssh-credentials:1.19
 pipeline-github:2.8-138.d766e30bb08b
 pipeline-utility-steps:2.9.0
