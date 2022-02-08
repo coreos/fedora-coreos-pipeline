@@ -68,11 +68,9 @@ properties([
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
                    description: "Don't error out if upgrade tests fail (temporary)"),
-      // use a string here because passing booleans via `oc start-build -e`
-      // is non-trivial
-      choice(name: 'AWS_REPLICATION',
-             choices: (['false', 'true']),
-             description: 'Force AWS AMI replication for non-production'),
+      booleanParam(name: 'AWS_REPLICATION',
+                   defaultValue: false,
+                   description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
              defaultValue: "${coreos_assembler_image}",
@@ -517,16 +515,12 @@ EOF
         // to true, overriding the default (false).
         if (official && !(params.STREAM in streams.production)) {
             stage('Publish') {
-                // use jnlp container in our pod, which has `oc` in it already
-                container('jnlp') {
-                    shwrap("""
-                    oc start-build --wait fedora-coreos-pipeline-release \
-                        -e STREAM=${params.STREAM} \
-                        -e VERSION=${newBuildID} \
-                        -e ARCHES=${basearch} \
-                        -e AWS_REPLICATION=${params.AWS_REPLICATION}
-                    """)
-                }
+                build job: 'release', wait: true, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'ARCHES', value: basearch),
+                    string(name: 'VERSION', value: newBuildID),
+                    booleanParam(name: 'AWS_REPLICATION', value: params.AWS_REPLICATION)
+                ]
             }
         }
 
