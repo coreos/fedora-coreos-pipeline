@@ -184,23 +184,17 @@ def process_template(args):
 def update_resources(args, resources):
     print("Updating:")
     for resource in resources:
-        if args.all or is_default_resource(resource):
-            action = resource_action(args, resource)
-            if action == 'skip':
-                continue
-            if args.dry_run:
-                print(f"Would {action} {resource['kind'].lower()} {resource['metadata']['name']}")
-                continue
-            out = subprocess.run([args.oc_cmd, action, '--filename', '-'],
-                                 input=json.dumps(resource), encoding='utf-8',
-                                 check=True, stdout=subprocess.PIPE)
-            print(f"  {out.stdout.strip()}")
+        action = resource_action(args, resource)
+        if action == 'skip':
+            continue
+        if args.dry_run:
+            print(f"Would {action} {resource['kind'].lower()} {resource['metadata']['name']}")
+            continue
+        out = subprocess.run([args.oc_cmd, action, '--filename', '-'],
+                             input=json.dumps(resource), encoding='utf-8',
+                             check=True, stdout=subprocess.PIPE)
+        print(f"  {out.stdout.strip()}")
     print()
-
-
-def is_default_resource(resource):
-    annos = resource['metadata'].get('annotations', {})
-    return annos.get('coreos.com/deploy-default') == "true"
 
 
 def resource_action(args, resource):
