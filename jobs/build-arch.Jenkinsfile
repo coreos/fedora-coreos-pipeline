@@ -10,9 +10,9 @@ node {
     repo = "coreos/fedora-coreos-config"
 
 
-    // just autodetect if we're in the official prod Jenkins or not
-    official = (env.JENKINS_URL in ['https://jenkins-fedora-coreos.apps.ocp.ci.centos.org/',
-                                    'https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])
+    // just autodetect if we're in the official prod Jenkins or not; structure
+    // as a list to support migrations more easily
+    official = (env.JENKINS_URL in ['https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])
 
     if (official) {
         echo "Running in official (prod) mode."

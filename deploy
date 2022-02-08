@@ -25,7 +25,6 @@ import subprocess
 
 # the code supports multiple prod pipelines for easing migrations
 PROD_CLUSTERS = {
-    "https://api.ocp.ci.centos.org:6443": "fedora-coreos",
     "https://api.ocp.fedoraproject.org:6443": "fedora-coreos-pipeline"
 }
 
