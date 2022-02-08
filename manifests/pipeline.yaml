@@ -104,27 +104,6 @@ objects:
           type: JenkinsPipeline
           jenkinsfilePath: Jenkinsfile
 
-  ### FEDORA COREOS RELEASE PIPELINE ###
-
-  - kind: BuildConfig
-    apiVersion: "build.openshift.io/v1"
-    metadata:
-      name: fedora-coreos-pipeline-release
-      annotations:
-        coreos.com/deploy-default: "false"
-        coreos.com/s3-bucket: ${S3_BUCKET}
-    spec:
-      source:
-        type: Git
-        git:
-          uri: ${JENKINS_JOBS_URL}
-          ref: ${JENKINS_JOBS_REF}
-      strategy:
-        jenkinsPipelineStrategy:
-          type: JenkinsPipeline
-          jenkinsfilePath: Jenkinsfile.release
-      runPolicy: Parallel
-
   ### FEDORA COREOS STREAM PIPELINE ###
 
   - kind: BuildConfig
