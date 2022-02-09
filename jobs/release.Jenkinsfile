@@ -27,12 +27,9 @@ properties([
       // where we are running the job by hand is when we're doing a
       // production release and we want to replicate there. Defaulting
       // to true means there is less opportunity for human error.
-      //
-      // use a string here because passing booleans via `oc start-build -e`
-      // is non-trivial
-      choice(name: 'AWS_REPLICATION',
-             choices: (['true', 'false']),
-             description: 'Force AWS AMI replication'),
+      booleanParam(name: 'AWS_REPLICATION',
+                   defaultValue: true,
+                   description: 'Force AWS AMI replication'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
