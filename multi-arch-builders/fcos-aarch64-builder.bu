@@ -51,6 +51,16 @@ storage:
         name: builder
       group:
         name: builder
+    - path: /home/builder/.config/systemd/user/timers.target.wants
+      user:
+        name: builder
+      group:
+        name: builder
+    - path: /home/builder/.config/systemd/user/sockets.target.wants
+      user:
+        name: builder
+      group:
+        name: builder
   files:
     - path: /etc/hostname
       mode: 0644
