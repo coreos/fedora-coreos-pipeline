@@ -91,9 +91,7 @@ storage:
           ExecStartPre=mkdir -p /home/builder/coreos-assembler/
           ExecStartPre=-git clone --depth=1 https://github.com/coreos/coreos-assembler.git /home/builder/coreos-assembler/
           ExecStartPre=git -C /home/builder/coreos-assembler/ pull
-          # use --no-cache until we regularly bump nocache line
-          # https://github.com/coreos/coreos-assembler/issues/2636
-          ExecStart=podman build --pull-always --no-cache -t localhost/coreos-assembler:latest /home/builder/coreos-assembler/
+          ExecStart=podman build --pull-always -t localhost/coreos-assembler:latest /home/builder/coreos-assembler/
           ExecStartPost=-podman image prune --force
     - path: /home/builder/.config/systemd/user/build-cosa-firstboot.service
       mode: 0644
