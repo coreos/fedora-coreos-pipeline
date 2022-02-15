@@ -138,7 +138,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             }
 
 
-            if ((basearch in ['aarch64', 'x86_64']) && (params.AWS_REPLICATION == 'true')) {
+            if ((basearch in ['aarch64', 'x86_64']) && params.AWS_REPLICATION) {
                 // Replicate AMI to other regions.
                 stage("Replicate ${basearch} AWS AMI") {
                     shwrap("""
