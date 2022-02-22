@@ -73,6 +73,9 @@ properties([
              description: 'Override coreos-assembler image to use',
              defaultValue: "${coreos_assembler_image}",
              trim: true),
+      booleanParam(name: 'KOLA_RUN_SLEEP',
+                   defaultValue: false,
+                   description: 'Just wait forever when we get to running kola tests (temporary)'),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -313,6 +316,13 @@ lock(resource: "build-${params.STREAM}") {
             shwrap("""
             cosa buildextend-qemu
             """)
+        }
+
+        // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
+        if (params.KOLA_RUN_SLEEP) {
+            echo "Hit KOLA_RUN_SLEEP; going to sleep..."
+            shwrap("sleep infinity")
+            throw new Exception("unreachable")
         }
 
         stage('Kola:QEMU basic') {
