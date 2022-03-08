@@ -206,7 +206,8 @@ EOF
         withCredentials([usernamePassword(credentialsId: botCreds,
                                           usernameVariable: 'GHUSER',
                                           passwordVariable: 'GHTOKEN')]) {
-          // should gracefully handle race conditions here
+          // Sometimes other commits have come in; rebase if needed and then push.
+          sh("git -C src/config pull --rebase")
           sh("git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}")
         }
     }
