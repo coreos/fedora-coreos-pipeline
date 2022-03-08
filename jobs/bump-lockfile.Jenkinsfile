@@ -206,11 +206,26 @@ EOF
         withCredentials([usernamePassword(credentialsId: botCreds,
                                           usernameVariable: 'GHUSER',
                                           passwordVariable: 'GHTOKEN')]) {
-          // should gracefully handle race conditions here
-          sh("git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}")
+          // gracefully handle race conditions
+          sh("""
+            rev=\$(git -C src/config rev-parse origin/${branch})
+            if ! git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}; then
+                git fetch origin
+                if [ "\$rev" != \$(git -C src/config rev-parse origin/${branch}) ]; then
+                    touch ${env.WORKSPACE}/rerun
+                else
+                    exit 1
+                fi
+            fi
+          """)
         }
     }
-    if (!haveChanges && forceTimestamp) {
+    if (utils.pathExists("rerun")) {
+        build job: 'bump-lockfile', wait: false, parameters: [
+            string(name: 'STREAM', value: params.STREAM)
+        ]
+        currentBuild.description = "[${params.STREAM}] ⚡ (retriggered)"
+    } else if (!haveChanges && forceTimestamp) {
         currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
     } else {
         currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
