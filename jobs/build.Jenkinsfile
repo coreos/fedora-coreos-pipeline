@@ -360,16 +360,16 @@ lock(resource: "build-${params.STREAM}") {
             return
         }
 
-        // Do an early archive of just the OSTree and the QEMU image. This has
-        // the desired side effect of reserving our build ID before we fork off
-        // multi-arch builds.
+        // Do an Early Archive of just the OSTree. This has the
+        // desired side effect of reserving our build ID before
+        // we fork off multi-arch builds.
         stage('Archive OSTree') {
             if (s3_stream_dir) {
               // run with --force here in case the previous run of the
               // pipeline died in between buildupload and bump_builds_json()
               shwrap("""
               export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-              cosa buildupload --force --skip-builds-json \
+              cosa buildupload --force --skip-builds-json --artifact=ostree \
                   s3 --acl=public-read ${s3_stream_dir}/builds
               """)
               pipeutils.bump_builds_json(
