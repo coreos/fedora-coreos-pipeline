@@ -147,6 +147,12 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
                 "localhost/coreos-assembler:"
             )
         }
+        if (params.COREOS_ASSEMBLER_IMAGE.startsWith("registry.ci.openshift.org/coreos/coreos-assembler:")) {
+            image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
+                "registry.ci.openshift.org/coreos/coreos-assembler:",
+                "localhost/coreos-assembler:"
+            )
+        }
 
         try { timeout(time: 240, unit: 'MINUTES') {
 
