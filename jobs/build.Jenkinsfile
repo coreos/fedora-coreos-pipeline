@@ -349,15 +349,21 @@ lock(resource: "build-${params.STREAM}") {
             return
         }
 
-        stage('Kola:QEMU upgrade') {
-            shwrap("""
-            cosa kola --rerun --upgrades --no-test-exit-error
-            tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
-            """)
-            archiveArtifacts "kola-run-upgrade.tar.xz"
-        }
-        if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
-            return
+        try {
+            stage('Kola:QEMU upgrade') {
+                shwrap("""
+                cosa kola --rerun --upgrades --no-test-exit-error
+                tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
+                """)
+                archiveArtifacts "kola-run-upgrade.tar.xz"
+            }
+            if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+                return
+            }
+        } catch(e) {
+            if (!params.ALLOW_KOLA_UPGRADE_FAILURE) {
+                throw e
+            }
         }
 
         // Do an Early Archive of just the OSTree. This has the
