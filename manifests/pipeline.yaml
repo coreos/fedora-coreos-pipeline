@@ -32,9 +32,9 @@ parameters:
     value: # empty -> based on stream
   - description: Image of coreos-assembler to use
     name: COREOS_ASSEMBLER_IMAGE
-    # for now we just follow :main, but we may start freezing if things become
+    # for now we just follow :latest, but we may start freezing if things become
     # too unstable
-    value: quay.io/coreos-assembler/coreos-assembler:main
+    value: registry.ci.openshift.org/coreos/coreos-assembler:latest
   - description: AWS S3 bucket in which to store builds (or blank for none)
     name: S3_BUCKET
     value: fcos-builds
@@ -47,7 +47,7 @@ objects:
   ### COREOS-ASSEMBLER ###
 
   # keep a local copy of coreos-assembler so we're not constantly pulling it
-  # each time from quay.io
+  # each time from app.ci
   - apiVersion: v1
     kind: ImageStream
     metadata:
@@ -57,7 +57,7 @@ objects:
         # this allows e.g. the pipeline to directly reference the imagestream
         local: true
       tags:
-        - name: main
+        - name: latest
           from:
             kind: DockerImage
             name: ${COREOS_ASSEMBLER_IMAGE}
