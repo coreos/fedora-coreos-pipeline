@@ -89,19 +89,22 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
-        stage('Sync oscontainer to quay.io') {
-            def image_path = shwrapCapture("cosa meta --build=${params.VERSION} --image-path ostree")
-            withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
-                withEnv(["SRC_IMAGE=${image_path}",
-                         "DEST_IMAGE=docker://${quay_registry}:${params.STREAM}"]) {
-                    sh('skopeo copy --authfile=${OSCONTAINER_SECRET} oci-archive://${SRC_IMAGE} ${DEST_IMAGE}')
-                }
-            }
-        }
-
         for (basearch in params.ARCHES.split()) {
             def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
+
+            // for now we only support pushing x86_64 images
+            if (basearch == 'x86_64') {
+                stage("Push Container") {
+                    def image_path = shwrapCapture("cosa meta --build=${params.VERSION} --image-path ostree")
+                    withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
+                        withEnv(["SRC_IMAGE=${image_path}",
+                                 "DEST_IMAGE=docker://${quay_registry}:${params.STREAM}"]) {
+                            sh('skopeo copy --authfile=${OSCONTAINER_SECRET} oci-archive://${SRC_IMAGE} ${DEST_IMAGE}')
+                        }
+                    }
+                }
+            }
 
             // For production streams, import the OSTree into the prod
             // OSTree repo.
