@@ -127,7 +127,10 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] Waiting"
 
-lock(resource: "build-${params.STREAM}-${params.ARCH}") {
+// build lock: we don't want multiple concurrent builds for the same stream and
+// arch (though this should work fine in theory)
+// release lock: we want to block the release job until we're done
+lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "release-${params.VERSION}-${params.ARCH}"]]) {
     currentBuild.description = "[${params.STREAM}][${params.ARCH}] Running"
 
     podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
@@ -503,24 +506,6 @@ EOF
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                     string(name: 'ARCH', value: basearch),
                     string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
-                ]
-            }
-        }
-
-        // For now, we auto-release all non-production streams builds. That
-        // way, we can e.g. test testing-devel AMIs easily.
-        //
-        // Since we are only running this stage for non-production (i.e. mechanical
-        // and development) builds we'll default to not doing AWS AMI replication.
-        // That can be overridden by the user setting the AWS_REPLICATION parameter
-        // to true, overriding the default (false).
-        if (official && !(params.STREAM in streams.production)) {
-            stage('Publish') {
-                build job: 'release', wait: false, parameters: [
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'ARCHES', value: basearch),
-                    string(name: 'VERSION', value: newBuildID),
-                    booleanParam(name: 'AWS_REPLICATION', value: params.AWS_REPLICATION)
                 ]
             }
         }

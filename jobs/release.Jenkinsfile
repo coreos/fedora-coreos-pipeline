@@ -64,7 +64,9 @@ def quay_registry = "quay.io/coreos-assembler/fcos"
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
 // *does*, this makes sure they're run serially.
-lock(resource: "release-${params.STREAM}") {
+// Also lock version-arch-specific locks to make sure these builds are finished.
+def locks = streams.additional_arches.each {[resource: "release-${params.VERSION}-${it}"]}
+lock(resource: "release-${params.STREAM}", extra: locks) {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') { try {
 
