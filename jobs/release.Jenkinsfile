@@ -68,6 +68,11 @@ lock(resource: "release-${params.STREAM}") {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') { try {
 
+        // print out details of the cosa image to help debugging
+        shwrap("""
+        cat /cosa/coreos-assembler-git.json
+        """)
+
         def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
         def ostree_prod_refs = [:]
