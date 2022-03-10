@@ -21,7 +21,7 @@ properties([
              trim: true),
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: 'x86_64 aarch64',
+             defaultValue: '',
              trim: true),
       // Default to true for AWS_REPLICATION because the only case
       // where we are running the job by hand is when we're doing a
@@ -94,7 +94,12 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
-        def basearches = params.ARCHES.split()
+        def basearches = ""
+        if (params.ARCHES == '') {
+            basearches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split()
+        } else {
+            basearches = params.ARCHES.split()
+        }
 
         for (basearch in basearches) {
             def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
