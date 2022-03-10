@@ -77,7 +77,7 @@ properties([
              trim: true),
       string(name: 'ARCH',
              description: 'The target architecture',
-             defaultValue: 'aarch64',
+             choices: streams.additional_arches,
              trim: true),
       string(name: 'FCOS_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',

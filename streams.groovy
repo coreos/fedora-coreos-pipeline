@@ -8,6 +8,9 @@ production = ['testing', 'stable', 'next']
 development = ['testing-devel'] + next_devel
 mechanical = ['rawhide', 'branched' /* 'bodhi-updates', 'bodhi-updates-testing' */]
 
+// list of secondary architectures we support
+additional_arches = ['aarch64']
+
 all_streams = production + development + mechanical
 
 // Maps a list of streams to a list of GitSCM branches.

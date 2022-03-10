@@ -386,16 +386,18 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
-        stage('Fork AARCH64 Pipeline') {
-            build job: 'build-arch', wait: false, parameters: [
-                booleanParam(name: 'FORCE', value: params.FORCE),
-                booleanParam(name: 'MINIMAL', value: params.MINIMAL),
-                string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
-                string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
-                string(name: 'STREAM', value: params.STREAM),
-                string(name: 'VERSION', value: newBuildID),
-                string(name: 'ARCH', value: 'aarch64')
-            ]
+        stage('Fork Multi-Arch Builds') {
+            for (arch in streams.additional_arches) {
+                build job: 'build-arch', wait: false, parameters: [
+                    booleanParam(name: 'FORCE', value: params.FORCE),
+                    booleanParam(name: 'MINIMAL', value: params.MINIMAL),
+                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
+                    string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: newBuildID),
+                    string(name: 'ARCH', value: arch)
+                ]
+            }
         }
 
         if (!params.MINIMAL) {
