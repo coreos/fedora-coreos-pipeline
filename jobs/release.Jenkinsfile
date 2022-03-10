@@ -94,7 +94,9 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
-        for (basearch in params.ARCHES.split()) {
+        def basearches = params.ARCHES.split()
+
+        for (basearch in basearches) {
             def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
 
@@ -161,16 +163,12 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // Since some of the earlier operations (like AWS replication) only modify
             // the individual meta.json files we need to re-generate the release metadata
             // to get the new info and upload it back to s3.
-            //
-            // Pass --artifact=ostree to buildupload to prevent it from trying to
-            // upload the qcow2 for x86_64. This happens because we early archive
-            // just the ostree in the x86_64 pipeline, but the qemu qcow is in the
-            // meta.json
+            def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
             cosa generate-release-meta --build-id ${params.VERSION} --workdir .
             cosa buildupload --build=${params.VERSION} --skip-builds-json \
-                --artifact=ostree s3 --acl=public-read ${s3_stream_dir}/builds
+                ${arch_args} s3 --acl=public-read ${s3_stream_dir}/builds
             """)
 
             // Run plume to publish official builds; This will handle modifying
@@ -185,7 +183,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
 
             if (utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-                for (basearch in params.ARCHES.split()) {
+                for (basearch in basearches) {
                     shwrap("""
                     /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                         stream.release --build ${params.VERSION} --basearch ${basearch} --stream ${params.STREAM}
