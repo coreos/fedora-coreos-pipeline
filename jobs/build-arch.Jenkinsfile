@@ -56,7 +56,7 @@ properties([
              choices: (streams.development + streams.production + streams.mechanical),
              description: 'Fedora CoreOS stream to build'),
       string(name: 'VERSION',
-             description: 'Override default versioning mechanism',
+             description: 'Build version',
              defaultValue: '',
              trim: true),
       booleanParam(name: 'FORCE',
@@ -139,6 +139,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         """)
 
         // declare these early so we can use them in `finally` block
+        assert params.VERSION != ""
         def newBuildID = params.VERSION
         def basearch = params.ARCH
 
