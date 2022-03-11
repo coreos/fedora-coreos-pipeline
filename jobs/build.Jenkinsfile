@@ -635,7 +635,6 @@ lock(resource: "build-${params.STREAM}") {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'ARCHES', value: basearch),
                     string(name: 'VERSION', value: newBuildID),
                     booleanParam(name: 'AWS_REPLICATION', value: params.AWS_REPLICATION)
                 ]
