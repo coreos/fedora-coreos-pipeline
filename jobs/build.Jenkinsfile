@@ -59,6 +59,10 @@ properties([
              description: 'Override default versioning mechanism',
              defaultValue: '',
              trim: true),
+      string(name: 'ADDITIONAL_ARCHES',
+             description: 'Space-separated list of additional target architectures',
+             defaultValue: streams.additional_arches.join(" "),
+             trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
@@ -390,7 +394,7 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         stage('Fork Multi-Arch Builds') {
-            for (arch in streams.additional_arches) {
+            for (arch in params.ADDITIONAL_ARCHES.split()) {
                 build job: 'build-arch', wait: false, parameters: [
                     booleanParam(name: 'FORCE', value: params.FORCE),
                     booleanParam(name: 'MINIMAL', value: params.MINIMAL),
@@ -638,6 +642,7 @@ lock(resource: "build-${params.STREAM}") {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'ARCHES', value: basearch + " " + params.ADDITIONAL_ARCHES),
                     string(name: 'VERSION', value: newBuildID),
                     booleanParam(name: 'AWS_REPLICATION', value: params.AWS_REPLICATION)
                 ]
