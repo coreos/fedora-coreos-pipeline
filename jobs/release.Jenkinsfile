@@ -23,7 +23,7 @@ properties([
              trim: true),
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: '',
+             defaultValue: "x86_64" + " " + streams.additional_arches.join(" "),
              trim: true),
       // Default to true for AWS_REPLICATION because the only case
       // where we are running the job by hand is when we're doing a
@@ -63,11 +63,14 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 // TODO: Change this to quay.io/fedora/coreos per https://fedoraproject.org/wiki/Changes/OstreeNativeContainer
 def quay_registry = "quay.io/coreos-assembler/fcos"
 
+// Get the list of requested architectures to release
+def basearches = params.ARCHES.split()
+
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
 // *does*, this makes sure they're run serially.
 // Also lock version-arch-specific locks to make sure these builds are finished.
-def locks = streams.additional_arches.collect{[resource: "release-${params.VERSION}-${it}"]}
+def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
 podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
     node(pod_label) { container('coreos-assembler') { try {
@@ -98,11 +101,11 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
-        def basearches = ""
-        if (params.ARCHES == '') {
-            basearches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split()
-        } else {
-            basearches = params.ARCHES.split()
+        def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split()
+        assert builtarches.contains("x86_64"): "The x86_64 architecture was not in builtarches."
+        if (!builtarches.containsAll(basearches)) {
+            echo "Some requested architectures did not successfully build! Continuing."
+            basearches = builtarches.intersect(basearches)
         }
 
         for (basearch in basearches) {
