@@ -636,14 +636,14 @@ lock(resource: "build-${params.STREAM}") {
         //
         // Since we are only running this stage for non-production (i.e. mechanical
         // and development) builds we'll default to not doing AWS AMI replication.
-        // That can be overridden by the user setting the AWS_REPLICATION parameter
-        // to true, overriding the default (false).
+        // We'll also default to allowing failures for additonal architectures.
         if (official && !(params.STREAM in streams.production)) {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'ARCHES', value: basearch + " " + params.ADDITIONAL_ARCHES),
                     string(name: 'VERSION', value: newBuildID),
+                    booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
                     booleanParam(name: 'AWS_REPLICATION', value: params.AWS_REPLICATION)
                 ]
             }
