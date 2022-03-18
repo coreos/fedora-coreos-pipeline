@@ -25,6 +25,9 @@ properties([
              description: 'Space-separated list of target architectures',
              defaultValue: "x86_64" + " " + streams.additional_arches.join(" "),
              trim: true),
+      booleanParam(name: 'ALLOW_MISSING_ARCHES',
+                   defaultValue: false,
+                   description: 'Allow release to continue even with missing architectures'),
       // Default to true for AWS_REPLICATION because the only case
       // where we are running the job by hand is when we're doing a
       // production release and we want to replicate there. Defaulting
@@ -104,8 +107,15 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split()
         assert builtarches.contains("x86_64"): "The x86_64 architecture was not in builtarches."
         if (!builtarches.containsAll(basearches)) {
-            echo "Some requested architectures did not successfully build! Continuing."
-            basearches = builtarches.intersect(basearches)
+            if (params.ALLOW_MISSING_ARCHES) {
+                echo "Some requested architectures did not successfully build! Continuing."
+                basearches = builtarches.intersect(basearches)
+            } else {
+                echo "ERROR: Some requested architectures did not successfully build"
+                echo "ERROR: Detected built architectures: $builtarches"
+                echo "ERROR: Requested base architectures: $basearches"
+                return
+            }
         }
 
         for (basearch in basearches) {
