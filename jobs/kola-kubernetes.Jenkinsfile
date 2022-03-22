@@ -1,7 +1,8 @@
-def streams
+def pipeutils, streams
 node {
     checkout scm
     streams = load("streams.groovy")
+    pipeutils = load("utils.groovy")
 }
 
 properties([
@@ -81,7 +82,7 @@ try { timeout(time: 60, unit: 'MINUTES') {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    if (currentBuild.result != 'SUCCESS') {
+    if (currentBuild.result != 'SUCCESS' && pipeutils.get_config('notify-slack') == "yes") {
         slackSend(color: 'danger', message: ":fcos: :k8s: :trashfire: kola-kubernetes <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
     }
 }

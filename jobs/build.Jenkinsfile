@@ -667,18 +667,17 @@ lock(resource: "build-${params.STREAM}") {
                 message = "${message} (${newBuildID})"
             }
 
-            try {
-                if (official) {
-                    slackSend(color: color, message: message)
-                    shwrap("""
-                    /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
-                        build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                        --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                        --state FINISHED --result ${currentBuild.result}
-                    """)
-                }
-            } finally {
-                echo message
+            echo message
+            if (pipeutils.get_config('notify-slack') == "yes") {
+                slackSend(color: color, message: message)
+            }
+            if (official)
+                shwrap("""
+                /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                    build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                    --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                    --state FINISHED --result ${currentBuild.result}
+                """)
             }
         }
     }}

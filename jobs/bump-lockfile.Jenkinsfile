@@ -1,6 +1,7 @@
-def streams, gp
+def pipeutils, streams, gp
 node {
     checkout scm
+    pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
     gp = load("gp.groovy")
 }
@@ -235,7 +236,7 @@ EOF
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    if (currentBuild.result != 'SUCCESS') {
+    if (currentBuild.result != 'SUCCESS' && pipeutils.get_config('notify-slack') == "yes") {
         slackSend(color: 'danger', message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
     }
 }

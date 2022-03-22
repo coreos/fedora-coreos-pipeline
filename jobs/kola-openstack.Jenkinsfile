@@ -1,7 +1,8 @@
-def streams
+def pipeutils, streams
 node {
     checkout scm
     streams = load("streams.groovy")
+    pipeutils = load("utils.groovy")
 }
 
 properties([
@@ -138,7 +139,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        if (currentBuild.result != 'SUCCESS') {
+        if (currentBuild.result != 'SUCCESS' && pipeutils.get_config('notify-slack') == "yes") {
             slackSend(color: 'danger', message: ":fcos: :openstack: :trashfire: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
