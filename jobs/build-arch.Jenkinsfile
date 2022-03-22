@@ -1,6 +1,7 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, developer_prefix, repo, src_config_url, src_config_ref, s3_bucket, gp
+def pipeutils, streams, official, developer_prefix, repo, gp
+def src_config_url, src_config_ref, s3_bucket, notify_slack
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -20,11 +21,12 @@ node {
         echo "Running in developer mode on ${env.JENKINS_URL}."
     }
 
-    developer_prefix = pipeutils.get_config('developer-prefix')
-    src_config_url = pipeutils.get_config('source-config-url')
-    src_config_ref = pipeutils.get_config('source-config-ref')
-    s3_bucket = pipeutils.get_config('s3-bucket')
-    gcp_gs_bucket = pipeutils.get_config('gcp-gs-bucket')
+    def pipecfg = pipeutils.load_config()
+    developer_prefix = pipecfg['developer-prefix']
+    src_config_url = pipecfg['source-config-url']
+    src_config_ref = pipecfg['source-config-ref']
+    s3_bucket = pipecfg['s3-bucket']
+    notify_slack = pipecfg['notify-slack']
 
     // sanity check that a valid prefix is provided if in devel mode and drop
     // the trailing '-' in the devel prefix
@@ -206,7 +208,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
         stage('Init') {
 
             def ref = params.STREAM
-            if (src_config_ref != "") {
+            if (src_config_ref != null) {
                 assert !official : "Asked to override ref in official mode"
                 ref = src_config_ref
             }
@@ -537,7 +539,7 @@ EOF
             }
 
             echo message
-            if (pipeutils.get_config('notify-slack') == "yes") {
+            if (notify_slack == "yes") {
                 slackSend(color: color, message: message)
             }
             if (official) {
