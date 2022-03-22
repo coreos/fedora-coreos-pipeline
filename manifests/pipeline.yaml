@@ -41,6 +41,9 @@ parameters:
   - description: GCP GS bucket to use for image uploads (or blank for none)
     name: GCP_GS_BUCKET
     value: fedora-coreos-cloud-image-uploads
+  - description: Whether Slack notifications are enabled
+    name: NOTIFY_SLACK
+    value: yes
 
 objects:
 
@@ -80,3 +83,4 @@ objects:
       gcp-gs-bucket: ${GCP_GS_BUCKET}
       jenkins-jobs-url: ${JENKINS_JOBS_URL}
       jenkins-jobs-ref: ${JENKINS_JOBS_REF}
+      notify-slack: ${NOTIFY_SLACK}
