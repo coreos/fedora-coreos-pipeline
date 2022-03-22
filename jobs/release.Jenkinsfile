@@ -1,11 +1,13 @@
-def pipeutils, streams, s3_bucket
+def pipeutils, streams
+def s3_bucket, notify_slack
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
     pod = readFile(file: "manifests/pod.yaml")
-
-    s3_bucket = pipeutils.get_config('s3-bucket')
+    pipecfg = pipeutils.load_config()
+    s3_bucket = pipecfg['s3-bucket']
+    notify_slack = pipecfg['notify-slack']
 }
 
 properties([
@@ -235,7 +237,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        if (currentBuild.result != 'SUCCESS' && pipeutils.get_config('notify-slack') == "yes") {
+        if (currentBuild.result != 'SUCCESS' && notify_slack == "yes") {
             slackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
         }
     }}}
