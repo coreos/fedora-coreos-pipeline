@@ -21,9 +21,6 @@ parameters:
   - description: Git branch/tag reference for Jenkins jobs
     name: JENKINS_JOBS_REF
     value: main
-  - description: Prefix to prepend to resources
-    name: DEVELOPER_PREFIX
-    value:
   - description: Git source URI for FCOS config
     name: FCOS_CONFIG_URL
     value: https://github.com/coreos/fedora-coreos-config
@@ -54,7 +51,7 @@ objects:
   - apiVersion: v1
     kind: ImageStream
     metadata:
-      name: ${DEVELOPER_PREFIX}coreos-assembler
+      name: coreos-assembler
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream
@@ -74,11 +71,10 @@ objects:
   - kind: ConfigMap
     apiVersion: v1
     metadata:
-      name: ${DEVELOPER_PREFIX}pipeline-config
+      name: pipeline-config
     data:
       source-config-url: ${FCOS_CONFIG_URL}
       source-config-ref: ${FCOS_CONFIG_REF}
-      developer-prefix: ${DEVELOPER_PREFIX}
       s3-bucket: ${S3_BUCKET}
       gcp-gs-bucket: ${GCP_GS_BUCKET}
       jenkins-jobs-url: ${JENKINS_JOBS_URL}
