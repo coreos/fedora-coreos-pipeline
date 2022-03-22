@@ -12,8 +12,6 @@
             # OR
             --cosa https://github.com/jlebon/coreos-assembler
 
-    Deleting developer pipeline:
-        ./deploy --delete-devel
 '''
 
 import os
@@ -33,19 +31,12 @@ def main():
     args = parse_args()
 
     if targeting_official_namespace(args) and not args.official:
-        eprint("Refusing to create developer resource in official namespace.")
-        eprint("Use --official to create official resources.")
+        eprint("Refusing to create resources in official namespace.")
+        eprint("Use --official to create resources there.")
         return 1
 
     resources = process_template(args)
-
-    if args.update:
-        update_resources(args, resources)
-    else:
-        assert args.delete_devel
-
-        delete_developer_resources(args, resources)
-
+    update_resources(args, resources)
 
 def targeting_official_namespace(args):
     ctx_name = subprocess.check_output([args.oc_cmd, 'config', 'current-context'],
@@ -70,20 +61,10 @@ def targeting_official_namespace(args):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    action = parser.add_mutually_exclusive_group(required=True)
-    action.add_argument("--update", action='store_true',
-                        help="Create or update resources")
-    action.add_argument("--delete-devel", action='store_true',
-                        help="Delete developer resources")
     parser.add_argument("--official", action='store_true',
-                        help="Whether to update official resources "
-                             "(implies --all)")
-    parser.add_argument("--all", action='store_true',
-                        help="Whether to update all resources")
+                        help="Allows updating resources in official pipeline")
     parser.add_argument("--dry-run", action='store_true',
                         help="Only print what would happen")
-    parser.add_argument("--prefix", help="Developer prefix for resources",
-                        default=get_username())
     parser.add_argument("--pipeline", metavar='<URL>[@REF]',
                         help="Repo and ref to use for pipeline code")
     parser.add_argument("--config", metavar='<URL>[@REF]',
@@ -103,15 +84,6 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if args.official:
-        args.all = True
-
-    # just sanity check we have a prefix
-    assert len(args.prefix)
-    assert not args.prefix.endswith('-'), "Prefix must not end with dash"
-
-    # e.g. jlebon --> jlebon-fedora-coreos-pipeline
-    args.prefix += '-'
 
     return args
 
@@ -123,8 +95,6 @@ def get_username():
 
 def process_template(args):
     params = {}
-    if not args.official:
-        params['DEVELOPER_PREFIX'] = args.prefix
     if args.pipeline:
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_S2I'))
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_JOBS'))
@@ -195,17 +165,6 @@ def resource_exists(args, resource):
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL) == 0
 
-
-def delete_developer_resources(args, resources):
-    # only delete prefixed resources
-    print("Deleting:")
-    for resource in resources:
-        if resource['metadata']['name'].startswith(args.prefix):
-            out = subprocess.run([args.oc_cmd, 'delete', '--filename', '-'],
-                                 input=json.dumps(resource), encoding='utf-8',
-                                 check=True, stdout=subprocess.PIPE)
-            print(f"  {out.stdout.strip()}")
-    print()
 
 
 def params_from_git_refspec(refspec, param_prefix):

@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, developer_prefix, repo, gp
+def pipeutils, streams, official, repo, gp
 def src_config_url, src_config_ref, s3_bucket, notify_slack
 node {
     checkout scm
@@ -11,29 +11,17 @@ node {
     repo = "coreos/fedora-coreos-config"
 
 
-    // just autodetect if we're in the official prod Jenkins or not; structure
-    // as a list to support migrations more easily
-    official = (env.JENKINS_URL in ['https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])
-
-    if (official) {
-        echo "Running in official (prod) mode."
-    } else {
-        echo "Running in developer mode on ${env.JENKINS_URL}."
-    }
-
     def pipecfg = pipeutils.load_config()
-    developer_prefix = pipecfg['developer-prefix']
     src_config_url = pipecfg['source-config-url']
     src_config_ref = pipecfg['source-config-ref']
     s3_bucket = pipecfg['s3-bucket']
     notify_slack = pipecfg['notify-slack']
 
-    // sanity check that a valid prefix is provided if in devel mode and drop
-    // the trailing '-' in the devel prefix
-    if (!official) {
-      assert developer_prefix.length() > 0 : "Missing developer prefix"
-      assert developer_prefix.endsWith("-") : "Missing trailing dash in developer prefix"
-      developer_prefix = developer_prefix[0..-2]
+    official = pipeutils.isOfficial()
+    if (official) {
+        echo "Running in official (prod) mode."
+    } else {
+        echo "Running in unofficial pipeline on ${env.JENKINS_URL}."
     }
 }
 
@@ -43,12 +31,6 @@ FEDORA_AWS_TESTING_USER_ID = "013116697141"
 // Base URL through which to download artifacts
 BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
 
-def coreos_assembler_image
-if (official) {
-    coreos_assembler_image = "coreos-assembler:main"
-} else {
-    coreos_assembler_image = "${developer_prefix}-coreos-assembler:main"
-}
 
 properties([
     pipelineTriggers([]),
@@ -75,7 +57,7 @@ properties([
                    description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
-             defaultValue: "${coreos_assembler_image}",
+             defaultValue: "coreos-assembler:main",
              trim: true),
       string(name: 'ARCH',
              description: 'The target architecture',
@@ -100,8 +82,7 @@ def strict_build_param = is_mechanical ? "" : "--strict"
 
 // Note that the heavy lifting is done on a remote node via gangplank
 // so we shouldn't need much memory.
-def cosa_memory_request_mb = 2.5 * 1024
-cosa_memory_request_mb = cosa_memory_request_mb as Integer
+def cosa_memory_request_mb = 2.5 * 1024 as Integer
 
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
@@ -190,20 +171,11 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
         def s3_stream_dir
 
         if (s3_bucket && utils.pathExists("\${AWS_FCOS_BUILDS_BOT_CONFIG}")) {
-          if (official) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
-          } else {
-            // One prefix = one pipeline = one stream; the deploy script is geared
-            // towards testing a specific combination of (cosa, pipeline, fcos config),
-            // not a full duplication of all the prod streams. One can always instantiate
-            // a second prefix to test a separate combination if more than 1 concurrent
-            // devel pipeline is needed.
-            s3_stream_dir = "${s3_bucket}/devel/streams/${developer_prefix}"
-          }
         }
 
-        def developer_builddir = "/srv/devel/${developer_prefix}/build"
+        def local_builddir = "/srv/devel/streams/${params.STREAM}"
 
         stage('Init') {
 
@@ -252,9 +224,9 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
                     cosa buildfetch --url=s3://${s3_stream_dir}/builds --build ${parent_version} --arch=${basearch}
                     """)
                 }
-            } else if (!official && utils.pathExists(developer_builddir)) {
+            } else if (utils.pathExists(local_builddir)) {
                 shwrap("""
-                cosa buildfetch --url=${developer_builddir} --arch=${basearch}
+                cosa buildfetch --url=${local_builddir} --arch=${basearch}
                 """)
             }
         }
@@ -371,7 +343,6 @@ EOF
         // split this into two separate developer knobs in the future.
         if (s3_stream_dir && !is_mechanical) {
             stage('Upload AWS') {
-                def suffix = official ? "" : "--name-suffix ${developer_prefix}"
                 // pick up the AWS compressed vmdk and uncompress it
                 def meta = readJSON file: meta_json
                 def aws_image_filenamexz = meta.images.aws.path
@@ -391,7 +362,7 @@ EOF
                 // uploading first, and then pointing ore at our uploaded vmdk
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                cosa buildextend-aws ${suffix} \
+                cosa buildextend-aws \
                     --upload \
                     --arch=${basearch} \
                     --build=${newBuildID} \
@@ -408,7 +379,7 @@ EOF
         }
 
 
-        // Generate KeyLime hashes for attestation on official builds
+        // Generate KeyLime hashes for attestation on builds
         // This is a POC setup and will be modified over time
         // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
         stage('KeyLime Hash Generation') {
@@ -435,14 +406,14 @@ EOF
                   newBuildID,
                   basearch,
                   s3_stream_dir)
-            } else if (!official) {
-              // In devel mode without an S3 server, just archive into the PVC
+            } else {
+              // Without an S3 server, just archive into the PVC
               // itself. Otherwise there'd be no other way to retrieve the
               // artifacts. But note we only keep one build at a time.
               shwrap("""
-              rm -rf ${developer_builddir}
-              mkdir -p ${developer_builddir}
-              cp -aT builds ${developer_builddir}
+              rm -rf ${local_builddir}
+              mkdir -p ${local_builddir}
+              cp -aT builds ${local_builddir}
               """)
             }
         }

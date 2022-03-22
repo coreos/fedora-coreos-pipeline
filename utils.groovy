@@ -9,6 +9,11 @@ def load_config() {
     """))
 }
 
+// Tells us if we're running if the official Jenkins for the FCOS pipeline
+boolean isOfficial() {
+    return (env.JENKINS_URL in ['https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])
+}
+
 // Parse and handle the result of Kola
 boolean checkKolaSuccess(dir, currentBuild) {
     // archive the image if the tests failed

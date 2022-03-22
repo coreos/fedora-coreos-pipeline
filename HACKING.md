@@ -284,24 +284,12 @@ oc create configmap jenkins-casc-cfg --from-file=jenkins/config
 If working on the production pipeline, you may simply do:
 
 ```
-./deploy --official --update
-```
-
-If working in a different namespace/cluster, the command is the same,
-but without the `--official` switch:
-
-
-```
-./deploy --update
+./deploy --official
 ```
 
 You may also want to provide additional switches depending on the
 circumstances. Here are some of them:
 
-- `--prefix PREFIX`
-    - The prefix to prepend to created developer-specific resources. By
-      default, this will be your username, but you can provide a
-      specific prefix as well.
 - `--pipeline <URL>[@REF]`
     - Git source URL and optional git ref for pipeline Jenkinsfile.
 - `--config <URL>[@REF]`
@@ -315,7 +303,7 @@ For example, to target a specific combination of pipeline, FCOS config,
 cosa image, and bucket:
 
 ```
-./deploy --update \
+./deploy \
     --pipeline https://github.com/jlebon/fedora-coreos-pipeline     \
     --config https://github.com/jlebon/fedora-coreos-config@feature \
     --cosa-img quay.io/jlebon/coreos-assembler:random-tag           \
@@ -360,7 +348,7 @@ The procedure is the same for updating the pipeline:
 
 
 ```
-./deploy --update
+./deploy
 ```
 
 Note any value you don't pass to `deploy` will be reset to its default
