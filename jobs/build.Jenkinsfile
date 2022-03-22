@@ -671,7 +671,7 @@ lock(resource: "build-${params.STREAM}") {
             if (pipeutils.get_config('notify-slack') == "yes") {
                 slackSend(color: color, message: message)
             }
-            if (official)
+            if (official) {
                 shwrap("""
                 /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                     build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
