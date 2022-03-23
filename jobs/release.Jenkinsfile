@@ -114,6 +114,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 echo "ERROR: Some requested architectures did not successfully build"
                 echo "ERROR: Detected built architectures: $builtarches"
                 echo "ERROR: Requested base architectures: $basearches"
+                currentBuild.result = 'FAILURE'
                 return
             }
         }
