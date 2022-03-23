@@ -208,7 +208,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
         stage('Init') {
 
             def ref = params.STREAM
-            if (src_config_ref != null) {
+            if (src_config_ref != "") {
                 assert !official : "Asked to override ref in official mode"
                 ref = src_config_ref
             }
