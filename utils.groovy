@@ -4,9 +4,9 @@ import org.yaml.snakeyaml.Yaml
 // instead.
 
 def load_config() {
-    return readJSON text: shwrapCapture("""
+    return readJSON(text: shwrapCapture("""
         oc get configmap -n ${env.PROJECT_NAME} -o json pipeline-config | jq .data
-    """)
+    """))
 }
 
 // Parse and handle the result of Kola
