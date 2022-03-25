@@ -23,7 +23,7 @@ node {
     src_config_url = pipecfg['source-config-url']
     src_config_ref = pipecfg['source-config-ref']
     s3_bucket = pipecfg['s3-bucket']
-    gcp_gs_bucket = pipecfg['gcp_gs_bucket']
+    gcp_gs_bucket = pipecfg['gcp-gs-bucket']
     notify_slack = pipecfg['notify-slack']
 
     // sanity check that a valid prefix is provided if in devel mode and drop
