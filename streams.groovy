@@ -6,7 +6,7 @@ next_devel = ['next-devel']
 
 production = ['testing', 'stable', 'next']
 development = ['testing-devel'] + next_devel
-mechanical = ['rawhide', 'branched' /* 'bodhi-updates', 'bodhi-updates-testing' */]
+mechanical = ['rawhide' /* 'branched', 'bodhi-updates', 'bodhi-updates-testing' */]
 
 // list of secondary architectures we support
 additional_arches = ['aarch64']
