@@ -67,7 +67,7 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 def quay_registry = "quay.io/coreos-assembler/fcos"
 
 // Get the list of requested architectures to release
-def basearches = params.ARCHES.split() as List
+def basearches = params.ARCHES.split() as Set
 
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
@@ -104,7 +104,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             """)
         }
 
-        def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split() as List
+        def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split() as Set
         assert builtarches.contains("x86_64"): "The x86_64 architecture was not in builtarches."
         if (!builtarches.containsAll(basearches)) {
             if (params.ALLOW_MISSING_ARCHES) {
