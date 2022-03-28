@@ -568,6 +568,18 @@ lock(resource: "build-${params.STREAM}") {
           //}
         }
         if (!params.MINIMAL && s3_stream_dir &&
+                utils.pathExists("\${AZURE_KOLA_TESTS_CONFIG}") && !is_mechanical) {
+            stage('Kola:Azure') {
+                // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
+                build job: 'kola-azure', wait: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: newBuildID),
+                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                ]
+            }
+        }
+        if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${GCP_KOLA_TESTS_CONFIG}") && !is_mechanical) {
             stage('Kola:GCP') {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
