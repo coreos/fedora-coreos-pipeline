@@ -140,6 +140,24 @@ assuming they have enough permissions.
 oc create secret generic gcp-kola-tests-config --from-file=config=/path/to/kola-secret
 ```
 
+### [OPTIONAL] Creating Azure credentials configs
+
+If you want to run kola tests against Azure images you need to
+create a secret with an `azureProfile.json` and a file called an
+azure auth file. See the
+[kola docs](https://github.com/coreos/coreos-assembler/blob/main/docs/mantle/credentials.md#azure)
+for more information on those files.
+
+Once you have the azureAuth.json and azureProfile.json for connecting to Azure,
+create the secret in OpenShift:
+
+```
+mkdir dir
+cp azureAuth.json dir/
+cp azureProfile.json dir/
+oc create secret generic azure-kola-tests-config --from-file=dir
+```
+
 ### [OPTIONAL] Creating OpenStack credentials configs
 
 If you want to run kola tests against OpenStack images you need to
@@ -288,7 +306,8 @@ If working on the production pipeline, you may simply do:
 ```
 
 You may also want to provide additional switches depending on the
-circumstances. Here are some of them:
+circumstances. Below are some of the options. To see more run
+`./deploy --help`.
 
 - `--pipeline <URL>[@REF]`
     - Git source URL and optional git ref for pipeline Jenkinsfile.
