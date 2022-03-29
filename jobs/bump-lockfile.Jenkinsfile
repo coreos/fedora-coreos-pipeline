@@ -1,12 +1,11 @@
-def pipeutils, streams, gp
-def notify_slack
+def pipeutils, streams, official, gp
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
     gp = load("gp.groovy")
     def pipecfg = pipeutils.load_config()
-    notify_slack = pipecfg['notify-slack']
+    official = pipeutils.isOfficial()
 }
 
 repo = "coreos/fedora-coreos-config"
@@ -239,7 +238,7 @@ EOF
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    if (currentBuild.result != 'SUCCESS' && notify_slack == "yes") {
+    if (official && currentBuild.result != 'SUCCESS') {
         slackSend(color: 'danger', message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
     }
 }
