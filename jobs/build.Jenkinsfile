@@ -1,7 +1,7 @@
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, streams, official
-def src_config_url, src_config_ref, s3_bucket, gcp_gs_bucket, notify_slack
+def src_config_url, src_config_ref, s3_bucket, gcp_gs_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -13,7 +13,6 @@ node {
     src_config_ref = pipecfg['source-config-ref']
     s3_bucket = pipecfg['s3-bucket']
     gcp_gs_bucket = pipecfg['gcp-gs-bucket']
-    notify_slack = pipecfg['notify-slack']
 
     official = pipeutils.isOfficial()
     if (official) {
@@ -638,7 +637,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             echo message
-            if (notify_slack == "yes") {
+            if (official) {
                 slackSend(color: color, message: message)
             }
             if (official) {
