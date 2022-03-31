@@ -117,6 +117,8 @@ EOF
 oc create secret generic aws-fcos-kola-bot-config --from-file=config=/path/to/kola-secret
 ```
 
+NOTE: For the prod pipeline these secrets can be found in BitWarden
+
 ### [OPTIONAL] Creating GCP credentials configs
 
 If you are in production where we upload images to GCP OR you want to
@@ -140,6 +142,8 @@ assuming they have enough permissions.
 oc create secret generic gcp-kola-tests-config --from-file=config=/path/to/kola-secret
 ```
 
+NOTE: For the prod pipeline these secrets can be found in BitWarden
+
 ### [OPTIONAL] Creating Azure credentials configs
 
 If you want to run kola tests against Azure images you need to
@@ -158,6 +162,8 @@ cp azureProfile.json dir/
 oc create secret generic azure-kola-tests-config --from-file=dir
 ```
 
+NOTE: For the prod pipeline these secrets can be found in BitWarden
+
 ### [OPTIONAL] Creating OpenStack credentials configs
 
 If you want to run kola tests against OpenStack images you need to
@@ -171,6 +177,8 @@ to your OpenStack instance, create the secret in OpenShift:
 ```
 oc create secret generic openstack-kola-tests-config --from-file=config=/path/to/clouds.yaml
 ```
+
+NOTE: For the prod pipeline these secrets can be found in BitWarden
 
 ### [OPTIONAL] Allocating S3 storage
 
@@ -226,6 +234,8 @@ Then create the secret in OpenShift:
 ```
 oc create secret generic fcos-aarch64-builder --from-file=dir
 ```
+
+NOTE: For the prod pipeline these secrets can be found in BitWarden
 
 ### [PROD] GitHub webhook shared secret
 
