@@ -136,7 +136,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
             // skip the upgrade test.
             try {
                 def azure_subscription = shwrapCapture("jq -r .subscriptionId \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json")
-                fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+                fcosKola(cosaDir: env.WORKSPACE, parallel: 10,
                         build: params.VERSION, arch: params.ARCH,
                         extraArgs: params.KOLA_TESTS,
                         skipBasicScenarios: true,
