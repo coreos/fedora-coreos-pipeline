@@ -152,12 +152,7 @@ EOF
             gp.gangplankArchWrapper([spec: "spec.spec", arch: "aarch64"])
         }, x86_64: {
             stage("Fetch") {
-                // XXX: hack around subtle lockfile bug (jlebon to submit an
-                // rpm-ostree issue or patch about this)
-                shwrap("cp src/config/fedora-coreos-pool.repo{,.bak}")
-                shwrap("echo cost=500 >> src/config/fedora-coreos-pool.repo")
                 shwrap("cosa fetch --strict")
-                shwrap("cp src/config/fedora-coreos-pool.repo{.bak,}")
             }
 
             stage("Build") {
