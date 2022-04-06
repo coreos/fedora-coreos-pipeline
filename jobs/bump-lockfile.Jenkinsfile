@@ -123,6 +123,14 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // The bulk of the work (build, test, etc) is done in the following.
     // We only need to do that work if we have changes.
     if (haveChanges) {
+        // Get the local diff to the manifest lockfiles and capture them in a variable
+        // that we will later apply in a prep stage. This is a huge hack. We need to
+        // convey to the multi-arch builder(s) the updated manifest lockfiles but we
+        // don't have a good way to copy files over using gangplank so we'll just
+        // apply the changes this way.
+        def patch = shwrapCapture("git -C src/config diff | base64 -w 0")
+
+        // Run aarch64/x86_64 in parallel
         parallel "Fetch/Build/Test aarch64": {
             shwrap("""
                cat <<'EOF' > spec.spec
@@ -136,8 +144,12 @@ stages:
 - id: ExecOrder 1 Stage
   execution_order: 1
   description: Stage 1 execution base
-  build_artifacts: [base]
+  prep_commands:
+    - cat /cosa/coreos-assembler-git.json
+    - echo '${patch}' | base64 -d | git -C src/config apply
   post_commands:
+    - cosa fetch --strict
+    - cosa build --force --strict
     - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
     - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
     - cosa buildextend-metal
