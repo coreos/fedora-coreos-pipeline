@@ -96,6 +96,10 @@ objects:
             value: >-
               --sessionEviction=86400
               --sessionTimeout=1440
+          # DELTA: When using a PVC this ensures that plugins are
+          # actually updated when the image gets updated.
+          - name: OVERRIDE_PV_PLUGINS_WITH_IMAGE_PLUGINS
+            value: "true"
           image: ' '
           imagePullPolicy: IfNotPresent
           livenessProbe:
