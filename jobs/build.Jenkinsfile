@@ -477,6 +477,22 @@ lock(resource: "build-${params.STREAM}") {
                     """)
                 }
             }
+            if (!is_mechanical) {
+                stage("Push KubeVirt image") {
+                    withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
+                            // Push the KubeVirt containerdisk to quay.io/coreos/fedora-coreos:{stream}.
+                            shwrap("""
+                            cosa buildextend-kubevirt \
+                                --log-level=INFO \
+                                --build=${newBuildID} \
+                                --upload \
+                                --registry quay.io/coreos
+                                --name fedora-coreos
+                                --tag ${params.STREAM}
+                            """)
+                    }
+                }
+            }
         }
 
         // Generate KeyLime hashes for attestation on builds
