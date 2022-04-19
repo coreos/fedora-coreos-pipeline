@@ -16,7 +16,7 @@ cat fcos-aarch64-builder.bu | butane --pretty --strict > fcos-aarch64-builder.ig
 NAME='fcos-aarch64-builder'
 AMI='ami-0cd88be9379abf352'
 TYPE='a1.metal'
-DISK='100'
+DISK='200'
 SUBNET='subnet-0732e4cda7466a2ae'
 SECURITY_GROUPS='sg-7d0b4c05'
 USERDATA="${PWD}/fcos-aarch64-builder.ign"
