@@ -46,8 +46,8 @@ Make sure the instance came up fine and wait for the COSA image build
 to complete:
 
 ```bash
-systemctl --failed
-sudo machinectl builder@
+sudo systemctl --failed
+sudo machinectl shell builder@
 journalctl --user -f # to watch image build
 podman images # to view built image
 ```
