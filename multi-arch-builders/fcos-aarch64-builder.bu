@@ -83,6 +83,21 @@ storage:
           length_minutes = 60
     - path: /var/lib/systemd/linger/builder
       mode: 0644
+    - path: /home/builder/.config/systemd/user/prune-container-resources.service
+      mode: 0644
+      user:
+        name: builder
+      group:
+        name: builder
+      contents:
+        inline: |
+          [Unit]
+          Description=Prune Dangling Container Resources
+          [Service]
+          Type=oneshot
+          ExecStart=podman image prune --force
+          ExecStart=podman container prune --force
+          ExecStart=podman volume prune --force
     - path: /home/builder/.config/systemd/user/build-cosa.service
       mode: 0644
       user:
@@ -102,7 +117,6 @@ storage:
           ExecStartPre=-git clone --depth=1 https://github.com/coreos/coreos-assembler.git /home/builder/coreos-assembler/
           ExecStartPre=git -C /home/builder/coreos-assembler/ pull
           ExecStart=podman build --pull-always -t localhost/coreos-assembler:latest /home/builder/coreos-assembler/
-          ExecStartPost=-podman image prune --force
     - path: /home/builder/.config/systemd/user/build-cosa-firstboot.service
       mode: 0644
       user:
@@ -122,6 +136,20 @@ storage:
             ExecStart=systemctl --user start build-cosa.service
             [Install]
             WantedBy=default.target
+    - path: /home/builder/.config/systemd/user/prune-container-resources.timer
+      mode: 0644
+      user:
+        name: builder
+      group:
+        name: builder
+      contents:
+        inline: |
+            [Timer]
+            OnCalendar=daily
+            AccuracySec=60m
+            Persistent=true
+            [Install]
+            WantedBy=timers.target
     - path: /home/builder/.config/systemd/user/build-cosa.timer
       mode: 0644
       user:
@@ -137,6 +165,12 @@ storage:
             [Install]
             WantedBy=timers.target
   links:
+    - path: /home/builder/.config/systemd/user/timers.target.wants/prune-container-resources.timer
+      target: /home/builder/.config/systemd/user/prune-container-resources.timer
+      user:
+        name: builder
+      group:
+        name: builder
     - path: /home/builder/.config/systemd/user/default.target.wants/build-cosa-firstboot.service
       target: /home/builder/.config/systemd/user/build-cosa-firstboot.service
       user:
