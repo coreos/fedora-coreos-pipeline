@@ -63,7 +63,7 @@ objects:
         # this allows e.g. the pipeline to directly reference the imagestream
         local: true
       tags:
-        - name: latest
+        - name: main
           from:
             kind: DockerImage
             name: ${COREOS_ASSEMBLER_IMAGE}
