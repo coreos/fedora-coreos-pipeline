@@ -418,17 +418,19 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
 
-            // parallel build these artifacts
-            def pbuilds = [:]
-            ["Aliyun", "AWS", "Azure", "AzureStack", "DigitalOcean", "Exoscale", "GCP", "IBMCloud", "Nutanix", "OpenStack", "VirtualBox", "VMware", "Vultr"].each {
-                pbuilds[it] = {
+            // parallel build these artifacts (over two runs to stay in the sweet spot and avoid hitting PID limits)
+            def platforms = ["Aliyun", "AWS", "Azure", "AzureStack", "DigitalOcean", "Exoscale", "GCP", "IBMCloud", "Nutanix", "OpenStack", "VirtualBox", "VMware", "Vultr"]
+            def pbuilds = platforms.collectEntries {
+                [it, {
                     def cmd = it.toLowerCase()
                     shwrap("""
                     cosa buildextend-${cmd}
                     """)
-                }
+                }]
             }
-            parallel pbuilds
+            def platforms_split_idx = platforms.size().intdiv(2)
+            parallel pbuilds.subMap(platforms[0..platforms_split_idx-1])
+            parallel pbuilds.subMap(platforms[platforms_split_idx..-1])
 
             // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
