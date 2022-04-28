@@ -147,7 +147,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
                             --azure-location $region                                      \
                             --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
             } finally {
-                stage('Delete Image') {
+                parallel "Delete Image": {
                     // Delete the image in Azure
                     shwrap("""
                     ore azure delete-image --log-level=INFO                           \
@@ -164,6 +164,13 @@ lock(resource: "kola-azure-${params.ARCH}") {
                         --storage-account $azure_testing_storage_account              \
                         --container $azure_testing_storage_container                  \
                         --blob-name $azure_image_name
+                    """)
+                }, "Garbage Collection": {
+                    shwrap("""
+                    ore azure gc --log-level=INFO                                     \
+                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
+                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
+                        --azure-location $region
                     """)
                 }
             }
