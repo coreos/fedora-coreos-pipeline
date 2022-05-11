@@ -2,7 +2,7 @@
 
 // Contains 'next-devel' when that stream is enabled.
 // Automatically edited by next-devel/manage.py.
-next_devel = ['next-devel']
+next_devel = []
 
 production = ['testing', 'stable', 'next']
 development = ['testing-devel'] + next_devel
