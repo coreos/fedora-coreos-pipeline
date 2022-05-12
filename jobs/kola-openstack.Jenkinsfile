@@ -117,6 +117,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                         skipBasicScenarios: true,
                         skipUpgrade: true,
                         platformArgs: """-p=openstack                               \
+                            --allow-rerun-success                                   \
                             --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
                             --openstack-flavor=v3-starter-4                          \
                             --openstack-network=private                              \
