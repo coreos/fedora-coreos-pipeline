@@ -220,7 +220,7 @@ EOF
           sh("""
             rev=\$(git -C src/config rev-parse origin/${branch})
             if ! git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}; then
-                git fetch origin
+                git -C src/config fetch origin
                 if [ "\$rev" != \$(git -C src/config rev-parse origin/${branch}) ]; then
                     touch ${env.WORKSPACE}/rerun
                 else
