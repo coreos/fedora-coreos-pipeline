@@ -64,6 +64,7 @@ storage:
   files:
     - path: /etc/hostname
       mode: 0644
+      overwrite: true
       contents:
         inline: fcos-aarch64-builder
     - path: /etc/systemd/zram-generator.conf
