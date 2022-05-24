@@ -61,7 +61,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     shwrap("cosa buildfetch --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
     def lockfile, pkgChecksum, pkgTimestamp
-    def archinfo = [x86_64: [:], aarch64: [:]]
+    def archinfo = [x86_64: [:], aarch64: [:], s390x: [:]]
     for (arch in archinfo.keySet()) {
         lockfile = "src/config/manifest-lock.${arch}.json"
         (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
@@ -81,6 +81,13 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
             gp.gangplankArchWrapper([cmd: "cosa fetch --update-lockfile --dry-run",
                                      arch: "aarch64", appendFlags: appendFlags])
             shwrap("cp builds/cache/src/config/manifest-lock.aarch64.json src/config/manifest-lock.aarch64.json")
+        }, s390x: {
+            def appendFlags = "--git-ref=${params.STREAM}"
+            appendFlags += " --git-url=https://github.com/${repo}"
+            appendFlags += " --returnFiles=src/config/manifest-lock.s390x.json"
+            gp.gangplankArchWrapper([cmd: "cosa fetch --update-lockfile --dry-run",
+                                     arch: "s390x", appendFlags: appendFlags])
+            shwrap("cp builds/cache/src/config/manifest-lock.s390x.json src/config/manifest-lock.s390x.json")
         }
     }
 
@@ -162,6 +169,36 @@ delay_meta_merge: false
 EOF
                    """)
             gp.gangplankArchWrapper([spec: "spec.spec", arch: "aarch64"])
+        }, s390x: {
+            shwrap("""
+               cat <<'EOF' > spec.spec
+job:
+  strict: true
+  miniocfgfile: ""
+recipe:
+  git_ref: ${params.STREAM}
+  git_url: https://github.com/${repo}
+stages:
+- id: ExecOrder 1 Stage
+  execution_order: 1
+  description: Stage 1 execution base
+  prep_commands:
+    - cat /cosa/coreos-assembler-git.json
+    - echo '${patch}' | base64 -d | git -C src/config apply
+  post_commands:
+    - cosa fetch --strict
+    - cosa build --force --strict
+    - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
+    - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
+    - cosa buildextend-metal
+    - cosa buildextend-metal4k
+    - cosa buildextend-live
+    - kola testiso -S --output-dir tmp/kola-metal
+    - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
+delay_meta_merge: false
+EOF
+                   """)
+            gp.gangplankArchWrapper([spec: "spec.spec", arch: "s390x"])
         }, x86_64: {
             stage("Fetch") {
                 shwrap("cosa fetch --strict")
