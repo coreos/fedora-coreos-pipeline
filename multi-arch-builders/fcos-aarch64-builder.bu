@@ -146,8 +146,8 @@ storage:
       contents:
         inline: |
             [Timer]
-            OnCalendar=daily
-            AccuracySec=60m
+            OnCalendar=*-*-* 05:00:00 UTC
+            AccuracySec=30m
             Persistent=true
             [Install]
             WantedBy=timers.target
@@ -160,7 +160,7 @@ storage:
       contents:
         inline: |
             [Timer]
-            OnCalendar=daily
+            OnCalendar=*-*-* 04:00:00 UTC
             AccuracySec=30m
             Persistent=true
             [Install]
