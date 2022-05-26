@@ -212,7 +212,9 @@ EOF
         if (!haveChanges && forceTimestamp) {
             message="lockfiles: bump timestamp"
         }
-        shwrap("git -C src/config commit -am '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
+        // do an explicit `git add` in case there is a new lockfile
+        shwrap("git -C src/config add manifest-lock.*.json")
+        shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
         withCredentials([usernamePassword(credentialsId: botCreds,
                                           usernameVariable: 'GHUSER',
                                           passwordVariable: 'GHTOKEN')]) {
