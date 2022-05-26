@@ -50,7 +50,7 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
             // notes changed, and also the way change detection works above
             // doesn't mesh well with freshly regenerated data.
             shwrap("""
-                python -c 'import sys, yaml, json; json.dump(yaml.safe_load(sys.stdin.read()), sys.stdout)' \
+                python3 -c 'import sys, yaml, json; json.dump(yaml.safe_load(sys.stdin.read()), sys.stdout)' \
                     < release-notes/${stream}.yml > release-notes/${stream}.json
                 aws s3 cp --acl public-read --cache-control 'max-age=60' \
                     release-notes/${stream}.json s3://fcos-builds/release-notes/${stream}.json
