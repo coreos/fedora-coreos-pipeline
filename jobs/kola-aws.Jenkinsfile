@@ -106,6 +106,20 @@ try { timeout(time: 90, unit: 'MINUTES') {
                             --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
                             --aws-region=us-east-1 --aws-type=m6i.large""")
             }
+        } else if (params.ARCH == "aarch64") {
+            def tests = params.KOLA_TESTS
+            if (tests == "") {
+                tests = "basic"
+            }
+            fcosKola(cosaDir: env.WORKSPACE,
+                        build: params.VERSION, arch: params.ARCH,
+                        extraArgs: tests,
+                        skipUpgrade: true,
+                        skipBasicScenarios: true,
+                        marker: "kola-c7g",
+                        platformArgs: """-p=aws \
+                        --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                        --aws-region=us-east-1 --aws-type=c7g.xlarge""")
         }
 
         currentBuild.result = 'SUCCESS'
