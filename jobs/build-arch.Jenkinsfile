@@ -322,7 +322,34 @@ stages:
     - cosa buildextend-openstack
     # Hack for serial console on aarch64 aws images
     # see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988
-    - echo 'ZGlmZiAtLWdpdCBhL3Vzci9saWIvY29yZW9zLWFzc2VtYmxlci9nZi1wbGF0Zm9ybWlkIGIvdXNyL2xpYi9jb3Jlb3MtYXNzZW1ibGVyL2dmLXBsYXRmb3JtaWQKaW5kZXggNDI5Y2ExYmViLi44MTIzNTk0NjkgMTAwNzU1Ci0tLSBhL3Vzci9saWIvY29yZW9zLWFzc2VtYmxlci9nZi1wbGF0Zm9ybWlkCisrKyBiL3Vzci9saWIvY29yZW9zLWFzc2VtYmxlci9nZi1wbGF0Zm9ybWlkCkBAIC00Niw3ICs0NiwxMSBAQCBibHNjZmdfcGF0aD0kKGNvcmVvc19nZiBnbG9iLWV4cGFuZCAvYm9vdC9sb2FkZXIvZW50cmllcy9vc3RyZWUtKi5jb25mKQogY29yZW9zX2dmIGRvd25sb2FkICIke2Jsc2NmZ19wYXRofSIgIiR7dG1wZH0iL2Jscy5jb25mCiAjIFJlbW92ZSBhbnkgcGxhdGZvcm1pZCBjdXJyZW50bHkgdGhlcmUKIHNlZCAtaSAtZSAncywgaWduaXRpb24ucGxhdGZvcm0uaWQ9W2EtekEtWjAtOV0qLCxnJyAiJHt0bXBkfSIvYmxzLmNvbmYKLXNlZCAtaSAtZSAnL15vcHRpb25zIC8gcywkLCBpZ25pdGlvbi5wbGF0Zm9ybS5pZD0nIiR7cGxhdGZvcm1pZH0iJywnICIke3RtcGR9Ii9ibHMuY29uZgoraWYgWyAiJHtwbGF0Zm9ybWlkfSIgPT0gJ2F3cycgXTsgdGhlbgorICAgIHNlZCAtaSAtZSAnc3xeXChvcHRpb25zIC4qXCl8XDEgaWduaXRpb24ucGxhdGZvcm0uaWQ9JyIke3BsYXRmb3JtaWR9IicgY29uc29sZT10dHlTMCwxMTUyMDBuOHwnICIke3RtcGR9Ii9ibHMuY29uZgorZWxzZQorICAgIHNlZCAtaSAtZSAnL15vcHRpb25zIC8gcywkLCBpZ25pdGlvbi5wbGF0Zm9ybS5pZD0nIiR7cGxhdGZvcm1pZH0iJywnICIke3RtcGR9Ii9ibHMuY29uZgorZmkKIGNvcmVvc19nZiB1cGxvYWQgIiR7dG1wZH0iL2Jscy5jb25mICIke2Jsc2NmZ19wYXRofSIKIAogaWYgWyAiJGJhc2VhcmNoIiA9ICJzMzkweCIgXSA7IHRoZW4K' | base64 --decode | sudo patch /usr/lib/coreos-assembler/gf-platformid
+    - |
+      if [ "$(uname -m)" = aarch64 ] && [ ! -f src/config/platforms.yaml ]; then
+          cat > src/config/platforms.yaml <<EOG
+      aarch64:
+        aws:
+          grub_commands:
+            - serial --speed=115200
+            - terminal_input serial console
+            - terminal_output serial console
+          kernel_arguments:
+            - console=ttyS0,115200n8
+        metal:
+          grub_commands:
+            - serial --speed=115200
+            - terminal_input serial console
+            - terminal_output serial console
+        openstack:
+          grub_commands:
+            - serial --speed=115200
+            - terminal_input serial console
+            - terminal_output serial console
+        qemu:
+          grub_commands:
+            - serial --speed=115200
+            - terminal_input serial console
+            - terminal_output serial console
+      EOG
+      fi
     - cosa buildextend-aws
   post_commands:
     - cosa compress --compressor xz
