@@ -295,7 +295,7 @@ EOF
         stage('Build/Test Remaining') {
             try {
                 shwrap("""
-                   cat <<'EOF' > spec.spec
+                   cat <<'EOF' > spec-aarch64.spec
 job:
   strict: true
   miniocfgfile: ""
@@ -331,7 +331,34 @@ stages:
 delay_meta_merge: false
 EOF
                 """)
-                gp.gangplankArchWrapper([spec: "spec.spec", arch: basearch, image: image])
+                shwrap("""
+                   cat <<'EOF' > spec-s390x.spec
+job:
+  strict: true
+  miniocfgfile: ""
+recipe:
+  git_ref: ${params.STREAM}
+  git_url: https://github.com/${repo}
+  git_commit: ${params.FCOS_CONFIG_COMMIT}
+stages:
+- id: ExecOrder 1 Stage
+  execution_order: 1
+  description: Stage 1 execution base
+  prep_commands:
+    - cat /cosa/coreos-assembler-git.json
+  require_artifacts: [ostree]
+  commands:
+    - cosa buildextend-qemu
+    - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
+    - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
+  post_commands:
+    - cosa compress --compressor xz
+    - tar --xz -cf tmp/kola.tar.xz tmp/kola{-basic,,-metal,-metal4k} || true
+  post_always: true
+delay_meta_merge: false
+EOF
+                """)
+                gp.gangplankArchWrapper([spec: "spec-${basearch}.spec", arch: basearch, image: image])
             } catch (Throwable e) {
                 throw e
             } finally {
@@ -346,7 +373,7 @@ EOF
         // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
         // to S3, we also take that to mean we should upload an AMI. We could
         // split this into two separate developer knobs in the future.
-        if (s3_stream_dir && !is_mechanical) {
+        if (s3_stream_dir && !is_mechanical && basearch == "aarch64") {
             stage('Upload AWS') {
                 // pick up the AWS compressed vmdk and uncompress it
                 def meta = readJSON file: meta_json
