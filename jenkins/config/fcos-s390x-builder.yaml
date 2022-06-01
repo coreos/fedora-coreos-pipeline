@@ -1,0 +1,27 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: fcos-s390x-builder-host-string
+            secret: ${fcos-s390x-builder/host}
+            description: FCOS s390x Builder Host
+        - string:
+            scope: GLOBAL
+            id: fcos-s390x-builder-user-string
+            secret: ${fcos-s390x-builder/user}
+            description: FCOS s390x Builder User
+        - string:
+            scope: GLOBAL
+            id: fcos-s390x-builder-uid-string
+            secret: ${fcos-s390x-builder/uid}
+            description: FCOS s390x Builder UID
+        - basicSSHUserPrivateKey:
+            scope: GLOBAL
+            id: fcos-s390x-builder-sshkey-key
+            username: builder
+            description: FCOS s390x Builder SSH Key
+            privateKeySource:
+              directEntry:
+                privateKey: "${readFile:${fcos-s390x-builder/sshkey}}"
