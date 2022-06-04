@@ -54,6 +54,7 @@ default_artifacts:
     - openstack
     - hashlist-experimental
   aarch64:
+    - aws
     - azure
   ppc64le:
     - powervs
@@ -72,9 +73,6 @@ default_artifacts:
     - virtualbox
     - vmware
     - vultr
-
-# Temporary hack for AWS aarch64; see comment in `build-arch.Jenkinsfile`.
-aws_aarch64_serial_console_hack: true
 
 clouds:
   aws:

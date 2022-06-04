@@ -125,9 +125,6 @@ registry_repos:
   # OPTIONAL: whether to push in v2s2 format rather than OCI
   v2s2: true
 
-# OPTIONAL/TEMPORARY: enable AWS aarch64 hack; see comment in `build-arch.Jenkinsfile`.
-aws_aarch64_serial_console_hack: true
-
 # OPTIONAL: cloud-related knobs
 clouds:
   aws:
