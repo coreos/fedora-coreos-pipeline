@@ -135,7 +135,10 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         // convey to the multi-arch builder(s) the updated manifest lockfiles but we
         // don't have a good way to copy files over using gangplank so we'll just
         // apply the changes this way.
-        def patch = shwrapCapture("git -C src/config diff | base64 -w 0")
+        //
+        // do an explicit `git add` in case there is a new lockfile
+        shwrap("git -C src/config add manifest-lock.*.json")
+        def patch = shwrapCapture("git -C src/config diff --cached | base64 -w 0")
 
         // Run aarch64/x86_64 in parallel
         parallel "Fetch/Build/Test aarch64": {
@@ -249,8 +252,6 @@ EOF
         if (!haveChanges && forceTimestamp) {
             message="lockfiles: bump timestamp"
         }
-        // do an explicit `git add` in case there is a new lockfile
-        shwrap("git -C src/config add manifest-lock.*.json")
         shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
         withCredentials([usernamePassword(credentialsId: botCreds,
                                           usernameVariable: 'GHUSER',
