@@ -495,18 +495,6 @@ EOF
                     string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
                 ]
             }
-            // XXX: The Kubernetes node e2e tests are currently not supported on !x86_64:
-            // https://github.com/coreos/fedora-coreos-tracker/issues/1044
-            //stage('Kola:Kubernetes') {
-            //    // We consider the Kubernetes kola tests to be a followup job, so we use `wait: false` here.
-            //    build job: 'kola-kubernetes', wait: false, parameters: [
-            //        string(name: 'STREAM', value: params.STREAM),
-            //        string(name: 'VERSION', value: newBuildID),
-            //        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-            //        string(name: 'ARCH', value: basearch),
-            //        string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
-            //    ]
-            //}
         }
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
