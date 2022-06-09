@@ -483,30 +483,32 @@ EOF
         }
 
         // Now that the metadata is uploaded go ahead and kick off some tests
-        if (!params.MINIMAL && s3_stream_dir &&
-                utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
-            stage('Kola:AWS') {
-                // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
-                build job: 'kola-aws', wait: false, parameters: [
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'VERSION', value: newBuildID),
-                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                    string(name: 'ARCH', value: basearch),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
-                ]
+        if (params.ARCH == "aarch64") {
+            if (!params.MINIMAL && s3_stream_dir &&
+                    utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
+                stage('Kola:AWS') {
+                    // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
+                    build job: 'kola-aws', wait: false, parameters: [
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                        string(name: 'ARCH', value: basearch),
+                        string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
+                    ]
+                }
             }
-        }
-        if (!params.MINIMAL && s3_stream_dir &&
-                utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
-            stage('Kola:OpenStack') {
-                // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
-                build job: 'kola-openstack', wait: false, parameters: [
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'VERSION', value: newBuildID),
-                    string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                    string(name: 'ARCH', value: basearch),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
-                ]
+            if (!params.MINIMAL && s3_stream_dir &&
+                    utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
+                stage('Kola:OpenStack') {
+                    // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
+                    build job: 'kola-openstack', wait: false, parameters: [
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                        string(name: 'ARCH', value: basearch),
+                        string(name: 'FCOS_CONFIG_COMMIT', value: params.FCOS_CONFIG_COMMIT)
+                    ]
+                }
             }
         }
 
