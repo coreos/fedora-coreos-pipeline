@@ -353,6 +353,11 @@ stages:
     - cosa buildextend-qemu
     - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
     - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
+    - cosa buildextend-metal
+    - cosa buildextend-metal4k
+    - cosa buildextend-live
+    - kola testiso -S --output-dir tmp/kola-metal
+    - cosa buildextend-ibmcloud
   post_commands:
     - cosa compress --compressor xz
     - tar --xz -cf tmp/kola.tar.xz tmp/kola{-basic,,-metal,-metal4k} || true
