@@ -126,9 +126,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             if (basearch == 'x86_64') {
                 stage("Push Container") {
                     withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
-                        withEnv(["DEST_IMAGE=${quay_registry}:${params.STREAM}"]) {
-                            shwrap('cosa push-container --authfile=${OSCONTAINER_SECRET} ${DEST_IMAGE}')
-                        }
+                        shwrap("cosa push-container --authfile=\${OSCONTAINER_SECRET} ${quay_registry}:${params.STREAM}")
                     }
                 }
             }
