@@ -125,11 +125,9 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // for now we only support pushing x86_64 images
             if (basearch == 'x86_64') {
                 stage("Push Container") {
-                    def image_path = shwrapCapture("cosa meta --build=${params.VERSION} --image-path ostree")
                     withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
-                        withEnv(["SRC_IMAGE=${image_path}",
-                                 "DEST_IMAGE=docker://${quay_registry}:${params.STREAM}"]) {
-                            sh('skopeo copy --authfile=${OSCONTAINER_SECRET} oci-archive://${SRC_IMAGE} ${DEST_IMAGE}')
+                        withEnv(["DEST_IMAGE=${quay_registry}:${params.STREAM}"]) {
+                            shwrap('cosa push-container --authfile=${OSCONTAINER_SECRET} ${DEST_IMAGE}')
                         }
                     }
                 }
