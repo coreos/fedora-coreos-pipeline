@@ -127,22 +127,6 @@ ibmcloud is instance-create $NAME $VPC $ZONE $PROFILE $SUBNET --output json --im
      --user-data @fcos-s390x-builder.ign > out.json
 ```
 
-
-Assign the backup floating IP to the instance so we can log in to it
-and then log in:
-
-```bash
-NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update fcos-s390x-builder-backup --nic $NIC
-
-INSTANCE=$(jq --raw-output .id out.json)
-IP=$(ibmcloud is instance $INSTANCE --output json \
-     | jq -r '.primary_network_interface.floating_ips[0].address')
-echo "You can now SSH to core@${IP}"
-```
-
-NOTE: Just this once ignore the ssh host key changed warning if you see it.
-
 Make sure the instance came up fine and wait for the COSA image build
 to complete:
 
