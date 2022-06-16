@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official
+def pipeutils, streams, official, bumped_builds_json
 def src_config_url, src_config_ref, s3_bucket, gcp_gs_bucket
 node {
     checkout scm
@@ -20,6 +20,7 @@ node {
     } else {
         echo "Running in unofficial pipeline on ${env.JENKINS_URL}."
     }
+    bumped_builds_json = false
 }
 
 // Share with the Fedora testing account so we can test it afterwards
@@ -360,23 +361,27 @@ lock(resource: "build-${params.STREAM}") {
         // process this batch
         parallel parallelruns
 
-        // Do an Early Archive of just the OSTree. This has the
+        // If there are other architectures to build then let's
+        // do an early archive of just the OSTree. This has the
         // desired side effect of reserving our build ID before
         // we fork off multi-arch builds.
-        stage('Archive OSTree') {
-            if (s3_stream_dir) {
-              // run with --force here in case the previous run of the
-              // pipeline died in between buildupload and bump_builds_json()
-              shwrap("""
-              export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-              cosa buildupload --force --skip-builds-json --artifact=ostree \
-                  s3 --acl=public-read ${s3_stream_dir}/builds
-              """)
-              pipeutils.bump_builds_json(
-                  params.STREAM,
-                  newBuildID,
-                  basearch,
-                  s3_stream_dir)
+        if (params.ADDITIONAL_ARCHES) {
+            stage('Archive OSTree') {
+                if (s3_stream_dir) {
+                  // run with --force here in case the previous run of the
+                  // pipeline died in between buildupload and bump_builds_json()
+                  shwrap("""
+                  export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                  cosa buildupload --force --skip-builds-json --artifact=ostree \
+                      s3 --acl=public-read ${s3_stream_dir}/builds
+                  """)
+                  pipeutils.bump_builds_json(
+                      params.STREAM,
+                      newBuildID,
+                      basearch,
+                      s3_stream_dir)
+                }
+                bumped_builds_json = true
             }
         }
 
@@ -529,6 +534,14 @@ lock(resource: "build-${params.STREAM}") {
               cosa buildupload --skip-builds-json \
                   s3 --acl=public-read ${s3_stream_dir}/builds
               """)
+              // If we didn't do an early archive let's bump the builds.json file now
+              if (!bumped_builds_json) {
+                  pipeutils.bump_builds_json(
+                      params.STREAM,
+                      newBuildID,
+                      basearch,
+                      s3_stream_dir)
+              }
             } else {
               // Without an S3 server, just archive into the PVC
               // itself. Otherwise there'd be no other way to retrieve the
