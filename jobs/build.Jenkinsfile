@@ -281,11 +281,28 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
-        stage('Build QEMU') {
+        // A few independent tasks that can be run in parallel
+        def parallelruns = [:]
+
+        // Generate KeyLime hashes for attestation on builds
+        // This is a POC setup and will be modified over time
+        // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
+        parallelruns['KeyLime Hash Generation'] = {
             shwrap("""
-            cosa buildextend-qemu
+            cosa generate-hashlist --arch=${basearch} --release=${newBuildID} \
+                --output=builds/${newBuildID}/${basearch}/exp-hash.json
+            sha256sum builds/${newBuildID}/${basearch}/exp-hash.json \
+                > builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM
             """)
         }
+
+        // Build QEMU image
+        parallelruns['Build QEMU'] = {
+            shwrap("cosa buildextend-qemu")
+        }
+
+        // process this batch
+        parallel parallelruns
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
         if (params.KOLA_RUN_SLEEP) {
@@ -305,35 +322,43 @@ lock(resource: "build-${params.STREAM}") {
             return
         }
 
-        stage('Kola:QEMU') {
-            // leave 512M for overhead; VMs are 1G each
-            def parallel = ((cosa_memory_request_mb - 512) / 1024) as Integer
+        // reset for the next batch of independent tasks
+        parallelruns = [:]
+
+        // Kola QEMU tests
+        parallelruns['Kola:QEMU'] = {
+            // leave 512M for overhead & 1G for upgrade test; VMs are 1G each
+            def parallel = ((cosa_memory_request_mb - 1536) / 1024) as Integer
             shwrap("""
             cosa kola run --rerun --parallel ${parallel} --no-test-exit-error
             tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
             """)
             archiveArtifacts "kola-run.tar.xz"
-        }
-        if (!pipeutils.checkKolaSuccess("tmp/kola", currentBuild)) {
-            return
+            if (!pipeutils.checkKolaSuccess("tmp/kola", currentBuild)) {
+                return
+            }
         }
 
-        try {
-            stage('Kola:QEMU upgrade') {
+        // Kola QEMU Upgrade tests
+        parallelruns['Kola:QEMU Upgrade'] = {
+            try {
                 shwrap("""
                 cosa kola --rerun --upgrades --no-test-exit-error
                 tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
                 """)
                 archiveArtifacts "kola-run-upgrade.tar.xz"
-            }
-            if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
-                return
-            }
-        } catch(e) {
-            if (!params.ALLOW_KOLA_UPGRADE_FAILURE) {
-                throw e
+                if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+                    return
+                }
+            } catch(e) {
+                if (!params.ALLOW_KOLA_UPGRADE_FAILURE) {
+                    throw e
+                }
             }
         }
+
+        // process this batch
+        parallel parallelruns
 
         // Do an Early Archive of just the OSTree. This has the
         // desired side effect of reserving our build ID before
@@ -432,11 +457,15 @@ lock(resource: "build-${params.STREAM}") {
             parallel pbuilds.subMap(platforms[0..platforms_split_idx-1])
             parallel pbuilds.subMap(platforms[platforms_split_idx..-1])
 
+
+            // reset for the next batch of independent tasks
+            parallelruns = [:]
+
             // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
             if (s3_stream_dir && !is_mechanical) {
-                stage('Upload AWS') {
+                parallelruns['Upload AWS'] = {
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
                     // also publish vmdks, we could make this more efficient by
@@ -455,7 +484,7 @@ lock(resource: "build-${params.STREAM}") {
 
             // If there is a config for GCP then we'll upload our image to GCP
             if (utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}") && !is_mechanical) {
-                stage('Upload GCP') {
+                parallelruns['Upload GCP'] = {
                     shwrap("""
                     # pick up the project to use from the config
                     gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
@@ -479,18 +508,9 @@ lock(resource: "build-${params.STREAM}") {
                     """)
                 }
             }
-        }
 
-        // Generate KeyLime hashes for attestation on builds
-        // This is a POC setup and will be modified over time
-        // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
-        stage('KeyLime Hash Generation') {
-            shwrap("""
-            cosa generate-hashlist --arch=${basearch} --release=${newBuildID} \
-                --output=builds/${newBuildID}/${basearch}/exp-hash.json
-            sha256sum builds/${newBuildID}/${basearch}/exp-hash.json \
-                > builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM
-            """)
+            // process this batch
+            parallel parallelruns
         }
 
         stage('Archive') {
@@ -546,9 +566,14 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // Now that the metadata is uploaded go ahead and kick off some tests
+        // These can all be kicked off in parallel. These take little time
+        // so there isn't much benefit in running them in parallel, but it
+        // makes the UI view have less columns, which is useful.
+        parallelruns = [:]
+
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
-            stage('Kola:AWS') {
+            parallelruns['Kola:AWS'] = {
                 // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-aws', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
@@ -559,7 +584,7 @@ lock(resource: "build-${params.STREAM}") {
             }
           // XXX: This is failing right now. Disable until the New
           // Year when someone can dig into the problem.
-          //stage('Kola:Kubernetes') {
+          //parallelruns['Kola:Kubernetes'] = {
           //    // We consider the Kubernetes kola tests to be a followup job, so we use `wait: false` here.
           //    build job: 'kola-kubernetes', wait: false, parameters: [
           //        string(name: 'STREAM', value: params.STREAM),
@@ -571,7 +596,7 @@ lock(resource: "build-${params.STREAM}") {
         }
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${AZURE_KOLA_TESTS_CONFIG}") && !is_mechanical) {
-            stage('Kola:Azure') {
+            parallelruns['Kola:Azure'] = {
                 // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-azure', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
@@ -583,7 +608,7 @@ lock(resource: "build-${params.STREAM}") {
         }
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${GCP_KOLA_TESTS_CONFIG}") && !is_mechanical) {
-            stage('Kola:GCP') {
+            parallelruns['Kola:GCP'] = {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-gcp', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
@@ -595,7 +620,7 @@ lock(resource: "build-${params.STREAM}") {
         }
         if (!params.MINIMAL && s3_stream_dir &&
                 utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
-            stage('Kola:OpenStack') {
+            parallelruns['Kola:OpenStack'] = {
                 // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-openstack', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
@@ -605,6 +630,9 @@ lock(resource: "build-${params.STREAM}") {
                 ]
             }
         }
+
+        // process this batch
+        parallel parallelruns
 
         // For now, we auto-release all non-production streams builds. That
         // way, we can e.g. test testing-devel AMIs easily.
