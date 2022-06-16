@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official
+def pipeutils, streams, official, uploading
 def src_config_url, src_config_ref, s3_bucket, gcp_gs_bucket
 node {
     checkout scm
@@ -62,7 +62,10 @@ properties([
              trim: true),
       booleanParam(name: 'KOLA_RUN_SLEEP',
                    defaultValue: false,
-                   description: 'Just wait forever when we get to running kola tests (temporary)'),
+                   description: 'Wait forever at kola tests stage. Implies NO_UPLOAD'),
+      booleanParam(name: 'NO_UPLOAD',
+                   defaultValue: false,
+                   description: 'Don't upload results to S3; for debugging purposes.'),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -139,6 +142,14 @@ lock(resource: "build-${params.STREAM}") {
         if (s3_bucket && utils.pathExists("\${AWS_FCOS_BUILDS_BOT_CONFIG}")) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+        }
+
+        // Now, determine if we should do any uploads to remote s3 buckets or clouds
+        // Don't upload if the user told us not to or we're debugging with KOLA_RUN_SLEEP
+        if (s3_stream_dir && (!params.NO_UPLOAD || params.KOLA_RUN_SLEEP) {
+            uploading = true
+        } else {
+            uploading = false
         }
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
@@ -268,7 +279,7 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
-        if (official && s3_stream_dir && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+        if (official && uploading && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
             stage('Sign OSTree') {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
@@ -360,11 +371,11 @@ lock(resource: "build-${params.STREAM}") {
         // process this batch
         parallel parallelruns
 
-        // Do an Early Archive of just the OSTree. This has the
-        // desired side effect of reserving our build ID before
-        // we fork off multi-arch builds.
+        // If we are uploading results then let's do an early archive
+        // of just the OSTree. This has the desired side effect of
+        // reserving our build ID before we fork off multi-arch builds.
         stage('Archive OSTree') {
-            if (s3_stream_dir) {
+            if (uploading) {
               // run with --force here in case the previous run of the
               // pipeline died in between buildupload and bump_builds_json()
               shwrap("""
@@ -381,16 +392,18 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         stage('Fork Multi-Arch Builds') {
-            for (arch in params.ADDITIONAL_ARCHES.split()) {
-                build job: 'build-arch', wait: false, parameters: [
-                    booleanParam(name: 'FORCE', value: params.FORCE),
-                    booleanParam(name: 'MINIMAL', value: params.MINIMAL),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
-                    string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'VERSION', value: newBuildID),
-                    string(name: 'ARCH', value: arch)
-                ]
+            if (uploading) {
+                for (arch in params.ADDITIONAL_ARCHES.split()) {
+                    build job: 'build-arch', wait: false, parameters: [
+                        booleanParam(name: 'FORCE', value: params.FORCE),
+                        booleanParam(name: 'MINIMAL', value: params.MINIMAL),
+                        string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
+                        string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'ARCH', value: arch)
+                    ]
+                }
             }
         }
 
@@ -461,10 +474,10 @@ lock(resource: "build-${params.STREAM}") {
             // reset for the next batch of independent tasks
             parallelruns = [:]
 
-            // Key off of s3_stream_dir: i.e. if we're configured to upload artifacts
+            // Key off of uploading: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
-            if (s3_stream_dir && !is_mechanical) {
+            if (uploading && !is_mechanical) {
                 parallelruns['Upload AWS'] = {
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
@@ -483,7 +496,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             // If there is a config for GCP then we'll upload our image to GCP
-            if (utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}") && !is_mechanical) {
+            if (uploading && !is_mechanical && utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}") {
                 parallelruns['Upload GCP'] = {
                     shwrap("""
                     # pick up the project to use from the config
@@ -521,7 +534,7 @@ lock(resource: "build-${params.STREAM}") {
             cosa compress --compressor xz
             """)
 
-            if (s3_stream_dir) {
+            if (uploading) {
               // just upload as public-read for now, but see discussions in
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               shwrap("""
@@ -545,7 +558,7 @@ lock(resource: "build-${params.STREAM}") {
         // signing of artifacts and importing of OSTree commits. They
         // must be run after the archive stage because the artifacts
         // are pulled from their S3 locations.
-        if (official && s3_stream_dir && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+        if (official && uploading && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
             stage('Sign Images') {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
@@ -571,7 +584,7 @@ lock(resource: "build-${params.STREAM}") {
         // makes the UI view have less columns, which is useful.
         parallelruns = [:]
 
-        if (!params.MINIMAL && s3_stream_dir &&
+        if (!params.MINIMAL && uploading &&
                 utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
             parallelruns['Kola:AWS'] = {
                 // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
@@ -594,7 +607,7 @@ lock(resource: "build-${params.STREAM}") {
           //    ]
           //}
         }
-        if (!params.MINIMAL && s3_stream_dir &&
+        if (!params.MINIMAL && uploading &&
                 utils.pathExists("\${AZURE_KOLA_TESTS_CONFIG}") && !is_mechanical) {
             parallelruns['Kola:Azure'] = {
                 // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
@@ -606,7 +619,7 @@ lock(resource: "build-${params.STREAM}") {
                 ]
             }
         }
-        if (!params.MINIMAL && s3_stream_dir &&
+        if (!params.MINIMAL && uploading &&
                 utils.pathExists("\${GCP_KOLA_TESTS_CONFIG}") && !is_mechanical) {
             parallelruns['Kola:GCP'] = {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
@@ -618,7 +631,7 @@ lock(resource: "build-${params.STREAM}") {
                 ]
             }
         }
-        if (!params.MINIMAL && s3_stream_dir &&
+        if (!params.MINIMAL && uploading &&
                 utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
             parallelruns['Kola:OpenStack'] = {
                 // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
@@ -640,7 +653,7 @@ lock(resource: "build-${params.STREAM}") {
         // Since we are only running this stage for non-production (i.e. mechanical
         // and development) builds we'll default to not doing AWS AMI replication.
         // We'll also default to allowing failures for additonal architectures.
-        if (official && !(params.STREAM in streams.production)) {
+        if (official && uploading !(params.STREAM in streams.production)) {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
