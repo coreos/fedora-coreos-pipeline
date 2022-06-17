@@ -329,7 +329,7 @@ lock(resource: "build-${params.STREAM}") {
             """)
             archiveArtifacts "kola-run-basic.tar.xz"
         }
-        if (!pipeutils.checkKolaSuccess("tmp/kola", currentBuild)) {
+        if (!pipeutils.checkKolaSuccess("tmp/kola")) {
             error('Kola:QEMU basic')
         }
 
@@ -345,7 +345,7 @@ lock(resource: "build-${params.STREAM}") {
             tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
             """)
             archiveArtifacts "kola-run.tar.xz"
-            if (!pipeutils.checkKolaSuccess("tmp/kola", currentBuild)) {
+            if (!pipeutils.checkKolaSuccess("tmp/kola")) {
                 error('Kola:QEMU')
             }
         }
@@ -361,13 +361,11 @@ lock(resource: "build-${params.STREAM}") {
                 tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
                 """)
                 archiveArtifacts "kola-run-upgrade.tar.xz"
-                if (!pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+                if (!pipeutils.checkKolaSuccess("tmp/kola-upgrade")) {
                     error('Kola:QEMU Upgrade')
                 }
             } catch(e) {
                 if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
-                    // reset result back to !FAILED and warn
-                    currentBuild.result = ''
                     warnError(message: 'Upgrade Failed') {
                         error(e)
                     }
