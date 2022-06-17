@@ -65,7 +65,7 @@ properties([
                    description: 'Wait forever at kola tests stage. Implies NO_UPLOAD'),
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
-                   description: 'Don't upload results to S3; for debugging purposes.'),
+                   description: 'Do not upload results to S3; for debugging purposes.'),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
