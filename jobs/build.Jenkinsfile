@@ -146,7 +146,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Now, determine if we should do any uploads to remote s3 buckets or clouds
         // Don't upload if the user told us not to or we're debugging with KOLA_RUN_SLEEP
-        if (s3_stream_dir && (!params.NO_UPLOAD || params.KOLA_RUN_SLEEP) {
+        if (s3_stream_dir && (!params.NO_UPLOAD || params.KOLA_RUN_SLEEP)) {
             uploading = true
         } else {
             uploading = false
