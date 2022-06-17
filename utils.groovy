@@ -15,13 +15,12 @@ boolean isOfficial() {
 }
 
 // Parse and handle the result of Kola
-boolean checkKolaSuccess(dir, currentBuild) {
+boolean checkKolaSuccess(dir) {
     // archive the image if the tests failed
     def report = readJSON file: "${dir}/reports/report.json"
     def result = report["result"]
     print("kola result: ${result}")
     if (result != "PASS") {
-        currentBuild.result = 'FAILURE'
         return false
     }
     return true
