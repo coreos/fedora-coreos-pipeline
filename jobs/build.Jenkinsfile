@@ -503,7 +503,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             // If there is a config for GCP then we'll upload our image to GCP
-            if (uploading && !is_mechanical && utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}") {
+            if (uploading && !is_mechanical && utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
                 parallelruns['Upload GCP'] = {
                     shwrap("""
                     # pick up the project to use from the config
