@@ -330,7 +330,7 @@ lock(resource: "build-${params.STREAM}") {
             archiveArtifacts "kola-run-basic.tar.xz"
         }
         if (!pipeutils.checkKolaSuccess("tmp/kola", currentBuild)) {
-            return
+            error('Kola:QEMU basic')
         }
 
         // reset for the next batch of independent tasks
@@ -346,23 +346,32 @@ lock(resource: "build-${params.STREAM}") {
             """)
             archiveArtifacts "kola-run.tar.xz"
             if (!pipeutils.checkKolaSuccess("tmp/kola", currentBuild)) {
-                return
+                error('Kola:QEMU')
             }
         }
 
         // Kola QEMU Upgrade tests
         parallelruns['Kola:QEMU Upgrade'] = {
+            // If upgrades are broken `cosa kola --upgrades` might
+            // fail to even find the previous image so we wrap this
+            // in a try/catch so ALLOW_KOLA_UPGRADE_FAILURE can work.
             try {
                 shwrap("""
                 cosa kola --rerun --upgrades --no-test-exit-error
                 tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
                 """)
                 archiveArtifacts "kola-run-upgrade.tar.xz"
-                if (!params.ALLOW_KOLA_UPGRADE_FAILURE && !pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
-                    return
+                if (!pipeutils.checkKolaSuccess("tmp/kola-upgrade", currentBuild)) {
+                    error('Kola:QEMU Upgrade')
                 }
             } catch(e) {
-                if (!params.ALLOW_KOLA_UPGRADE_FAILURE) {
+                if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
+                    // reset result back to !FAILED and warn
+                    currentBuild.result = ''
+                    warnError(message: 'Upgrade Failed') {
+                        error(e)
+                    }
+                } else {
                     throw e
                 }
             }
