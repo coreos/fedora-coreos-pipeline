@@ -416,23 +416,31 @@ lock(resource: "build-${params.STREAM}") {
 
         if (!params.MINIMAL) {
 
-            stage("Metal") {
-                parallel metal: {
+            // We will parallel build all the different artifacts for this architecture. We split this up
+            // into two separate parallel runs to stay in the sweet spot and avoid hitting PID limits in
+            // our pipeline environment.
+            //
+            // First, define a list of all the derivative artifacts for this architecture.
+            def artifacts = ["Aliyun", "AWS", "Azure", "AzureStack", "DigitalOcean", "Exoscale",
+                             "GCP", "IBMCloud", "Nutanix", "OpenStack", "VirtualBox", "VMware", "Vultr"]
+            // For all architectures we need to build the metal/metal4k artifacts and the Live ISO. Since the
+            // ISO depends on the Metal/Metal4k images we'll make sure to put the Metal* ones in the first run
+            // and the Live ISO in the second run.
+            artifacts.add(0, "Metal")
+            artifacts.add(1, "Metal4k")
+            artifacts.add("Live")
+            // Run the two runs of parallel builds
+            parallelruns = artifacts.collectEntries {
+                [it, {
+                    def cmd = it.toLowerCase()
                     shwrap("""
-                    cosa buildextend-metal
+                    cosa buildextend-${cmd}
                     """)
-                }, metal4k: {
-                    shwrap("""
-                    cosa buildextend-metal4k
-                    """)
-                }
+                }]
             }
-
-            stage('Build Live') {
-                shwrap("""
-                cosa buildextend-live
-                """)
-            }
+            def artifacts_split_idx = artifacts.size().intdiv(2)
+            parallel parallelruns.subMap(artifacts[0..artifacts_split_idx-1])
+            parallel parallelruns.subMap(artifacts[artifacts_split_idx..-1])
 
             stage('Test Live ISO') {
                 // compress the metal and metal4k images now so we're testing
@@ -462,20 +470,6 @@ lock(resource: "build-${params.STREAM}") {
                     archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
                 }
             }
-
-            // parallel build these artifacts (over two runs to stay in the sweet spot and avoid hitting PID limits)
-            def platforms = ["Aliyun", "AWS", "Azure", "AzureStack", "DigitalOcean", "Exoscale", "GCP", "IBMCloud", "Nutanix", "OpenStack", "VirtualBox", "VMware", "Vultr"]
-            def pbuilds = platforms.collectEntries {
-                [it, {
-                    def cmd = it.toLowerCase()
-                    shwrap("""
-                    cosa buildextend-${cmd}
-                    """)
-                }]
-            }
-            def platforms_split_idx = platforms.size().intdiv(2)
-            parallel pbuilds.subMap(platforms[0..platforms_split_idx-1])
-            parallel pbuilds.subMap(platforms[platforms_split_idx..-1])
 
 
             // reset for the next batch of independent tasks
