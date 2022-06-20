@@ -292,13 +292,10 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
-        // A few independent tasks that can be run in parallel
-        def parallelruns = [:]
-
         // Generate KeyLime hashes for attestation on builds
         // This is a POC setup and will be modified over time
         // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
-        parallelruns['KeyLime Hash Generation'] = {
+        stage('KeyLime Hash Generation') {
             shwrap("""
             cosa generate-hashlist --arch=${basearch} --release=${newBuildID} \
                 --output=builds/${newBuildID}/${basearch}/exp-hash.json
@@ -308,12 +305,9 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // Build QEMU image
-        parallelruns['Build QEMU'] = {
+        stage('Build QEMU') {
             shwrap("cosa buildextend-qemu")
         }
-
-        // process this batch
-        parallel parallelruns
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
         if (params.KOLA_RUN_SLEEP) {
@@ -333,8 +327,8 @@ lock(resource: "build-${params.STREAM}") {
             error('Kola:QEMU basic')
         }
 
-        // reset for the next batch of independent tasks
-        parallelruns = [:]
+        // A few independent tasks that can be run in parallel
+        def parallelruns = [:]
 
         // Kola QEMU tests
         parallelruns['Kola:QEMU'] = {
