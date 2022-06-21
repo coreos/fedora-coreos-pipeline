@@ -558,9 +558,11 @@ lock(resource: "build-${params.STREAM}") {
         // These steps interact with Fedora Infrastructure/Releng for
         // signing of artifacts and importing of OSTree commits. They
         // must be run after the archive stage because the artifacts
-        // are pulled from their S3 locations.
+        // are pulled from their S3 locations. They can be run in
+        // parallel.
         if (official && uploading && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-            stage('Sign Images') {
+            parallelruns = [:]
+            parallelruns['Sign Images'] = {
                 shwrap("""
                 export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                 cosa sign --build=${newBuildID} --arch=${basearch} \
@@ -570,13 +572,15 @@ lock(resource: "build-${params.STREAM}") {
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
                 """)
             }
-            stage("OSTree Import: Compose Repo") {
+            parallelruns['OSTree Import: Compose Repo'] = {
                 shwrap("""
                 /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
                     --build=${newBuildID} --s3=${s3_stream_dir} --repo=compose \
                     --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
                 """)
             }
+            // process this batch
+            parallel parallelruns
         }
 
         // Now that the metadata is uploaded go ahead and kick off some tests
