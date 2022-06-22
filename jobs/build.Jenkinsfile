@@ -452,6 +452,12 @@ lock(resource: "build-${params.STREAM}") {
                         shwrap("kola testiso -SP --qemu-native-4k --output-dir tmp/kola-metal4k")
                     }, uefi: {
                         shwrap("mkdir -p tmp/kola-uefi")
+                        shwrap("""
+                        mkdir tmp/iso-live-login-with-rd-debug
+                        iso=tmp/iso-live-login-with-rd-debug/test.iso
+                        coreos-installer iso kargs modify --append rd.debug builds/${newBuildID}/${basearch}/*.iso -o \$iso
+                        kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --qemu-iso \$iso --output-dir tmp/kola-uefi/rd-debug")
+                        """)
                         shwrap("kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-uefi/insecure")
                         shwrap("kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-uefi/secure")
                     }
