@@ -17,7 +17,8 @@ HISTCONTROL='ignoreboth'
 Create the Ignition config
 
 ```bash
-cat fcos-aarch64-builder.bu | butane --pretty --strict > fcos-aarch64-builder.ign
+cat builder-common.bu | butane --pretty --strict > builder-common.ign
+cat fcos-aarch64-builder.bu | butane --pretty --strict --files-dir=. > fcos-aarch64-builder.ign
 ```
 
 Bring the instance up with appropriate details:
@@ -109,7 +110,8 @@ Create the Ignition config in a separate terminal and copy it into the
 container where ibmcloud is running:
 
 ```bash
-cat fcos-s390x-builder.bu | butane --pretty --strict > fcos-s390x-builder.ign
+cat builder-common.bu | butane --pretty --strict > builder-common.ign
+cat fcos-s390x-builder.bu | butane --pretty --strict --files-dir=. > fcos-s390x-builder.ign
 podman cp fcos-s390x-builder.ign ibmcloud:/root/fcos-s390x-builder.ign
 ```
 
