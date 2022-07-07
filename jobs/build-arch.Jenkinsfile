@@ -318,7 +318,7 @@ stages:
     - cosa buildextend-metal4k
     - cosa buildextend-live
     - kola testiso -S --output-dir tmp/kola-metal
-    - kola testiso -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
+    - kola testiso -SP --qemu-native-4k --qemu-multipath --scenarios iso-install --output-dir tmp/kola-metal4k
     - cosa buildextend-openstack
     # Hack for serial console on aarch64 aws images
     # see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988

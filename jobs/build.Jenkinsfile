@@ -455,7 +455,7 @@ lock(resource: "build-${params.STREAM}") {
                     parallel metal: {
                         shwrap("kola testiso -S --output-dir tmp/kola-metal")
                     }, metal4k: {
-                        shwrap("kola testiso -SP --qemu-native-4k --output-dir tmp/kola-metal4k")
+                        shwrap("kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-metal4k")
                     }, uefi: {
                         shwrap("mkdir -p tmp/kola-uefi")
                         shwrap("""
