@@ -166,7 +166,7 @@ stages:
     - cosa buildextend-metal4k
     - cosa buildextend-live
     - kola testiso -S --output-dir tmp/kola-metal
-    - kola testiso -SP --qemu-native-4k --scenarios iso-install --output-dir tmp/kola-metal4k
+    - kola testiso -SP --qemu-native-4k --qemu-multipath --scenarios iso-install --output-dir tmp/kola-metal4k
     - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
 delay_meta_merge: false
 EOF
@@ -229,7 +229,7 @@ EOF
                 parallel metal: {
                     shwrap("kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install,iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-metal")
                 }, metal4k: {
-                    shwrap("kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --output-dir tmp/kola-testiso-metal4k")
+                    shwrap("kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
                 }, uefi: {
                     shwrap("mkdir -p tmp/kola-testiso-uefi")
                     shwrap("kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
