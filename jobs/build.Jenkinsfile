@@ -86,6 +86,10 @@ def strict_build_param = is_mechanical ? "" : "--strict"
 // workflow, only the qemu image is built).
 def cosa_memory_request_mb = 6.5 * 1024 as Integer
 
+// the build pod runs most frequently and does the majority of the computation
+// so give it some healthy CPU shares
+pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "4")
+
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)

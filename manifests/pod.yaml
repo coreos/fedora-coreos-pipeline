@@ -64,6 +64,7 @@ spec:
        privileged: false
      resources:
        requests:
+         cpu: COREOS_ASSEMBLER_CPU_REQUEST
          memory: COREOS_ASSEMBLER_MEMORY_REQUEST
          devices.kubevirt.io/kvm: '1'
        limits:
