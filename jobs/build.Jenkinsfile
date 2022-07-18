@@ -182,9 +182,9 @@ lock(resource: "build-${params.STREAM}") {
         def parent_version = ""
         def parent_commit = ""
         if (s3_stream_dir) {
-            pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
-            if (utils.pathExists("tmp/releases.json")) {
-                def releases = readJSON file: "tmp/releases.json"
+            pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "releases.json")
+            if (utils.pathExists("releases.json")) {
+                def releases = readJSON file: "releases.json"
                 // check if there's a previous release we should use as parent
                 for (release in releases["releases"].reverse()) {
                     def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
