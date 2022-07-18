@@ -568,7 +568,7 @@ lock(resource: "build-${params.STREAM}") {
               shwrap("""
               rm -rf ${local_builddir}
               mkdir -p ${local_builddir}
-              cp -aT builds ${local_builddir}
+              rsync -avh builds/ ${local_builddir}
               """)
             }
         }
