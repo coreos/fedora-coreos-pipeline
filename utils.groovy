@@ -74,6 +74,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
             mv ./remote-builds.json \$TMPD/builds/builds.json
             source /usr/lib/coreos-assembler/cmdlib.sh
             insert_build ${buildid} \$TMPD ${arch}
+            mkdir -p builds
             cp \$TMPD/builds/builds.json builds/builds.json
         fi
         aws s3 cp --cache-control=max-age=300 --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
