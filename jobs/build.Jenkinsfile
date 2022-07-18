@@ -1,7 +1,8 @@
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, streams, official, uploading
-def src_config_url, src_config_ref, s3_bucket, gcp_gs_bucket
+def src_config_url, src_config_ref, s3_bucket
+def gcp_gs_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
