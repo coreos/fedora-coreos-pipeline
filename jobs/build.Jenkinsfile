@@ -157,26 +157,21 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
-        def fcos_config_commit
+        def ref = params.STREAM
+        if (src_config_ref != "") {
+            ref = src_config_ref
+        }
+        def fcos_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
-
-            def ref = params.STREAM
-            if (src_config_ref != "") {
-                ref = src_config_ref
-            }
-
             // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
             def cache_img = "/srv/prod/${params.STREAM}/cache.qcow2"
 
             shwrap("""
-            cosa init --force --branch ${ref} ${src_config_url}
+            cosa init --force --branch ${ref} --commit=${fcos_config_commit} ${src_config_url}
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)
-
-            // Capture the exact git commit used. Will pass to multi-arch pipeline runs.
-            fcos_config_commit = shwrapCapture("git -C src/config rev-parse HEAD")
 
             // If the cache img is larger than 7G, then nuke it. Otherwise
             // it'll just keep growing and we'll hit ENOSPC. It'll get rebuilt.
