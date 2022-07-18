@@ -178,24 +178,28 @@ lock(resource: "build-${params.STREAM}") {
             """)
         }
 
+        // Determine parent version/commit information
         def parent_version = ""
         def parent_commit = ""
-        stage('Fetch') {
-            if (s3_stream_dir) {
-                pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
-                if (utils.pathExists("tmp/releases.json")) {
-                    def releases = readJSON file: "tmp/releases.json"
-                    // check if there's a previous release we should use as parent
-                    for (release in releases["releases"].reverse()) {
-                        def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
-                        if (commit_obj != null) {
-                            parent_commit = commit_obj["checksum"]
-                            parent_version = release["version"]
-                            break
-                        }
+        if (s3_stream_dir) {
+            pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "tmp/releases.json")
+            if (utils.pathExists("tmp/releases.json")) {
+                def releases = readJSON file: "tmp/releases.json"
+                // check if there's a previous release we should use as parent
+                for (release in releases["releases"].reverse()) {
+                    def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
+                    if (commit_obj != null) {
+                        parent_commit = commit_obj["checksum"]
+                        parent_version = release["version"]
+                        break
                     }
                 }
+            }
+        }
 
+        // buildfetch previous build info
+        stage('BuildFetch') {
+            if (s3_stream_dir) {
                 shwrap("""
                 cosa buildfetch --arch=${basearch} \
                     --url s3://${s3_stream_dir}/builds \
@@ -215,11 +219,8 @@ lock(resource: "build-${params.STREAM}") {
                 cosa buildfetch --url=${local_builddir} --arch=${basearch}
                 """)
             }
-
-            shwrap("""
-            cosa fetch ${strict_build_param}
-            """)
         }
+
 
         def prevBuildID = null
         if (utils.pathExists("builds/latest")) {
@@ -235,7 +236,14 @@ lock(resource: "build-${params.STREAM}") {
             new_version = shwrapCapture("/var/tmp/fcos-releng/scripts/versionary.py")
         }
 
-        stage('Build') {
+        // fetch from repos for the current build
+        stage('Fetch') {
+            shwrap("""
+            cosa fetch ${strict_build_param}
+            """)
+        }
+
+        stage('Build OSTree') {
             def parent_arg = ""
             if (parent_version != "") {
                 parent_arg = "--parent-build ${parent_version}"
