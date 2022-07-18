@@ -257,36 +257,36 @@ lock(resource: "build-${params.STREAM}") {
             shwrap("""
             cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
             """)
+
+            // Insert the parent info into meta.json so we can display it in
+            // the release browser and for sanity checking
+            if (parent_commit && parent_version) {
+                shwrap("""
+                cosa meta \
+                    --set fedora-coreos.parent-commit=${parent_commit} \
+                    --set fedora-coreos.parent-version=${parent_version}
+                """)
+            }
         }
 
-        def meta_json
         def buildID = shwrapCapture("readlink builds/latest")
         if (prevBuildID == buildID) {
             currentBuild.result = 'SUCCESS'
             currentBuild.description = "[${params.STREAM}] 💤 (no new build)"
             return
-        } else {
-            newBuildID = buildID
-            currentBuild.description = "[${params.STREAM}][${basearch}] ⚡ ${newBuildID}"
-            meta_json = "builds/${newBuildID}/${basearch}/meta.json"
+        }
 
-            // and insert the parent info into meta.json so we can display it in
-            // the release browser and for sanity checking
-            if (parent_commit && parent_version) {
-                def meta = readJSON file: meta_json
-                meta["fedora-coreos.parent-version"] = parent_version
-                meta["fedora-coreos.parent-commit"] = parent_commit
-                writeJSON file: meta_json, json: meta
-            }
+        newBuildID = buildID
+        currentBuild.description = "[${params.STREAM}][${basearch}] ⚡ ${newBuildID}"
 
-            if (official) {
-                shwrap("""
-                /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
-                    build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                    --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                    --state STARTED
-                """)
-            }
+
+        if (official) {
+            shwrap("""
+            /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                --state STARTED
+            """)
         }
 
         if (official && uploading && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
