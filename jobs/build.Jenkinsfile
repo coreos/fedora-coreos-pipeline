@@ -263,7 +263,7 @@ lock(resource: "build-${params.STREAM}") {
             return
         } else {
             newBuildID = buildID
-            currentBuild.description = "[${params.STREAM}] ⚡ ${newBuildID}"
+            currentBuild.description = "[${params.STREAM}][${basearch}] ⚡ ${newBuildID}"
             meta_json = "builds/${newBuildID}/${basearch}/meta.json"
 
             // and insert the parent info into meta.json so we can display it in
@@ -694,7 +694,7 @@ lock(resource: "build-${params.STREAM}") {
             throw e
         } finally {
             def color
-            def message = "[${params.STREAM}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
+            def message = "[${params.STREAM}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
 
             if (currentBuild.result == 'SUCCESS') {
                 if (!newBuildID) {
