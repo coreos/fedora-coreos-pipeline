@@ -226,22 +226,22 @@ lock(resource: "build-${params.STREAM}") {
             prevBuildID = shwrapCapture("readlink builds/latest")
         }
 
+        def new_version = ""
+        if (params.VERSION) {
+            new_version = params.VERSION
+        } else if (official) {
+            // only use versioning that matches prod if we are running in the
+            // official pipeline.
+            new_version = shwrapCapture("/var/tmp/fcos-releng/scripts/versionary.py")
+        }
+
         stage('Build') {
             def parent_arg = ""
             if (parent_version != "") {
                 parent_arg = "--parent-build ${parent_version}"
             }
-
+            def version = new_version ? "--version ${new_version}" : ""
             def force = params.FORCE ? "--force" : ""
-            def version = ""
-            if (params.VERSION) {
-                version = "--version ${params.VERSION}"
-            } else if (official) {
-                // only use versioning that matches prod if we are running in the
-                // official pipeline.
-                def new_version = shwrapCapture("/var/tmp/fcos-releng/scripts/versionary.py")
-                version = "--version ${new_version}"
-            }
             shwrap("""
             cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
             """)
