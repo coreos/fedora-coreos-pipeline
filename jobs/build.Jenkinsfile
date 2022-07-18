@@ -308,8 +308,9 @@ lock(resource: "build-${params.STREAM}") {
             shwrap("""
             cosa generate-hashlist --arch=${basearch} --release=${newBuildID} \
                 --output=builds/${newBuildID}/${basearch}/exp-hash.json
-            sha256sum builds/${newBuildID}/${basearch}/exp-hash.json \
-                > builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM
+            source="builds/${newBuildID}/${basearch}/exp-hash.json"
+            target="builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM"
+            cosa shell -- bash -c "sha256sum \$source > \$target"
             """)
         }
 
@@ -331,12 +332,13 @@ lock(resource: "build-${params.STREAM}") {
         stage('Kola:QEMU basic') {
             shwrap("""
             cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
-            tar -cf - tmp/kola/ | xz -c9 > kola-run-basic.tar.xz
+            cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.tar.xz
+            cosa shell -- cat tmp/kola/reports/report.json > report.json
             """)
             archiveArtifacts "kola-run-basic.tar.xz"
-        }
-        if (!pipeutils.checkKolaSuccess("tmp/kola")) {
-            error('Kola:QEMU basic')
+            if (!pipeutils.checkKolaSuccess("report.json")) {
+                error('Kola:QEMU basic')
+            }
         }
 
         // reset for the next batch of independent tasks
@@ -348,10 +350,11 @@ lock(resource: "build-${params.STREAM}") {
             def parallel = ((cosa_memory_request_mb - 1536) / 1024) as Integer
             shwrap("""
             cosa kola run --rerun --parallel ${parallel} --no-test-exit-error
-            tar -cf - tmp/kola/ | xz -c9 > kola-run.tar.xz
+            cosa shell -- tar -c --xz tmp/kola/ > kola-run.tar.xz
+            cosa shell -- cat tmp/kola/reports/report.json > report.json
             """)
             archiveArtifacts "kola-run.tar.xz"
-            if (!pipeutils.checkKolaSuccess("tmp/kola")) {
+            if (!pipeutils.checkKolaSuccess("report.json")) {
                 error('Kola:QEMU')
             }
         }
@@ -364,10 +367,11 @@ lock(resource: "build-${params.STREAM}") {
             try {
                 shwrap("""
                 cosa kola --rerun --upgrades --no-test-exit-error
-                tar -cf - tmp/kola-upgrade | xz -c9 > kola-run-upgrade.tar.xz
+                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.tar.xz
+                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report.json
                 """)
                 archiveArtifacts "kola-run-upgrade.tar.xz"
-                if (!pipeutils.checkKolaSuccess("tmp/kola-upgrade")) {
+                if (!pipeutils.checkKolaSuccess("report.json")) {
                     error('Kola:QEMU Upgrade')
                 }
             } catch(e) {
@@ -459,30 +463,31 @@ lock(resource: "build-${params.STREAM}") {
                 """)
                 try {
                     parallel metal: {
-                        shwrap("kola testiso -S --output-dir tmp/kola-metal")
+                        shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
                     }, metal4k: {
-                        shwrap("kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-metal4k")
+                        shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
                     }, uefi: {
-                        shwrap("mkdir -p tmp/kola-uefi")
+                        shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
                         shwrap("""
-                        mkdir tmp/iso-live-login-with-rd-debug
+                        cosa shell -- mkdir tmp/iso-live-login-with-rd-debug
                         iso=tmp/iso-live-login-with-rd-debug/test.iso
-                        coreos-installer iso kargs modify --append rd.debug builds/${newBuildID}/${basearch}/*.iso -o \$iso
-                        kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --qemu-iso \$iso --output-dir tmp/kola-uefi/rd-debug
+                        cosa shell -- coreos-installer iso kargs modify --append rd.debug builds/${newBuildID}/${basearch}/*.iso -o \$iso
+                        cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --qemu-iso \$iso --output-dir tmp/kola-testiso-uefi/rd-debug
                         """)
-                        shwrap("kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-uefi/insecure")
-                        shwrap("kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-uefi/secure")
+                        shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
+                        shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
                     }
                 } catch (Throwable e) {
                     throw e
                 } finally {
-                    shwrap("tar -cf - tmp/kola-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
-                    shwrap("tar -cf - tmp/kola-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
-                    shwrap("tar -cf - tmp/kola-uefi/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-uefi.tar.xz")
+                    shwrap("""
+                    cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.tar.xz
+                    cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.tar.xz
+                    cosa shell -- tar -c --xz tmp/kola-testiso-uefi/ > kola-testiso-uefi.tar.xz
+                    """)
                     archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
                 }
             }
-
 
             // reset for the next batch of independent tasks
             parallelruns = [:]

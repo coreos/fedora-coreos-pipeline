@@ -15,9 +15,9 @@ boolean isOfficial() {
 }
 
 // Parse and handle the result of Kola
-boolean checkKolaSuccess(dir) {
+boolean checkKolaSuccess(file) {
     // archive the image if the tests failed
-    def report = readJSON file: "${dir}/reports/report.json"
+    def report = readJSON file: "${file}"
     def result = report["result"]
     print("kola result: ${result}")
     if (result != "PASS") {
