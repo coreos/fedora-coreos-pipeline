@@ -418,6 +418,7 @@ lock(resource: "build-${params.STREAM}") {
                     build job: 'build-arch', wait: false, parameters: [
                         booleanParam(name: 'FORCE', value: params.FORCE),
                         booleanParam(name: 'MINIMAL', value: params.MINIMAL),
+                        booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                         string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
                         string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
                         string(name: 'STREAM', value: params.STREAM),
