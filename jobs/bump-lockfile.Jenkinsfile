@@ -1,9 +1,9 @@
-def pipeutils, streams, official, gp
+def pipeutils, streams, official
+def session_aarch64, session_s390x
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
-    gp = load("gp.groovy")
     def pipecfg = pipeutils.load_config()
     official = pipeutils.isOfficial()
 }
@@ -21,6 +21,10 @@ properties([
         choice(name: 'STREAM',
                choices: streams.development,
                description: 'Fedora CoreOS development stream to bump'),
+        string(name: 'COREOS_ASSEMBLER_IMAGE',
+               description: 'Override coreos-assembler image to use',
+               defaultValue: "coreos-assembler:main",
+               trim: true),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -45,7 +49,8 @@ def getLockfileInfo(lockfile) {
     return [pkgChecksum, pkgTimestamp]
 }
 
-try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { cosaPod {
+try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { 
+    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE) {
     currentBuild.description = "[${params.STREAM}] Running"
 
     // set up git user upfront
@@ -57,8 +62,10 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     def branch = params.STREAM
     def forceTimestamp = false
     def haveChanges = false
-    shwrap("cosa init --branch ${branch} https://github.com/${repo}")
-    shwrap("cosa buildfetch --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
+    def fcos_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} ${branch} | cut -d \$'\t' -f 1")
+    shwrap("cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}")
+    // we buildfetch here so we can see in the build output what packages changed
+    shwrap("cosa buildfetch --arch=all --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
     def lockfile, pkgChecksum, pkgTimestamp
     def archinfo = [x86_64: [:], aarch64: [:], s390x: [:]]
@@ -69,25 +76,72 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
     }
 
+    // We currently have a limitation where we aren't building and
+    // pushing multi-arch COSA containers to quay. For multi-arch
+    // we're currently building images once a day on the local
+    // multi-arch builders. See https://github.com/coreos/coreos-assembler/issues/2470
+    //
+    // Until #2470 is resolved let's do the best thing we can do
+    // which is derive the multi-arch container name from the
+    // given x86_64 COSA container. We'll translate
+    // quay.io/coreos-assembler/coreos-assembler:$tag -> localhost/coreos-assembler:$tag
+    // This assumes that the desired tagged image has been built
+    // on the multi-arch builder already, which most likely means
+    // someone did it manually.
+    def image = "localhost/coreos-assembler:latest"
+    if (params.COREOS_ASSEMBLER_IMAGE.startsWith("quay.io/coreos-assembler/coreos-assembler:")) {
+        image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
+            "quay.io/coreos-assembler/coreos-assembler:",
+            "localhost/coreos-assembler:"
+        )
+    }
+
+    // Initialize the sessions on the remote builders
+    stage("Initialize Remotes") {
+        parallel aarch64: {
+            pipeutils.withPodmanRemoteArchBuilder(arch: "aarch64") {
+                session_aarch64 = shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
+                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session_aarch64}"]) {
+                    shwrap("""
+                    cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
+                    cosa remote-session sync ./builds/ :builds/
+                    """)
+                }
+            }
+        }, s390x: {
+            pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
+                session_s390x = shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
+                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session_s390x}"]) {
+                    shwrap("""
+                    cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
+                    cosa remote-session sync ./builds/ :builds/
+                    """)
+                }
+            }
+        }
+    }
+
     // do a first fetch where we only fetch metadata; no point in
     // importing RPMs if nothing actually changed
     stage("Fetch Metadata") {
         parallel x86_64: {
             shwrap("cosa fetch --update-lockfile --dry-run")
         }, aarch64: {
-            def appendFlags = "--git-ref=${params.STREAM}"
-            appendFlags += " --git-url=https://github.com/${repo}"
-            appendFlags += " --returnFiles=src/config/manifest-lock.aarch64.json"
-            gp.gangplankArchWrapper([cmd: "cosa fetch --update-lockfile --dry-run",
-                                     arch: "aarch64", appendFlags: appendFlags])
-            shwrap("cp builds/cache/src/config/manifest-lock.aarch64.json src/config/manifest-lock.aarch64.json")
+            pipeutils.withExistingCosaRemoteSession(arch: "aarch64",
+                                                 session: session_aarch64) {
+                shwrap("""
+                cosa fetch --update-lockfile --dry-run
+                cosa remote-session sync {:,}src/config/manifest-lock.aarch64.json
+                """)
+            }
         }, s390x: {
-            def appendFlags = "--git-ref=${params.STREAM}"
-            appendFlags += " --git-url=https://github.com/${repo}"
-            appendFlags += " --returnFiles=src/config/manifest-lock.s390x.json"
-            gp.gangplankArchWrapper([cmd: "cosa fetch --update-lockfile --dry-run",
-                                     arch: "s390x", appendFlags: appendFlags])
-            shwrap("cp builds/cache/src/config/manifest-lock.s390x.json src/config/manifest-lock.s390x.json")
+            remote.withExistingCosaRemoteSession(arch: "s390x",
+                                                 session: session_s390x) {
+                shwrap("""
+                cosa fetch --update-lockfile --dry-run
+                cosa remote-session sync {:,}src/config/manifest-lock.s390x.json
+                """)
+            }
         }
     }
 
@@ -130,116 +184,228 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // The bulk of the work (build, test, etc) is done in the following.
     // We only need to do that work if we have changes.
     if (haveChanges) {
-        // Get the local diff to the manifest lockfiles and capture them in a variable
-        // that we will later apply in a prep stage. This is a huge hack. We need to
-        // convey to the multi-arch builder(s) the updated manifest lockfiles but we
-        // don't have a good way to copy files over using gangplank so we'll just
-        // apply the changes this way.
-        //
-        // do an explicit `git add` in case there is a new lockfile
-        shwrap("git -C src/config add manifest-lock.*.json")
-        def patch = shwrapCapture("git -C src/config diff --cached | base64 -w 0")
-
-        // Run aarch64/x86_64 in parallel
-        parallel "Fetch/Build/Test aarch64": {
-            shwrap("""
-               cat <<'EOF' > spec.spec
-job:
-  strict: true
-  miniocfgfile: ""
-recipe:
-  git_ref: ${params.STREAM}
-  git_url: https://github.com/${repo}
-stages:
-- id: ExecOrder 1 Stage
-  execution_order: 1
-  description: Stage 1 execution base
-  prep_commands:
-    - cat /cosa/coreos-assembler-git.json
-    - echo '${patch}' | base64 -d | git -C src/config apply
-  post_commands:
-    - cosa fetch --strict
-    - cosa build --force --strict
-    - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
-    - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
-    - cosa buildextend-metal
-    - cosa buildextend-metal4k
-    - cosa buildextend-live
-    - kola testiso -S --output-dir tmp/kola-metal
-    - kola testiso -SP --qemu-native-4k --qemu-multipath --scenarios iso-install --output-dir tmp/kola-metal4k
-    - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
-delay_meta_merge: false
-EOF
-                   """)
-            gp.gangplankArchWrapper([spec: "spec.spec", arch: "aarch64"])
-        }, s390x: {
-            shwrap("""
-               cat <<'EOF' > spec.spec
-job:
-  strict: true
-  miniocfgfile: ""
-recipe:
-  git_ref: ${params.STREAM}
-  git_url: https://github.com/${repo}
-stages:
-- id: ExecOrder 1 Stage
-  execution_order: 1
-  description: Stage 1 execution base
-  prep_commands:
-    - cat /cosa/coreos-assembler-git.json
-    - echo '${patch}' | base64 -d | git -C src/config apply
-  post_commands:
-    - cosa fetch --strict
-    - cosa build --force --strict
-    - cosa kola run --rerun --basic-qemu-scenarios --output-dir tmp/kola-basic
-    - cosa kola run --rerun --parallel 4 --output-dir tmp/kola
-    - cosa buildextend-metal
-    - cosa buildextend-metal4k
-    - cosa buildextend-live
-    - kola testiso -S --output-dir tmp/kola-metal
-    - rm -f builds/builds.json # https://github.com/coreos/coreos-assembler/issues/2317
-delay_meta_merge: false
-EOF
-                   """)
-            gp.gangplankArchWrapper([spec: "spec.spec", arch: "s390x"])
-        }, x86_64: {
-            stage("Fetch") {
+        // Run tests across all architectures in parallel
+        parallel "aarch64": {
+            def arch = "aarch64"
+            def parallelruns = [:]
+            pipeutils.withExistingCosaRemoteSession(arch: arch,
+                                                 session: session_aarch64) {
+            stage("${arch}:Fetch") {
                 shwrap("cosa fetch --strict")
             }
-
-            stage("Build") {
+            stage("${arch}:Build") {
                 shwrap("cosa build --force --strict")
             }
-
-            fcosKola(cosaDir: env.WORKSPACE)
-
-            stage("Build Metal") {
+            stage("${arch}:Kola:basic") {
+                shwrap("""
+                cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
+                cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
+                """)
+                archiveArtifacts "kola-run-basic.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
+                    error("${arch}:Kola:basic")
+                }
+            }
+            parallelruns["${arch}:Kola"] = {
+                shwrap("""
+                cosa kola run --rerun --parallel 5 --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
+                cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
+                """)
+                archiveArtifacts "kola-run.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
+                    error("${arch}:Kola")
+                }
+            }
+            parallelruns["${arch}:Kola:upgrade"] = {
+                shwrap("""
+                cosa kola --rerun --upgrades --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
+                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
+                """)
+                archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
+                    error("${arch}:Kola:upgrade")
+                }
+            }
+            parallel parallelruns
+            stage("${arch}:Build Metal") {
                 shwrap("cosa buildextend-metal")
                 shwrap("cosa buildextend-metal4k")
             }
-
-            stage("Build Live") {
+            stage("${arch}:Build Live") {
                 shwrap("cosa buildextend-live --fast")
                 // Test metal4k with an uncompressed image and metal with a
                 // compressed one
                 shwrap("cosa compress --artifact=metal")
             }
-
             try {
-                parallel metal: {
-                    shwrap("kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install,iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-metal")
-                }, metal4k: {
-                    shwrap("kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
-                }, uefi: {
-                    shwrap("mkdir -p tmp/kola-testiso-uefi")
-                    shwrap("kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
-                    shwrap("kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
+                parallel "${arch}:metal" : {
+                    shwrap("cosa kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install,iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-metal")
+                }, "${arch}:metal4k" : {
+                    shwrap("cosa kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
                 }
             } finally {
-                shwrap("tar -cf - tmp/kola-testiso-metal/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal.tar.xz")
-                shwrap("tar -cf - tmp/kola-testiso-metal4k/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-metal4k.tar.xz")
-                shwrap("tar -cf - tmp/kola-testiso-uefi/ | xz -c9 > ${env.WORKSPACE}/kola-testiso-uefi.tar.xz")
-                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
+                shwrap("""
+                cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz
+                cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.${arch}.tar.xz
+                """)
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
+            }
+            } // end withExistingCosaRemoteSession
+        }, s390x: {
+            def arch = "s390x"
+            def parallelruns = [:]
+            pipeutils.withExistingCosaRemoteSession(arch: arch,
+                                                 session: session_s390x) {
+            stage("${arch}:Fetch") {
+                shwrap("cosa fetch --strict")
+            }
+            stage("${arch}:Build") {
+                shwrap("cosa build --force --strict")
+            }
+            stage("${arch}:Kola:basic") {
+                shwrap("""
+                cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
+                cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
+                """)
+                archiveArtifacts "kola-run-basic.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
+                    error("${arch}:Kola:basic")
+                }
+            }
+            parallelruns["${arch}:Kola"] = {
+                shwrap("""
+                cosa kola run --rerun --parallel 5 --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
+                cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
+                """)
+                archiveArtifacts "kola-run.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
+                    error("${arch}:Kola")
+                }
+            }
+            parallelruns["${arch}:Kola:upgrade"] = {
+                shwrap("""
+                cosa kola --rerun --upgrades --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
+                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
+                """)
+                archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
+                    error("${arch}:Kola:upgrade")
+                }
+            }
+            parallel parallelruns
+            stage("${arch}:Build Metal") {
+                shwrap("cosa buildextend-metal")
+                shwrap("cosa buildextend-metal4k")
+            }
+            stage("${arch}:Build Live") {
+                shwrap("cosa buildextend-live --fast")
+                // Test metal4k with an uncompressed image and metal with a
+                // compressed one
+                shwrap("cosa compress --artifact=metal")
+            }
+            try {
+                // s390x doesn't support 4k disks or iso-installs
+                stage("${arch}:metal") {
+                    shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
+                }
+            } finally {
+                shwrap("""
+                cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz
+                """)
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
+            }
+            } // end withExistingCosaRemoteSession
+        }, x86_64: {
+            def arch = "x86_64"
+            def parallelruns = [:]
+            stage("${arch}:Fetch") {
+                shwrap("cosa fetch --strict")
+            }
+            stage("${arch}:Build") {
+                shwrap("cosa build --force --strict")
+            }
+            stage("${arch}:Kola:basic") {
+                shwrap("""
+                cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
+                cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
+                """)
+                archiveArtifacts "kola-run-basic.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
+                    error("${arch}:Kola:basic")
+                }
+            }
+            parallelruns["${arch}:Kola"] = {
+                shwrap("""
+                cosa kola run --rerun --parallel 5 --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
+                cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
+                """)
+                archiveArtifacts "kola-run.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
+                    error("${arch}:Kola")
+                }
+            }
+            parallelruns["${arch}:Kola:upgrade"] = {
+                shwrap("""
+                cosa kola --rerun --upgrades --no-test-exit-error
+                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
+                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
+                """)
+                archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
+                if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
+                    error("${arch}:Kola:upgrade")
+                }
+            }
+            parallel parallelruns
+            stage("${arch}:Build Metal") {
+                shwrap("cosa buildextend-metal")
+                shwrap("cosa buildextend-metal4k")
+            }
+            stage("${arch}:Build Live") {
+                shwrap("cosa buildextend-live --fast")
+                // Test metal4k with an uncompressed image and metal with a
+                // compressed one
+                shwrap("cosa compress --artifact=metal")
+            }
+            try {
+                parallel "${arch}:metal" : {
+                    shwrap("cosa kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install,iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-metal")
+                }, "${arch}:metal4k" : {
+                    shwrap("cosa kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
+                }, "${arch}:uefi" : {
+                    shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
+                    shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
+                    shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
+                }
+            } finally {
+                shwrap("""
+                cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz
+                cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.${arch}.tar.xz
+                cosa shell -- tar -c --xz tmp/kola-testiso-uefi/ > kola-testiso-uefi.${arch}x86_64.tar.xz
+                """)
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
+            }
+        }
+    }
+
+    // Destroy the remote sessions. We don't need them anymore
+    stage("Destroy Remotes") {
+        parallel aarch64: {
+            pipeutils.withExistingCosaRemoteSession(arch: "aarch64",
+                                                 session: session_aarch64) {
+                shwrap("cosa remote-session destroy")
+            }
+        }, s390x: {
+            pipeutils.withExistingCosaRemoteSession(arch: "s390x",
+                                                 session: session_s390x) {
+                shwrap("cosa remote-session destroy")
             }
         }
     }
@@ -252,6 +418,7 @@ EOF
         if (!haveChanges && forceTimestamp) {
             message="lockfiles: bump timestamp"
         }
+        shwrap("git -C src/config add manifest-lock.*.json")
         shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
         withCredentials([usernamePassword(credentialsId: botCreds,
                                           usernameVariable: 'GHUSER',
