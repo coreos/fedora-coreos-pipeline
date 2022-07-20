@@ -117,10 +117,15 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] Waiting"
 
+// release lock: we want to block the release job until we're done.
+// ideally we'd lock this from the main pipeline and have lock ownership
+// transferred to us when we're triggered. in practice, it's very unlikely the
+// release job would win this race.
+lock(resource: "release-${params.VERSION}-${params.ARCH}") {
 // build lock: we don't want multiple concurrent builds for the same stream and
 // arch (though this should work fine in theory)
-// release lock: we want to block the release job until we're done
-lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "release-${params.VERSION}-${params.ARCH}"]]) {
+lock(resource: "build-${params.STREAM}-${params.ARCH}") {
+
     currentBuild.description = "[${params.STREAM}][${params.ARCH}] Running"
 
     podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
@@ -676,4 +681,4 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
             }
         }
     }}
-}}
+}}}
