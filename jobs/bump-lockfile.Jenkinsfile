@@ -128,15 +128,15 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
             shwrap("cosa fetch --update-lockfile --dry-run")
         }, aarch64: {
             pipeutils.withExistingCosaRemoteSession(arch: "aarch64",
-                                                 session: session_aarch64) {
+                                                    session: session_aarch64) {
                 shwrap("""
                 cosa fetch --update-lockfile --dry-run
                 cosa remote-session sync {:,}src/config/manifest-lock.aarch64.json
                 """)
             }
         }, s390x: {
-            remote.withExistingCosaRemoteSession(arch: "s390x",
-                                                 session: session_s390x) {
+            pipeutils.withExistingCosaRemoteSession(arch: "s390x",
+                                                    session: session_s390x) {
                 shwrap("""
                 cosa fetch --update-lockfile --dry-run
                 cosa remote-session sync {:,}src/config/manifest-lock.s390x.json
@@ -258,7 +258,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
             def arch = "s390x"
             def parallelruns = [:]
             pipeutils.withExistingCosaRemoteSession(arch: arch,
-                                                 session: session_s390x) {
+                                                    session: session_s390x) {
             stage("${arch}:Fetch") {
                 shwrap("cosa fetch --strict")
             }
@@ -399,7 +399,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     stage("Destroy Remotes") {
         parallel aarch64: {
             pipeutils.withExistingCosaRemoteSession(arch: "aarch64",
-                                                 session: session_aarch64) {
+                                                    session: session_aarch64) {
                 shwrap("cosa remote-session destroy")
             }
         }, s390x: {
