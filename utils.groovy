@@ -88,7 +88,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
 // Available parameters:
 //    arch:  string -- The architecture of the desired host
 def withPodmanRemoteArchBuilder(params = [:], Closure body) {
-    arch = params['arch']
+    def arch = params['arch']
     withPodmanRemote(remoteHost: "fcos-${arch}-builder-host-string",
                      remoteUid:  "fcos-${arch}-builder-uid-string",
                      sshKey:     "fcos-${arch}-builder-sshkey-key") {
@@ -103,8 +103,8 @@ def withPodmanRemoteArchBuilder(params = [:], Closure body) {
 // session:  string -- The session ID of the already created session
 //    arch:  string -- The architecture of the desired host
 def withExistingCosaRemoteSession(params = [:], Closure body) {
-    arch = params['arch']
-    session = params['session']
+    def arch = params['arch']
+    def session = params['session']
     withPodmanRemoteArchBuilder(arch: arch) {
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
             body()
