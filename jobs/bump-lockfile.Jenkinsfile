@@ -110,7 +110,6 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                 withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                     shwrap("""
                     cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
-                    cosa remote-session sync ./builds/ :builds/
                     """)
                 }
             }
