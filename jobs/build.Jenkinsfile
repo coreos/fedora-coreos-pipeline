@@ -468,11 +468,14 @@ lock(resource: "build-${params.STREAM}") {
                 cosa compress --compressor xz --artifact metal --artifact metal4k
                 """)
                 try {
-                    parallel metal: {
+                    parallelruns = [:]
+                    parallelruns['metal'] = {
                         shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
-                    }, metal4k: {
+                    }
+                    parallelruns['metal4k'] = {
                         shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
-                    }, uefi: {
+                    }
+                    parallelruns['uefi'] = {
                         shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
                         shwrap("""
                         cosa shell -- mkdir tmp/iso-live-login-with-rd-debug
@@ -483,6 +486,8 @@ lock(resource: "build-${params.STREAM}") {
                         shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
                         shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
                     }
+                    // process this batch
+                    parallel parallelruns
                 } catch (Throwable e) {
                     throw e
                 } finally {

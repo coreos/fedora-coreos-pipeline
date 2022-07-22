@@ -482,17 +482,24 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
                 cosa compress --compressor xz --artifact metal --artifact metal4k
                 """)
                 try {
-                    parallel metal: {
+                    parallelruns = [:]
+                    parallelruns['metal'] = {
                         shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
-                    }, metal4k: {
-                        shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
                     }
+                    // metal4k doesn't work on s390x right now: https://github.com/coreos/fedora-coreos-tracker/issues/1261
+                    if (basearch != "s390x") {
+                        parallelruns['metal4k'] = {
+                            shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
+                        }
+                    }
+                    // process this batch
+                    parallel parallelruns
                 } catch (Throwable e) {
                     throw e
                 } finally {
                     shwrap("""
                     cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.tar.xz
-                    cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.tar.xz
+                    cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.tar.xz || :
                     """)
                     archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
                 }
