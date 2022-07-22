@@ -127,7 +127,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                 if (arch == "x86_64") {
                     shwrap("""
                     cosa buildfetch --arch=${arch} --find-build-for-arch \
-                        --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
+                        --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds
                     cosa fetch --update-lockfile --dry-run
                     """)
                 } else {
@@ -135,7 +135,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                         arch: arch, session: archinfo[arch]['session']) {
                         shwrap("""
                         cosa buildfetch --arch=${arch} --find-build-for-arch \
-                            --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
+                            --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds
                         cosa fetch --update-lockfile --dry-run
                         cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
                         """)
