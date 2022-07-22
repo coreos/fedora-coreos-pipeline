@@ -1,5 +1,4 @@
 def pipeutils, streams, official
-def session_aarch64, session_s390x
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -70,6 +69,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     def lockfile, pkgChecksum, pkgTimestamp
     def archinfo = [x86_64: [:], aarch64: [:], s390x: [:]]
     for (arch in archinfo.keySet()) {
+        // initialize some data
+        archinfo[arch]['session'] = ""
         lockfile = "src/config/manifest-lock.${arch}.json"
         (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
         archinfo[arch]['prevPkgChecksum'] = pkgChecksum
@@ -98,20 +99,14 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     // Initialize the sessions on the remote builders
     stage("Initialize Remotes") {
-        parallel aarch64: {
-            pipeutils.withPodmanRemoteArchBuilder(arch: "aarch64") {
-                session_aarch64 = shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
-                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session_aarch64}"]) {
-                    shwrap("""
-                    cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
-                    cosa remote-session sync ./builds/ :builds/
-                    """)
-                }
+        for (arch in archinfo.keySet()) {
+            if (arch == "x86_64") {
+                continue
             }
-        }, s390x: {
-            pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
-                session_s390x = shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
-                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session_s390x}"]) {
+            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                archinfo[arch]['session'] = \
+                    shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
+                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                     shwrap("""
                     cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
                     cosa remote-session sync ./builds/ :builds/
@@ -124,25 +119,25 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // do a first fetch where we only fetch metadata; no point in
     // importing RPMs if nothing actually changed
     stage("Fetch Metadata") {
-        parallel x86_64: {
-            shwrap("cosa fetch --update-lockfile --dry-run")
-        }, aarch64: {
-            pipeutils.withExistingCosaRemoteSession(arch: "aarch64",
-                                                    session: session_aarch64) {
-                shwrap("""
-                cosa fetch --update-lockfile --dry-run
-                cosa remote-session sync {:,}src/config/manifest-lock.aarch64.json
-                """)
-            }
-        }, s390x: {
-            pipeutils.withExistingCosaRemoteSession(arch: "s390x",
-                                                    session: session_s390x) {
-                shwrap("""
-                cosa fetch --update-lockfile --dry-run
-                cosa remote-session sync {:,}src/config/manifest-lock.s390x.json
-                """)
+        def parallelruns = [:]
+        for (arch in archinfo.keySet()) {
+            parallelruns[arch] = {
+                if (arch == "x86_64") {
+                    shwrap("""
+                    cosa fetch --update-lockfile --dry-run
+                    """)
+                } else {
+                    pipeutils.withExistingCosaRemoteSession(
+                        arch: arch, session: archinfo[arch]['session']) {
+                        shwrap("""
+                        cosa fetch --update-lockfile --dry-run
+                        cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
+                        """)
+                    }
+                }
             }
         }
+        parallel parallelruns
     }
 
     for (arch in archinfo.keySet()) {
@@ -188,8 +183,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         parallel "aarch64": {
             def arch = "aarch64"
             def parallelruns = [:]
-            pipeutils.withExistingCosaRemoteSession(arch: arch,
-                                                 session: session_aarch64) {
+            pipeutils.withExistingCosaRemoteSession(
+                arch: arch, session: archinfo[arch]['session']) {
             stage("${arch}:Fetch") {
                 shwrap("cosa fetch --strict")
             }
@@ -257,8 +252,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         }, s390x: {
             def arch = "s390x"
             def parallelruns = [:]
-            pipeutils.withExistingCosaRemoteSession(arch: arch,
-                                                    session: session_s390x) {
+            pipeutils.withExistingCosaRemoteSession(
+                arch: arch, session: archinfo[arch]['session']) {
             stage("${arch}:Fetch") {
                 shwrap("cosa fetch --strict")
             }
@@ -397,14 +392,12 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     // Destroy the remote sessions. We don't need them anymore
     stage("Destroy Remotes") {
-        parallel aarch64: {
-            pipeutils.withExistingCosaRemoteSession(arch: "aarch64",
-                                                    session: session_aarch64) {
-                shwrap("cosa remote-session destroy")
+        for (arch in archinfo.keySet()) {
+            if (arch == "x86_64") {
+                continue
             }
-        }, s390x: {
-            pipeutils.withExistingCosaRemoteSession(arch: "s390x",
-                                                 session: session_s390x) {
+            pipeutils.withExistingCosaRemoteSession(
+                arch: arch, session: archinfo[arch]['session']) {
                 shwrap("cosa remote-session destroy")
             }
         }
