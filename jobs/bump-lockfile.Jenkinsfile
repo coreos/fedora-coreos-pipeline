@@ -221,7 +221,6 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                         }
                     }
                     parallelruns["${arch}:Kola:upgrade"] = {
-                        shwrap("""
                         // If upgrades are broken `cosa kola --upgrades` might
                         // fail to even find the previous image so we wrap this
                         // in a try/catch so ALLOW_KOLA_UPGRADE_FAILURE can work.
