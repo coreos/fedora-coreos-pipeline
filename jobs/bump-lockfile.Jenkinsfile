@@ -24,6 +24,9 @@ properties([
                description: 'Override coreos-assembler image to use',
                defaultValue: "coreos-assembler:main",
                trim: true),
+        booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
+                     defaultValue: false,
+                     description: "Don't error out if upgrade tests fail (temporary)"),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -219,13 +222,27 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                     }
                     parallelruns["${arch}:Kola:upgrade"] = {
                         shwrap("""
-                        cosa kola --rerun --upgrades --no-test-exit-error
-                        cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
-                        cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
-                        """)
-                        archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
-                        if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
-                            error("${arch}:Kola:upgrade")
+                        // If upgrades are broken `cosa kola --upgrades` might
+                        // fail to even find the previous image so we wrap this
+                        // in a try/catch so ALLOW_KOLA_UPGRADE_FAILURE can work.
+                        try {
+                            shwrap("""
+                            cosa kola --rerun --upgrades --no-test-exit-error
+                            cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
+                            cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.${arch}.json
+                            """)
+                            archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
+                            if (!pipeutils.checkKolaSuccess("report-kola-upgrade.${arch}.json")) {
+                                error("${arch}:Kola:upgrade")
+                            }
+                        } catch(e) {
+                            if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
+                                warnError(message: 'Upgrade Failed') {
+                                    error(e)
+                                }
+                            } else {
+                                throw e
+                            }
                         }
                     }
                     parallel parallelruns
