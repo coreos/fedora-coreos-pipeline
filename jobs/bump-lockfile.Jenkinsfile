@@ -63,8 +63,6 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     def haveChanges = false
     def fcos_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} ${branch} | cut -d \$'\t' -f 1")
     shwrap("cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}")
-    // we buildfetch here so we can see in the build output what packages changed
-    shwrap("cosa buildfetch --arch=all --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
 
     def lockfile, pkgChecksum, pkgTimestamp
     def archinfo = [x86_64: [:], aarch64: [:], s390x: [:]]
@@ -117,19 +115,25 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     }
 
     // do a first fetch where we only fetch metadata; no point in
-    // importing RPMs if nothing actually changed
+    // importing RPMs if nothing actually changed. We also do a 
+    // buildfetch here so we can see in the build output (that happens
+    // later) what packages changed.
     stage("Fetch Metadata") {
         def parallelruns = [:]
         for (arch in archinfo.keySet()) {
             parallelruns[arch] = {
                 if (arch == "x86_64") {
                     shwrap("""
+                    cosa buildfetch --arch=${arch} --find-build-for-arch \
+                        --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
                     cosa fetch --update-lockfile --dry-run
                     """)
                 } else {
                     pipeutils.withExistingCosaRemoteSession(
                         arch: arch, session: archinfo[arch]['session']) {
                         shwrap("""
+                        cosa buildfetch --arch=${arch} --find-build-for-arch \
+                            --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds")
                         cosa fetch --update-lockfile --dry-run
                         cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
                         """)
