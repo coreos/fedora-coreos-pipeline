@@ -235,6 +235,8 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                     /run/kubernetes/secrets/fedora-messaging-coreos-key
                 cosa remote-session sync {,:}/run/kubernetes/secrets/fedora-messaging-coreos-key/
             fi
+            # sync over the send-ostree-import-request.py from the automation repo
+            cosa remote-session sync {,:}/var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py
 
             cosa init --force --branch ${ref} --commit=${fcos_config_commit} ${src_config_url}
             """)
@@ -569,13 +571,6 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             }
         }
 
-        stage('Destroy Remote') {
-            shwrap("cosa remote-session destroy")
-        }
-
-        } // end withEnv
-        } // end withPodmanRemoteArchBuilder
-
         // These steps interact with Fedora Infrastructure/Releng for
         // signing of artifacts and importing of OSTree commits. They
         // must be run after the archive stage because the artifacts
@@ -595,6 +590,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             }
             parallelruns['OSTree Import: Compose Repo'] = {
                 shwrap("""
+                cosa shell -- \
                 /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
                     --build=${newBuildID} --arch=${basearch} \
                     --s3=${s3_stream_dir} --repo=compose \
@@ -604,6 +600,13 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             // process this batch
             parallel parallelruns
         }
+
+        stage('Destroy Remote') {
+            shwrap("cosa remote-session destroy")
+        }
+
+        } // end withEnv
+        } // end withPodmanRemoteArchBuilder
 
         // Now that the metadata is uploaded go ahead and kick off some tests
         // These can all be kicked off in parallel. These take little time
