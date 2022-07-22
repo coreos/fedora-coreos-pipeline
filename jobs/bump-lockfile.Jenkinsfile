@@ -184,214 +184,103 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // We only need to do that work if we have changes.
     if (haveChanges) {
         // Run tests across all architectures in parallel
-        parallel "aarch64": {
-            def arch = "aarch64"
-            def parallelruns = [:]
-            pipeutils.withExistingCosaRemoteSession(
-                arch: arch, session: archinfo[arch]['session']) {
-            stage("${arch}:Fetch") {
-                shwrap("cosa fetch --strict")
-            }
-            stage("${arch}:Build") {
-                shwrap("cosa build --force --strict")
-            }
-            stage("${arch}:Kola:basic") {
-                shwrap("""
-                cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
-                cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
-                """)
-                archiveArtifacts "kola-run-basic.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
-                    error("${arch}:Kola:basic")
+        def outerparallelruns = [:]
+        for (arch in archinfo.keySet()) {
+            outerparallelruns[arch] = {
+                def buildAndTest = {
+                    def parallelruns = [:]
+                    stage("${arch}:Fetch") {
+                        shwrap("cosa fetch --strict")
+                    }
+                    stage("${arch}:Build") {
+                        shwrap("cosa build --force --strict")
+                    }
+                    stage("${arch}:Kola:basic") {
+                        shwrap("""
+                        cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
+                        cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
+                        cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
+                        """)
+                        archiveArtifacts "kola-run-basic.${arch}.tar.xz"
+                        if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
+                            error("${arch}:Kola:basic")
+                        }
+                    }
+                    parallelruns["${arch}:Kola"] = {
+                        shwrap("""
+                        cosa kola run --rerun --parallel 5 --no-test-exit-error
+                        cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
+                        cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
+                        """)
+                        archiveArtifacts "kola-run.${arch}.tar.xz"
+                        if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
+                            error("${arch}:Kola")
+                        }
+                    }
+                    parallelruns["${arch}:Kola:upgrade"] = {
+                        shwrap("""
+                        cosa kola --rerun --upgrades --no-test-exit-error
+                        cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
+                        cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
+                        """)
+                        archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
+                        if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
+                            error("${arch}:Kola:upgrade")
+                        }
+                    }
+                    parallel parallelruns
+                    stage("${arch}:Build Metal") {
+                        shwrap("cosa buildextend-metal")
+                        shwrap("cosa buildextend-metal4k")
+                    }
+                    stage("${arch}:Build Live") {
+                        shwrap("cosa buildextend-live --fast")
+                        // Test metal4k with an uncompressed image and metal with a
+                        // compressed one
+                        shwrap("cosa compress --artifact=metal")
+                    }
+                    try {
+                        parallelruns = [:]
+                        parallelruns["${arch}:Kola:metal"] = {
+                            shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
+                        }
+                        // metal4k test doesn't work on s390x for now
+                        // https://github.com/coreos/fedora-coreos-tracker/issues/1261
+                        // and testiso for s390x doesn't support iso installs either
+                        if (arch != "s390x") {
+                            parallelruns["${arch}:Kola:metal4k"] = {
+                                shwrap("cosa kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
+                            }
+                        }
+                        // test additional non-default uefi case on x86_64
+                        if (arch == "x86_64") {
+                            parallelruns["${arch}:Kola:uefi"] = {
+                                shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
+                                shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
+                                shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
+                            }
+                        }
+                        parallel parallelruns
+                    } finally {
+                        shwrap("""
+                        cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz || :
+                        cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.${arch}.tar.xz || :
+                        cosa shell -- tar -c --xz tmp/kola-testiso-uefi/ > kola-testiso-uefi.${arch}x86_64.tar.xz || :
+                        """)
+                        archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
+                    }
                 }
-            }
-            parallelruns["${arch}:Kola"] = {
-                shwrap("""
-                cosa kola run --rerun --parallel 5 --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
-                cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
-                """)
-                archiveArtifacts "kola-run.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
-                    error("${arch}:Kola")
+                if (arch == "x86_64") {
+                    buildAndTest()
+                } else {
+                    pipeutils.withExistingCosaRemoteSession(
+                        arch: arch, session: archinfo[arch]['session']) {
+                        buildAndTest()
+                  }
                 }
-            }
-            parallelruns["${arch}:Kola:upgrade"] = {
-                shwrap("""
-                cosa kola --rerun --upgrades --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
-                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
-                """)
-                archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
-                    error("${arch}:Kola:upgrade")
-                }
-            }
-            parallel parallelruns
-            stage("${arch}:Build Metal") {
-                shwrap("cosa buildextend-metal")
-                shwrap("cosa buildextend-metal4k")
-            }
-            stage("${arch}:Build Live") {
-                shwrap("cosa buildextend-live --fast")
-                // Test metal4k with an uncompressed image and metal with a
-                // compressed one
-                shwrap("cosa compress --artifact=metal")
-            }
-            try {
-                parallel "${arch}:metal" : {
-                    shwrap("cosa kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install,iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-metal")
-                }, "${arch}:metal4k" : {
-                    shwrap("cosa kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
-                }
-            } finally {
-                shwrap("""
-                cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz
-                cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.${arch}.tar.xz
-                """)
-                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
-            }
-            } // end withExistingCosaRemoteSession
-        }, s390x: {
-            def arch = "s390x"
-            def parallelruns = [:]
-            pipeutils.withExistingCosaRemoteSession(
-                arch: arch, session: archinfo[arch]['session']) {
-            stage("${arch}:Fetch") {
-                shwrap("cosa fetch --strict")
-            }
-            stage("${arch}:Build") {
-                shwrap("cosa build --force --strict")
-            }
-            stage("${arch}:Kola:basic") {
-                shwrap("""
-                cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
-                cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
-                """)
-                archiveArtifacts "kola-run-basic.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
-                    error("${arch}:Kola:basic")
-                }
-            }
-            parallelruns["${arch}:Kola"] = {
-                shwrap("""
-                cosa kola run --rerun --parallel 5 --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
-                cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
-                """)
-                archiveArtifacts "kola-run.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
-                    error("${arch}:Kola")
-                }
-            }
-            parallelruns["${arch}:Kola:upgrade"] = {
-                shwrap("""
-                cosa kola --rerun --upgrades --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
-                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
-                """)
-                archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
-                    error("${arch}:Kola:upgrade")
-                }
-            }
-            parallel parallelruns
-            stage("${arch}:Build Metal") {
-                shwrap("cosa buildextend-metal")
-                shwrap("cosa buildextend-metal4k")
-            }
-            stage("${arch}:Build Live") {
-                shwrap("cosa buildextend-live --fast")
-                // Test metal4k with an uncompressed image and metal with a
-                // compressed one
-                shwrap("cosa compress --artifact=metal")
-            }
-            try {
-                // s390x doesn't support 4k disks or iso-installs
-                stage("${arch}:metal") {
-                    shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
-                }
-            } finally {
-                shwrap("""
-                cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz
-                """)
-                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
-            }
-            } // end withExistingCosaRemoteSession
-        }, x86_64: {
-            def arch = "x86_64"
-            def parallelruns = [:]
-            stage("${arch}:Fetch") {
-                shwrap("cosa fetch --strict")
-            }
-            stage("${arch}:Build") {
-                shwrap("cosa build --force --strict")
-            }
-            stage("${arch}:Kola:basic") {
-                shwrap("""
-                cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.${arch}.tar.xz
-                cosa shell -- cat tmp/kola/reports/report.json > report-kola-basic.${arch}.json
-                """)
-                archiveArtifacts "kola-run-basic.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola-basic.${arch}.json")) {
-                    error("${arch}:Kola:basic")
-                }
-            }
-            parallelruns["${arch}:Kola"] = {
-                shwrap("""
-                cosa kola run --rerun --parallel 5 --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
-                cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
-                """)
-                archiveArtifacts "kola-run.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
-                    error("${arch}:Kola")
-                }
-            }
-            parallelruns["${arch}:Kola:upgrade"] = {
-                shwrap("""
-                cosa kola --rerun --upgrades --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.${arch}.tar.xz
-                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report-kola-upgrade.json
-                """)
-                archiveArtifacts "kola-run-upgrade.${arch}.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report-kola-upgrade.json")) {
-                    error("${arch}:Kola:upgrade")
-                }
-            }
-            parallel parallelruns
-            stage("${arch}:Build Metal") {
-                shwrap("cosa buildextend-metal")
-                shwrap("cosa buildextend-metal4k")
-            }
-            stage("${arch}:Build Live") {
-                shwrap("cosa buildextend-live --fast")
-                // Test metal4k with an uncompressed image and metal with a
-                // compressed one
-                shwrap("cosa compress --artifact=metal")
-            }
-            try {
-                parallel "${arch}:metal" : {
-                    shwrap("cosa kola testiso -S --scenarios pxe-install,iso-install,iso-offline-install,iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-metal")
-                }, "${arch}:metal4k" : {
-                    shwrap("cosa kola testiso -S --scenarios iso-install,iso-offline-install --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
-                }, "${arch}:uefi" : {
-                    shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
-                    shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
-                    shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
-                }
-            } finally {
-                shwrap("""
-                cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.${arch}.tar.xz
-                cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.${arch}.tar.xz
-                cosa shell -- tar -c --xz tmp/kola-testiso-uefi/ > kola-testiso-uefi.${arch}x86_64.tar.xz
-                """)
-                archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*${arch}.tar.xz'
-            }
-        }
+            } // end outerparallelruns
+        } // end for loop
+        parallel outerparallelruns
     }
 
     // Destroy the remote sessions. We don't need them anymore
