@@ -603,6 +603,7 @@ lock(resource: "build-${params.STREAM}") {
             }
             parallelruns['OSTree Import: Compose Repo'] = {
                 shwrap("""
+                cosa shell -- \
                 /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
                     --build=${newBuildID} --arch=${basearch} \
                     --s3=${s3_stream_dir} --repo=compose \
