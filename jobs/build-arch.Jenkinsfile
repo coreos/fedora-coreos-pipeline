@@ -225,14 +225,10 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}", extra: [[resource: "rele
             if [ -f /etc/fedora-messaging-cfg/fedmsg.toml ]; then
                 cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
                     /etc/fedora-messaging-cfg
-                cosa remote-session sync                   \
-                    /etc/fedora-messaging-cfg/fedmsg.toml  \
-                    :/etc/fedora-messaging-cfg/fedmsg.toml
+                cosa remote-session sync {,:}/etc/fedora-messaging-cfg/
                 cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
                     /run/kubernetes/secrets/fedora-messaging-coreos-key
-                cosa remote-session sync                                 \
-                    /run/kubernetes/secrets/fedora-messaging-coreos-key/ \
-                    :/run/kubernetes/secrets/fedora-messaging-coreos-key/
+                cosa remote-session sync {,:}/run/kubernetes/secrets/fedora-messaging-coreos-key/
             fi
 
             cosa init --force --branch ${ref} --commit=${fcos_config_commit} ${src_config_url}
