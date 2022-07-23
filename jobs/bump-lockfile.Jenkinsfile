@@ -69,7 +69,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     def lockfile, pkgChecksum, pkgTimestamp
     def archinfo = [x86_64: [:], aarch64: [:], s390x: [:]]
-    for (arch in archinfo.keySet()) {
+    for (architecture in archinfo.keySet()) {
+        def arch = architecture
         // initialize some data
         archinfo[arch]['session'] = ""
         lockfile = "src/config/manifest-lock.${arch}.json"
@@ -100,7 +101,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     // Initialize the sessions on the remote builders
     stage("Initialize Remotes") {
-        for (arch in archinfo.keySet()) {
+        for (architecture in archinfo.keySet()) {
+            def arch = architecture
             if (arch == "x86_64") {
                 continue
             }
@@ -122,7 +124,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     // later) what packages changed.
     stage("Fetch Metadata") {
         def parallelruns = [:]
-        for (arch in archinfo.keySet()) {
+        for (architecture in archinfo.keySet()) {
+            def arch = architecture
             parallelruns[arch] = {
                 if (arch == "x86_64") {
                     shwrap("""
@@ -146,7 +149,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         parallel parallelruns
     }
 
-    for (arch in archinfo.keySet()) {
+    for (architecture in archinfo.keySet()) {
+        def arch = architecture
         lockfile = "src/config/manifest-lock.${arch}.json"
         (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
         archinfo[arch]['newPkgChecksum'] = pkgChecksum
@@ -187,7 +191,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     if (haveChanges) {
         // Run tests across all architectures in parallel
         def outerparallelruns = [:]
-        for (arch in archinfo.keySet()) {
+        for (architecture in archinfo.keySet()) {
+            def arch = architecture
             outerparallelruns[arch] = {
                 def buildAndTest = {
                     def parallelruns = [:]
@@ -300,7 +305,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     // Destroy the remote sessions. We don't need them anymore
     stage("Destroy Remotes") {
-        for (arch in archinfo.keySet()) {
+        for (architecture in archinfo.keySet()) {
+            def arch = architecture
             if (arch == "x86_64") {
                 continue
             }
