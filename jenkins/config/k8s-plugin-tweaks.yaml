@@ -1,0 +1,7 @@
+# mitigation for
+# https://docs.cloudbees.com/docs/cloudbees-ci-kb/latest/client-and-managed-masters/considerations-for-kubernetes-clients-connection-when-using-kubernetes-plugin
+jenkins:
+  clouds:
+  - kubernetes:
+      maxRequestsPerHost: 64
+      name: "openshift"
