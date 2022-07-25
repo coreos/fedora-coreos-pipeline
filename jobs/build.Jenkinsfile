@@ -416,8 +416,11 @@ lock(resource: "build-${params.STREAM}") {
         stage('Fork Multi-Arch Builds') {
             if (uploading) {
                 for (arch in params.ADDITIONAL_ARCHES.split()) {
+                    // We pass in FORCE=true here since if we got this far we know
+                    // we want to do a build even if the code tells us that there
+                    // are no apparent changes since the previous commit.
                     build job: 'build-arch', wait: false, parameters: [
-                        booleanParam(name: 'FORCE', value: params.FORCE),
+                        booleanParam(name: 'FORCE', value: true),
                         booleanParam(name: 'MINIMAL', value: params.MINIMAL),
                         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                         string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
