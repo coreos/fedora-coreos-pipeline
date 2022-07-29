@@ -340,6 +340,8 @@ circumstances. Below are some of the options. To see more run
     - Image of coreos-assembler to use.
 - `--bucket BUCKET`
     - AWS S3 bucket in which to store builds (or blank for none).
+- `--additional-root-ca-certs-secret SECRET`
+    - Secret name to any additional root CA certs
 
 For example, to target a specific combination of pipeline, FCOS config,
 cosa image, and bucket:

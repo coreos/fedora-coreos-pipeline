@@ -21,6 +21,9 @@ parameters:
   - description: Git branch/tag reference for Jenkins jobs
     name: JENKINS_JOBS_REF
     value: main
+  - description: Jenkins agent image to use
+    name: JENKINS_AGENT_IMAGE_TAG
+    value: base
   - description: Git source URI for FCOS config
     name: FCOS_CONFIG_URL
     value: https://github.com/coreos/fedora-coreos-config
@@ -86,3 +89,4 @@ objects:
       azure-testing-storage-container: ${AZURE_TESTING_STORAGE_CONTAINER}
       jenkins-jobs-url: ${JENKINS_JOBS_URL}
       jenkins-jobs-ref: ${JENKINS_JOBS_REF}
+      jenkins-agent-image-tag: ${JENKINS_AGENT_IMAGE_TAG}

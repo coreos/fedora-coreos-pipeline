@@ -83,6 +83,8 @@ def parse_args():
                         help="Pullspec to use for COSA image")
     parser.add_argument("--oc-cmd", default='oc',
                         help="The path to the oc binary")
+    parser.add_argument("--additional-root-ca-certs-secret", metavar='SECRET',
+                        help="Secret name to additional root CA certs")
     # XXX: to add as a mutually exclusive option with above
     # parser.add_argument("--cosa", metavar='<URL>[@REF]',
     #                     help="Repo and ref to use for COSA image",
@@ -100,6 +102,8 @@ def get_username():
 
 
 def process_template(args):
+    templates = ['pipeline.yaml', 'jenkins-s2i.yaml']
+
     params = {}
     if args.pipeline:
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_S2I'))
@@ -118,6 +122,10 @@ def process_template(args):
         params['AZURE_TESTING_STORAGE_ACCOUNT'] = args.azure_testing_storage_account
     if args.azure_testing_storage_container:
         params['AZURE_TESTING_STORAGE_CONTAINER'] = args.azure_testing_storage_container
+    if args.additional_root_ca_certs_secret:
+        params['ADDITIONAL_ROOT_CA_CERTS_SECRET'] = args.additional_root_ca_certs_secret
+        params['JENKINS_AGENT_IMAGE_TAG'] = "derived"
+        templates += ['jenkins-agent.yaml']
 
     print("Parameters:")
     for k, v in params.items():
@@ -129,7 +137,7 @@ def process_template(args):
         return [q for k, v in selected_params for q in ['--param', f'{k}={v}']]
 
     resources = []
-    for template in ['pipeline.yaml', 'jenkins-s2i.yaml']:
+    for template in templates:
         # we only want to pass the params which each template actually
         # supports, so filter it down for this specific template
         with open(f'manifests/{template}') as f:
