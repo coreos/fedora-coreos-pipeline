@@ -46,3 +46,22 @@ objects:
           name: jenkins:2
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
+
+  ### JENKINS AGENT ###
+
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-agent
+    spec:
+      lookupPolicy:
+        # this allows e.g. the pipeline to directly reference the imagestream
+        local: true
+      tags:
+        - name: base
+          from:
+            kind: ImageStreamTag
+            name: jenkins-agent-base:latest
+            namespace: openshift
+          referencePolicy:
+            type: Source

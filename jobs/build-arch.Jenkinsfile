@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, uploading
+def pipeutils, streams, official, uploading, jenkins_agent_image_tag
 def src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
@@ -13,6 +13,7 @@ node {
     src_config_url = pipecfg['source-config-url']
     src_config_ref = pipecfg['source-config-ref']
     s3_bucket = pipecfg['s3-bucket']
+    jenkins_agent_image_tag = pipecfg['jenkins-agent-image-tag']
 
     official = pipeutils.isOfficial()
     if (official) {
@@ -95,6 +96,7 @@ pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "1")
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
+pod = pod.replace("JENKINS_AGENT_IMAGE_TAG", jenkins_agent_image_tag)
 
 def podYaml = readYaml(text: pod);
 

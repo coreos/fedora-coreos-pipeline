@@ -12,7 +12,7 @@ spec:
   serviceAccountName: jenkins
   containers:
    - name: jnlp
-     image: quay.io/openshift/origin-jenkins-agent-base:latest
+     image: jenkins-agent:JENKINS_AGENT_IMAGE_TAG
      args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
    - name: coreos-assembler
      image: COREOS_ASSEMBLER_IMAGE
