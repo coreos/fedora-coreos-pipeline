@@ -1,19 +1,7 @@
 apiVersion: v1
 kind: Template
-labels:
-  app: fedora-coreos
-  template: fedora-coreos-jenkins-s2i-template
 metadata:
-  annotations:
-    description: |-
-      Jenkins S2I builder for Fedora CoreOS.
-    iconClass: icon-jenkins
-    openshift.io/display-name: Fedora CoreOS Jenkins S2I
-    openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/provider-display-name: Fedora CoreOS
-    tags: fcos,jenkins,fedora
-  name: fedora-coreos-jenkins-s2i
+  name: jenkins-s2i
 parameters:
   - description: Git source URI for Jenkins S2I
     name: JENKINS_S2I_URL
