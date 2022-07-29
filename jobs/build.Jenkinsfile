@@ -117,7 +117,18 @@ def pod_label = "cosa-${UUID.randomUUID().toString()}"
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
+// build lock: we don't want multiple concurrent builds for the same
+//             stream. This one goes first to make sure the release
+//             lock isn't attempted to be acquired until the previous
+//             build is done (and the previous build release job has
+//             already been kicked off and release lock taken by it).
+// release lock: we want to block future runs until the release job
+//               for this build (which gets started at the end of this
+//               build) is done. i.e. we don't want new x86_64 runs to
+//               start before the multi-arch jobs and the release job
+//               are done.
 lock(resource: "build-${params.STREAM}") {
+lock(resource: "release-${params.STREAM}") {
     currentBuild.description = "[${params.STREAM}] Running"
 
     podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
@@ -746,4 +757,4 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
     }}
-}}
+}}}
