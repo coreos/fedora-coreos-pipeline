@@ -82,10 +82,11 @@ storage:
       contents:
         inline: |
           [Unit]
-          Description=Prune Dangling Container Resources
+          Description=Prune Dangling and Expired Container Resources
           [Service]
           Type=oneshot
           ExecStart=podman image prune --force
+          ExecStart=podman image prune --all --force --filter until=48h
           ExecStart=podman container prune --force
           ExecStart=podman volume prune --force
     - path: /home/builder/.config/systemd/user/build-cosa.service
