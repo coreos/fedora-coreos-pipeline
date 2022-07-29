@@ -46,24 +46,3 @@ objects:
           name: jenkins:2
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
-
-  ### JENKINS SLAVE ###
-
-  # keep a local copy of the Jenkins slave image so we're not constantly pulling
-  # it each time from docker.io
-  - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      name: jenkins-slave-base-centos7
-    spec:
-      lookupPolicy:
-        # this allows e.g. the pipeline to directly reference the imagestream
-        local: true
-      tags:
-        - name: latest
-          from:
-            kind: DockerImage
-            # target :latest for now
-            name: docker.io/openshift/jenkins-slave-base-centos7:latest
-          importPolicy:
-            scheduled: true
