@@ -171,3 +171,87 @@ Once you are ready the old builder can be taken down:
 OLDINSTANCEID=<foo> # use `ibmcloud is instances` to find
 ibmcloud is instance-delete $OLDINSTANCEID
 ```
+
+### x86_64
+
+The x86_64 builder runs on an AWS node without `/dev/kvm` access. Right now this
+builder only builds the COSA container image and does not do FCOS builds so it
+doesn't need `/dev/kvm`. If that need changes then we can switch the instance type
+in the future.
+
+```bash
+# Add your credentials to the environment.
+HISTCONTROL='ignoreboth'
+ export AWS_DEFAULT_REGION=us-east-1
+ export AWS_ACCESS_KEY_ID=XXXX
+ export AWS_SECRET_ACCESS_KEY=YYYYYYYY
+```
+
+Create the Ignition config
+
+```bash
+cat builder-common.bu | butane --pretty --strict > builder-common.ign
+cat fcos-x86_64-builder.bu | butane --pretty --strict --files-dir=. > fcos-x86_64-builder.ign
+```
+
+Bring the instance up with appropriate details:
+
+```bash
+NAME='fcos-x86_64-builder'
+AMI='ami-068df0b4ca626835d'
+TYPE='c6a.xlarge'
+DISK='100'
+SUBNET='subnet-0732e4cda7466a2ae'
+SECURITY_GROUPS='sg-7d0b4c05'
+USERDATA="${PWD}/fcos-x86_64-builder.ign"
+aws ec2 run-instances                     \
+    --output json                         \
+    --image-id $AMI                       \
+    --instance-type $TYPE                 \
+    --subnet-id $SUBNET                   \
+    --security-group-ids $SECURITY_GROUPS \
+    --user-data "file://${USERDATA}"      \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${NAME}}]" \
+    --block-device-mappings "VirtualName=/dev/xvda,DeviceName=/dev/xvda,Ebs={VolumeSize=${DISK},VolumeType=gp3}" \
+    > out.json
+```
+
+Wait for the instance to come up and log in:
+
+```bash
+INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
+IP=$(aws ec2 describe-instances --instance-ids $INSTANCE --output json \
+     | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
+ssh "core@${IP}"
+```
+
+Make sure the instance came up fine:
+
+```bash
+sudo systemctl --failed
+```
+
+Now that the instance is up we can re-assign the floating IP address.
+This removes the IP from the existing instance (if there is one) so you'll
+want to make sure no jobs are currently running on the existing instance
+by checking to make sure Jenkins is idle (i.e. no build-cosa jobs are running).
+
+```bash
+# Grab the instance ID and associate the IP address
+INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
+EIP='34.199.112.205'
+EIPID='eipalloc-01bfbeca9d47b2202'
+aws ec2 associate-address --instance-id $INSTANCE --allow-reassociation --allocation-id $EIPID
+```
+
+Now you should be able to `ssh "core@${EIP}"`.
+
+NOTE: Just this once ignore the ssh host key changed warning if you see it.
+
+
+Once you are ready the old builder can be taken down:
+
+```
+OLDINSTANCEID=<foo> # use `aws ec2 describe-instances` to find
+aws ec2 terminate-instances --instance-ids $OLDINSTANCEID
+```

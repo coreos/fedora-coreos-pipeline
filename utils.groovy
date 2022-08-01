@@ -89,6 +89,11 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
 //    arch:  string -- The architecture of the desired host
 def withPodmanRemoteArchBuilder(params = [:], Closure body) {
     def arch = params['arch']
+    if (arch == "x86_64") {
+        // k8s secrets don't support undercores in the name so
+        // translate it to 'x86-64'
+        arch = "x86-64"
+    }
     withPodmanRemote(remoteHost: "fcos-${arch}-builder-host-string",
                      remoteUid:  "fcos-${arch}-builder-uid-string",
                      sshKey:     "fcos-${arch}-builder-sshkey-key") {
