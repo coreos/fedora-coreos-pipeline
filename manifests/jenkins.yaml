@@ -156,6 +156,9 @@ objects:
           - name: fcos-s390x-builder
             mountPath: /var/run/secrets/fcos-s390x-builder
             readOnly: true
+          - name: fcos-x86-64-builder
+            mountPath: /var/run/secrets/fcos-x86-64-builder
+            readOnly: true
           - name: oscontainer-secret
             mountPath: /var/run/secrets/oscontainer-secret
             readOnly: true
@@ -200,6 +203,10 @@ objects:
         - name: fcos-s390x-builder
           secret:
             secretName: fcos-s390x-builder
+            optional: true
+        - name: fcos-x86-64-builder
+          secret:
+            secretName: fcos-x86-64-builder
             optional: true
         - name: oscontainer-secret
           secret:
