@@ -58,6 +58,7 @@ pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
 
 // single CPU should be enough for this job
 pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "1")
+pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "1")
 
 echo "Final podspec: ${pod}"
 
