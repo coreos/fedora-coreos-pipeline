@@ -156,6 +156,9 @@ objects:
           - name: oscontainer-secret
             mountPath: /var/run/secrets/oscontainer-secret
             readOnly: true
+          - name: cosa-push-registry-secret
+            mountPath: /var/run/secrets/cosa-push-registry-secret
+            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -198,6 +201,10 @@ objects:
         - name: oscontainer-secret
           secret:
             secretName: oscontainer-secret
+            optional: true
+        - name: cosa-push-registry-secret
+          secret:
+            secretName: cosa-push-registry-secret
             optional: true
     triggers:
     - imageChangeParams:
