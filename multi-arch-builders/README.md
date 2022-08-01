@@ -53,21 +53,17 @@ IP=$(aws ec2 describe-instances --instance-ids $INSTANCE --output json \
 ssh "core@${IP}"
 ```
 
-Make sure the instance came up fine and wait for the COSA image build
-to complete:
+Make sure the instance came up fine:
 
 ```bash
 sudo systemctl --failed
-sudo machinectl shell builder@
-journalctl --user -f # to watch image build
-podman images # to view built image
 ```
 
-Now that the instance is up and COSA is built we can re-assign the
-floating IP address. This removes the IP from the existing instance
-(if there is one) so you'll want to make sure no jobs are currently
-running on the existing instance by checking to make sure Jenkins is
-idle (i.e. no multi-arch aarch64 jobs are running).
+Now that the instance is up we can re-assign the floating IP address.
+This removes the IP from the existing instance (if there is one) so you'll
+want to make sure no jobs are currently running on the existing instance
+by checking to make sure Jenkins is idle (i.e. no build-cosa or multi-arch
+aarch64 jobs are running).
 
 ```bash
 # Grab the instance ID and associate the IP address
@@ -145,21 +141,17 @@ echo "You can now SSH to core@${IP}"
 
 NOTE: Just this once ignore the ssh host key changed warning if you see it.
 
-Make sure the instance came up fine and wait for the COSA image build
-to complete:
+Make sure the instance came up fine:
 
 ```bash
 sudo systemctl --failed
-sudo machinectl shell builder@
-journalctl --user -f # to watch image build
-podman images # to view built image
 ```
 
-Now that the instance is up and COSA is built we can re-assign the
-floating IP address. This removes the IP from the existing instance
-(if there is one) so you'll want to make sure no jobs are currently
-running on the existing instance by checking to make sure Jenkins is
-idle (i.e. no multi-arch s390x jobs are running).
+Now that the instance is up we can re-assign the floating IP address.
+This removes the IP from the existing instance (if there is one) so you'll
+want to make sure no jobs are currently running on the existing instance
+by checking to make sure Jenkins is idle (i.e. no build-cosa or multi-arch
+s390x jobs are running).
 
 ```bash
 NIC=$(jq --raw-output .primary_network_interface.id out.json)

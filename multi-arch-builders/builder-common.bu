@@ -40,11 +40,6 @@ storage:
         name: builder
       group:
         name: builder
-    - path: /home/builder/.config/systemd/user/default.target.wants
-      user:
-        name: builder
-      group:
-        name: builder
     - path: /home/builder/.config/systemd/user/timers.target.wants
       user:
         name: builder
@@ -89,44 +84,6 @@ storage:
           ExecStart=podman image prune --all --force --filter until=48h
           ExecStart=podman container prune --force
           ExecStart=podman volume prune --force
-    - path: /home/builder/.config/systemd/user/build-cosa.service
-      mode: 0644
-      user:
-        name: builder
-      group:
-        name: builder
-      contents:
-        inline: |
-          [Unit]
-          Description=Build COSA container
-          [Service]
-          # Give time for the build to complete
-          TimeoutStartSec=180m
-          Type=oneshot
-          ExecStartPre=nm-online --timeout=30
-          ExecStartPre=mkdir -p /home/builder/coreos-assembler/
-          ExecStartPre=-git clone --depth=1 https://github.com/coreos/coreos-assembler.git /home/builder/coreos-assembler/
-          ExecStartPre=git -C /home/builder/coreos-assembler/ pull
-          ExecStart=podman build --pull-always -t localhost/coreos-assembler:latest /home/builder/coreos-assembler/
-    - path: /home/builder/.config/systemd/user/build-cosa-firstboot.service
-      mode: 0644
-      user:
-        name: builder
-      group:
-        name: builder
-      contents:
-        inline: |
-            [Unit]
-            Description=Build COSA on first boot
-            ConditionFirstBoot=yes
-            [Service]
-            # Give time for the build to complete
-            TimeoutStartSec=180m
-            Type=oneshot
-            RemainAfterExit=yes
-            ExecStart=systemctl --user start build-cosa.service
-            [Install]
-            WantedBy=default.target
     - path: /home/builder/.config/systemd/user/prune-container-resources.timer
       mode: 0644
       user:
@@ -141,35 +98,9 @@ storage:
             Persistent=true
             [Install]
             WantedBy=timers.target
-    - path: /home/builder/.config/systemd/user/build-cosa.timer
-      mode: 0644
-      user:
-        name: builder
-      group:
-        name: builder
-      contents:
-        inline: |
-            [Timer]
-            OnCalendar=*-*-* 04:00:00 UTC
-            AccuracySec=30m
-            Persistent=true
-            [Install]
-            WantedBy=timers.target
   links:
     - path: /home/builder/.config/systemd/user/timers.target.wants/prune-container-resources.timer
       target: /home/builder/.config/systemd/user/prune-container-resources.timer
-      user:
-        name: builder
-      group:
-        name: builder
-    - path: /home/builder/.config/systemd/user/default.target.wants/build-cosa-firstboot.service
-      target: /home/builder/.config/systemd/user/build-cosa-firstboot.service
-      user:
-        name: builder
-      group:
-        name: builder
-    - path: /home/builder/.config/systemd/user/timers.target.wants/build-cosa.timer
-      target: /home/builder/.config/systemd/user/build-cosa.timer
       user:
         name: builder
       group:
