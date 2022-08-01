@@ -90,6 +90,7 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 // the build-arch pod is mostly triggering the work on a remote node, so we
 // can be conservative with our request
 pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "1")
+pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "1")
 
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")

@@ -69,6 +69,7 @@ spec:
          devices.kubevirt.io/kvm: '1'
        limits:
          devices.kubevirt.io/kvm: '1'
+         cpu: COREOS_ASSEMBLER_CPU_LIMIT
   volumes:
   - name: srv
     emptyDir: {}
