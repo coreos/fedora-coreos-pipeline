@@ -142,30 +142,11 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         def newBuildID = params.VERSION
         def basearch = params.ARCH
 
-        // We currently have a limitation where we aren't building and
-        // pushing multi-arch COSA containers to quay. For multi-arch
-        // we're currently building images once a day on the local
-        // multi-arch builders. See https://github.com/coreos/coreos-assembler/issues/2470
-        //
-        // Until #2470 is resolved let's do the best thing we can do
-        // which is derive the multi-arch container name from the
-        // given x86_64 COSA container. We'll translate
-        // quay.io/coreos-assembler/coreos-assembler:$tag -> localhost/coreos-assembler:$tag
-        // This assumes that the desired tagged image has been built
-        // on the multi-arch builder already, which most likely means
-        // someone did it manually.
-        def image = "localhost/coreos-assembler:latest"
-        if (params.COREOS_ASSEMBLER_IMAGE.startsWith("quay.io/coreos-assembler/coreos-assembler:")) {
-            image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
-                "quay.io/coreos-assembler/coreos-assembler:",
-                "localhost/coreos-assembler:"
-            )
-        }
-        if (params.COREOS_ASSEMBLER_IMAGE.startsWith("registry.ci.openshift.org/coreos/coreos-assembler:")) {
-            image = params.COREOS_ASSEMBLER_IMAGE.replaceAll(
-                "registry.ci.openshift.org/coreos/coreos-assembler:",
-                "localhost/coreos-assembler:"
-            )
+        // If we are using the image stream (the default) then just translate
+        // that into 'quay.io/coreos-assembler/coreos-assembler:main'.
+        def image = params.COREOS_ASSEMBLER_IMAGE
+        if (image == "coreos-assembler:main") {
+            image = "quay.io/coreos-assembler/coreos-assembler:main"
         }
 
         try { timeout(time: 240, unit: 'MINUTES') {
