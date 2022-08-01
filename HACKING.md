@@ -246,12 +246,19 @@ uuidgen -r > secret
 oc create secret generic github-webhook-shared-secret --from-file=secret
 ```
 
-### [PROD] Create quay.io image push secret
+### [PROD] Create quay.io FCOS image push secret
 
 This secret is used to push the resulting OCI image to Quay.io
 
 1. Obtain the file `oscontainer-secret` from BitWarden.
 2. Run: `$ oc create secret generic oscontainer-secret --from-file=dockercfg=oscontainer-secret`.
+
+### [PROD] Create quay.io COSA image push secret
+
+This secret is used to push COSA container image builds to Quay.io
+
+1. Obtain the file `cosa-push-registry-secret` from BitWarden.
+2. Run: `$ oc create secret generic cosa-push-registry-secret --from-file=dockercfg=cosa-push-registry-secret`.
 
 ### [PROD] Create fedora-messaging configuration
 
