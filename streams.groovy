@@ -43,10 +43,6 @@ def get_push_trigger() {
     ]
 }
 
-// Returns true if the build was triggered by a push notification.
-def triggered_by_push() {
-    return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
-}
 
 // Starts a stream build.
 def build_stream(stream) {

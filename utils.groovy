@@ -112,4 +112,9 @@ def withExistingCosaRemoteSession(params = [:], Closure body) {
     }
 }
 
+// Returns true if the build was triggered by a push notification.
+def triggered_by_push() {
+    return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
+}
+
 return this
