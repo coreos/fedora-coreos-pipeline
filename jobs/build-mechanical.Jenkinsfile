@@ -1,6 +1,7 @@
-def streams
+def streams, pipeutils
 node {
     checkout scm
+    pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
 }
 
@@ -22,7 +23,7 @@ node {
         ]
     )
 
-    if (streams.triggered_by_push()) {
+    if (pipeutils.triggered_by_push()) {
         stream = streams.from_branch(change.GIT_BRANCH)
         if (stream != "") {
             streams.build_stream(stream)
