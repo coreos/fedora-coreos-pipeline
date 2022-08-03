@@ -84,7 +84,7 @@ currentBuild.description = "[${gitref}] Running"
 def basearches = params.ARCHES.split() as Set
 
 try {
-    lock(resource: "build-cosa-${gitref}") {
+    lock(resource: "build-cosa") {
     timeout(time: 60, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false) {
