@@ -150,7 +150,7 @@ try {
         currentBuild.description = "[${gitref}@${shortcommit}] ❌"
     }
     if (official && currentBuild.result != 'SUCCESS') {
-        message = ":fcos: :trashfire: build-cosa <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.COREOS_ASSEMBLER_GIT_REF}-${shortcommit}]"
+        message = ":fcos: :trashfire: build-cosa <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}-${shortcommit}]"
         slackSend(color: 'danger', message: message)
     }
 }
