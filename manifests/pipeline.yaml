@@ -29,9 +29,7 @@ parameters:
     value: # empty -> based on stream
   - description: Image of coreos-assembler to use
     name: COREOS_ASSEMBLER_IMAGE
-    # for now we just follow :latest, but we may start freezing if things become
-    # too unstable
-    value: registry.ci.openshift.org/coreos/coreos-assembler:latest
+    value: quay.io/coreos-assembler/coreos-assembler:main
   - description: AWS S3 bucket in which to store builds (or blank for none)
     name: S3_BUCKET
     value: fcos-builds
