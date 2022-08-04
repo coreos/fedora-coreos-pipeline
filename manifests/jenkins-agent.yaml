@@ -34,3 +34,7 @@ objects:
           name: jenkins-agent:derived
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
+      triggers:
+        - type: ConfigChange
+        - type: ImageChange
+          imageChange: {}
