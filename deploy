@@ -110,7 +110,7 @@ def process_template(args):
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_JOBS'))
     if args.config:
         params.update(params_from_git_refspec(args.config, 'FCOS_CONFIG'))
-    if args.bucket:
+    if args.bucket is not None:
         params['S3_BUCKET'] = args.bucket
     if args.cosa_img:
         params['COREOS_ASSEMBLER_IMAGE'] = args.cosa_img
