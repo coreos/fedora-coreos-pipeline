@@ -78,7 +78,7 @@ node {
     shortcommit = commit.substring(0,7)
 }
 
-currentBuild.description = "[${gitref}] Running"
+currentBuild.description = "[${gitref}@${shortcommit}] Waiting"
 
 // Get the list of requested architectures to build for
 def basearches = params.ARCHES.split() as Set
@@ -150,7 +150,7 @@ try {
         currentBuild.description = "[${gitref}@${shortcommit}] ❌"
     }
     if (official && currentBuild.result != 'SUCCESS') {
-        message = ":fcos: :trashfire: build-cosa <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}-${shortcommit}]"
+        message = ":fcos: :trashfire: build-cosa <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
         slackSend(color: 'danger', message: message)
     }
 }
