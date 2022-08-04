@@ -88,10 +88,16 @@ def strict_build_param = is_mechanical ? "" : "--strict"
 // workflow, only the qemu image is built).
 def cosa_memory_request_mb = 6.5 * 1024 as Integer
 
+// Now that we've established the memory constraint based on xz above, derive
+// kola parallelism from that. We leave 512M for overhead and VMs are 1G each
+// (in general; root reprovisioning tests require 4G which is partly why we run
+// them separately).
+def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
+
 // the build pod runs most frequently and does the majority of the computation
 // so give it some healthy CPU shares
-pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "4")
-pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "4")
+pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "${ncpus}")
+pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "${ncpus}")
 
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
@@ -354,10 +360,10 @@ lock(resource: "build-${params.STREAM}") {
 
         // Kola QEMU tests
         parallelruns['Kola:QEMU'] = {
-            // leave 512M for overhead & 1G for upgrade test; VMs are 1G each
-            def parallel = ((cosa_memory_request_mb - 1536) / 1024) as Integer
+            // remove 1 for upgrade test
+            def n = ncpus - 1
             shwrap("""
-            cosa kola run --rerun --parallel ${parallel} --no-test-exit-error
+            cosa kola run --rerun --parallel ${n} --no-test-exit-error
             cosa shell -- tar -c --xz tmp/kola/ > kola-run.tar.xz
             cosa shell -- cat tmp/kola/reports/report.json > report.json
             """)
