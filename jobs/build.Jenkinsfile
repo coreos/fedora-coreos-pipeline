@@ -363,11 +363,21 @@ lock(resource: "build-${params.STREAM}") {
             // remove 1 for upgrade test
             def n = ncpus - 1
             shwrap("""
-            cosa kola run --rerun --parallel ${n} --no-test-exit-error
+            cosa kola run --rerun --parallel ${n} --no-test-exit-error --tag '!reprovision'
             cosa shell -- tar -c --xz tmp/kola/ > kola-run.tar.xz
             cosa shell -- cat tmp/kola/reports/report.json > report.json
             """)
             archiveArtifacts "kola-run.tar.xz"
+            if (!pipeutils.checkKolaSuccess("report.json")) {
+                error('Kola:QEMU')
+            }
+            shwrap("""
+            cosa shell -- rm -rf tmp/kola
+            cosa kola run --rerun --no-test-exit-error --tag reprovision
+            cosa shell -- tar -c --xz tmp/kola/ > kola-run-reprovision.tar.xz
+            cosa shell -- cat tmp/kola/reports/report.json > report.json
+            """)
+            archiveArtifacts "kola-run-reprovision.tar.xz"
             if (!pipeutils.checkKolaSuccess("report.json")) {
                 error('Kola:QEMU')
             }
