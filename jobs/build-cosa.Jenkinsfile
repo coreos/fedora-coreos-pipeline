@@ -50,7 +50,7 @@ node {
         poll: false,
         scm: [
             $class: 'GitSCM',
-            branches: [[name: 'origin/rhcos*'], [name: 'origin/main']],
+            branches: [[name: 'origin/main']],
             userRemoteConfigs: [[url: 'https://github.com/coreos/coreos-assembler.git']],
             extensions: [[$class: 'CloneOption',
                           noTags: true,
