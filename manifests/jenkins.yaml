@@ -80,9 +80,6 @@ objects:
             value: ${ENABLE_FATAL_ERROR_LOG_FILE}
           - name: JENKINS_UC_INSECURE
             value: ${JENKINS_UC_INSECURE}
-          # DELTA: we want baked configs to always be applied on updates
-          - name: OVERRIDE_PV_CONFIG_WITH_IMAGE_CONFIG
-            value: "true"
           # DELTA: point c-as-c plugin to config map files; see below
           - name: CASC_JENKINS_CONFIG
             value: /var/lib/jenkins/configuration-as-code
