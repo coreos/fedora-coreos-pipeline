@@ -36,6 +36,9 @@ properties([
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
              trim: true),
+      booleanParam(name: 'FORCE',
+                   defaultValue: false,
+                   description: 'Whether to force a rebuild'),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -91,13 +94,15 @@ try {
 
         currentBuild.description = "[${gitref}@${shortcommit}] Running"
 
+        def force = params.FORCE ? "--force" : ""
+
         withCredentials([file(credentialsId: 'cosa-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
             stage('Build COSA') {
                 parallel basearches.collectEntries{arch -> [arch, {
                     pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                         shwrap("""
                         cosa remote-build-container \
-                            --arch $arch --git-ref $commit \
+                            --arch $arch --git-ref $commit ${force} \
                             --git-url ${params.COREOS_ASSEMBLER_GIT_URL} \
                             --repo ${params.CONTAINER_REGISTRY_STAGING_REPO} \
                             --push-to-registry --auth=\$REGISTRY_SECRET
