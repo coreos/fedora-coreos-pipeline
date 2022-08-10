@@ -118,7 +118,7 @@ try {
                     images += " --image=docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}"
                 }
                 shwrap("""
-                cosa push-container-manifest \
+                cosa push-container-manifest --v2s2 \
                     --auth=\$REGISTRY_SECRET --tag ${gitref} \
                     --repo ${params.CONTAINER_REGISTRY_REPO} ${images}
                 """)
