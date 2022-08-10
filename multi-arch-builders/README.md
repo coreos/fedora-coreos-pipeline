@@ -85,6 +85,24 @@ OLDINSTANCEID=<foo> # use `aws ec2 describe-instances` to find
 aws ec2 terminate-instances --instance-ids $OLDINSTANCEID
 ```
 
+### ppc64le
+
+This machine is a VM on a koji builder set up for us by Kevin Fenzi
+(nirik). We'll work to automate this bringup and store the information
+about how to provision this machine here in the future.
+
+To connect to this machine first add 
+[custom ssh configuration](https://docs.fedoraproject.org/en-US/infra/sysadmin_guide/sshaccess/#_ssh_configuration)
+for connecting to machines via Fedora bastion hosts.
+
+When done, tweak the list of `10.3.*` addresses in the list to include
+`10.3.171.*`. Then you should be able to connect:
+
+```
+ssh core@10.3.171.40
+```
+
+
 ### s390x
 
 We use an s390x instance in IBM Cloud to do our builds and tests. First get an

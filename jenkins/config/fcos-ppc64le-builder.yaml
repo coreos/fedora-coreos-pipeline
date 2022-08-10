@@ -1,0 +1,27 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: fcos-ppc64le-builder-host-string
+            secret: ${fcos-ppc64le-builder/host}
+            description: FCOS ppc64le Builder Host
+        - string:
+            scope: GLOBAL
+            id: fcos-ppc64le-builder-user-string
+            secret: ${fcos-ppc64le-builder/user}
+            description: FCOS ppc64le Builder User
+        - string:
+            scope: GLOBAL
+            id: fcos-ppc64le-builder-uid-string
+            secret: ${fcos-ppc64le-builder/uid}
+            description: FCOS ppc64le Builder UID
+        - basicSSHUserPrivateKey:
+            scope: GLOBAL
+            id: fcos-ppc64le-builder-sshkey-key
+            username: builder
+            description: FCOS ppc64le Builder SSH Key
+            privateKeySource:
+              directEntry:
+                privateKey: "${readFile:${fcos-ppc64le-builder/sshkey}}"
