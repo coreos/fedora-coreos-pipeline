@@ -401,7 +401,7 @@ lock(resource: "build-${params.STREAM}") {
             } catch(e) {
                 if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
                     warnError(message: 'Upgrade Failed') {
-                        error(e)
+                        error(e.getMessage())
                     }
                 } else {
                     throw e
