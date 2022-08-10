@@ -150,6 +150,9 @@ objects:
           - name: fcos-aarch64-builder
             mountPath: /var/run/secrets/fcos-aarch64-builder
             readOnly: true
+          - name: fcos-ppc64le-builder
+            mountPath: /var/run/secrets/fcos-ppc64le-builder
+            readOnly: true
           - name: fcos-s390x-builder
             mountPath: /var/run/secrets/fcos-s390x-builder
             readOnly: true
@@ -196,6 +199,10 @@ objects:
         - name: fcos-aarch64-builder
           secret:
             secretName: fcos-aarch64-builder
+            optional: true
+        - name: fcos-ppc64le-builder
+          secret:
+            secretName: fcos-ppc64le-builder
             optional: true
         - name: fcos-s390x-builder
           secret:

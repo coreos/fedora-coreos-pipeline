@@ -1,0 +1,24 @@
+# This butane config will do the following:
+#
+# - Merge in the builder-common.ign Ignition file
+# - Allow the builder user to log in with the associated ssh key
+# - Set a hostname
+#
+variant: fcos
+version: 1.4.0
+ignition:
+  config:
+    merge:
+      - local: builder-common.ign
+passwd:
+  users:
+    - name: builder
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsZ+IH1M1TWoBXz5uRe03gmk8waNrij0sDrPgTTb/rf builder@fcos-ppc64le-builder
+storage:
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: buildvm-ppc64le-fcos01.iad2.fedoraproject.org
