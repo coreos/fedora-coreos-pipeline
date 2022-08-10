@@ -35,7 +35,13 @@ parameters:
     value: quay.io/coreos-assembler/coreos-assembler:main
   - description: AWS S3 bucket in which to store builds (or blank for none)
     name: S3_BUCKET
-    value: fcos-builds
+    value: ''
+  - description: Brew principle to be used (or blank for none)
+    name: BREW_PRINCIPLE
+    value: ''
+  - description: Brew profile to be used (or blank for none)
+    name: BREW_PROFILE
+    value: ''
   - description: GCP GS bucket to use for image uploads (or blank for none)
     name: GCP_GS_BUCKET
     value: fedora-coreos-cloud-image-uploads
@@ -83,6 +89,8 @@ objects:
       source-config-url: ${FCOS_CONFIG_URL}
       source-config-ref: ${FCOS_CONFIG_REF}
       s3-bucket: ${S3_BUCKET}
+      brew-principle : ${BREW_PRINCIPLE}
+      brew-profile: ${BREW_PROFILE}
       gcp-gs-bucket: ${GCP_GS_BUCKET}
       azure-testing-resource-group: ${AZURE_TESTING_RESOURCE_GROUP}
       azure-testing-storage-account: ${AZURE_TESTING_STORAGE_ACCOUNT}
