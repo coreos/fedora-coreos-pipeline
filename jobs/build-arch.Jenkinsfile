@@ -441,6 +441,8 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             def artifacts
             if (basearch == "aarch64") {
                 artifacts = ["OpenStack"]
+            } else if (basearch == "ppc64le") {
+                artifacts = ["OpenStack", "PowerVS"]
             } else if (basearch == "s390x") {
                 artifacts = ["IBMCloud", "OpenStack"]
             }
