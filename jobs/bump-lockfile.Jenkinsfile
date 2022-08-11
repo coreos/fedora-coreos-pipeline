@@ -346,7 +346,11 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
+    def color = 'danger'
+    if (currentBuild.result == 'UNSTABLE') {
+        color = 'warning'
+    }
     if (official && currentBuild.result != 'SUCCESS') {
-        slackSend(color: 'danger', message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
+        slackSend(color: color, message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
     }
 }
