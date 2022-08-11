@@ -742,6 +742,9 @@ lock(resource: "build-${params.STREAM}") {
                 }
                 message = ":fcos: :sparkles: ${message} - SUCCESS"
                 color = 'good';
+            } else if (currentBuild.result == 'UNSTABLE') {
+                message = ":fcos: :warning: ${message} - WARNING"
+                color = 'warning';
             } else {
                 message = ":fcos: :trashfire: ${message} - FAILURE"
                 color = 'danger';
