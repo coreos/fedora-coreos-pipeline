@@ -54,7 +54,7 @@ node {
         scm: [
             $class: 'GitSCM',
             branches: [[name: 'origin/main']],
-            userRemoteConfigs: [[url: 'https://github.com/coreos/coreos-assembler.git']],
+            userRemoteConfigs: [[url: params.COREOS_ASSEMBLER_GIT_URL]],
             extensions: [[$class: 'CloneOption',
                           noTags: true,
                           reference: '',
