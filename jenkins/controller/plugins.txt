@@ -13,3 +13,4 @@ workflow-api:1153.vb_912c0e47fb_a_
 ssh-credentials:277.v95c2fec1c047
 pipeline-github:2.8-138.d766e30bb08b
 pipeline-utility-steps:2.12.1
+kubernetes-credentials-provider:0.20
