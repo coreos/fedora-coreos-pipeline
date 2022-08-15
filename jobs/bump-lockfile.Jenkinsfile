@@ -51,8 +51,13 @@ def getLockfileInfo(lockfile) {
     return [pkgChecksum, pkgTimestamp]
 }
 
+// Keep in sync with build.Jenkinsfile
+def cosa_memory_request_mb = 6.5 * 1024 as Integer
+def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
+
 try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { 
-    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE) {
+    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE
+            cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi") {
     currentBuild.description = "[${params.STREAM}] Running"
 
     // set up git user upfront
@@ -201,13 +206,23 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                         }
                     }
                     parallelruns["${arch}:Kola"] = {
+                        def n = ncpus - 1 // remove 1 for upgrade test
                         shwrap("""
-                        cosa kola run --rerun --parallel 5 --no-test-exit-error
+                        cosa kola run --rerun --parallel ${n} --no-test-exit-error --tag '!reprovision'
                         cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
                         cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
                         """)
                         archiveArtifacts "kola-run.${arch}.tar.xz"
                         if (!pipeutils.checkKolaSuccess("report-kola.${arch}.json")) {
+                            error("${arch}:Kola")
+                        }
+                        shwrap("""
+                        cosa kola run --rerun --no-test-exit-error --tag reprovision
+                        cosa shell -- tar -c --xz tmp/kola/ > kola-run-reprovision.${arch}.tar.xz
+                        cosa shell -- cat tmp/kola/reports/report.json > report-kola-reprovision.${arch}.json
+                        """)
+                        archiveArtifacts "kola-run-reprovision.${arch}.tar.xz"
+                        if (!pipeutils.checkKolaSuccess("report-kola-reprovision.${arch}.json")) {
                             error("${arch}:Kola")
                         }
                     }
