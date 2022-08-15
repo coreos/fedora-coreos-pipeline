@@ -14,7 +14,7 @@ properties([
     parameters([
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64 ppc64le" + " " + streams.additional_arches.join(" "),
+             defaultValue: "x86_64" + " " + streams.additional_arches.join(" "),
              trim: true),
       string(name: 'COREOS_ASSEMBLER_GIT_URL',
              description: 'Override the coreos-assembler git repo to use',
