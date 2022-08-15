@@ -208,7 +208,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                     parallelruns["${arch}:Kola"] = {
                         def n = ncpus - 1 // remove 1 for upgrade test
                         shwrap("""
-                        cosa kola run --rerun --parallel ${n} --no-test-exit-error --tag '!reprovision'
+                        cosa kola run --rerun --parallel ${n} --no-test-exit-error --denylist-test basic  --tag '!reprovision'
                         cosa shell -- tar -c --xz tmp/kola/ > kola-run.${arch}.tar.xz
                         cosa shell -- cat tmp/kola/reports/report.json > report-kola.${arch}.json
                         """)

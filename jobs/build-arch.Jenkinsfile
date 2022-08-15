@@ -380,7 +380,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         // Kola QEMU tests
         parallelruns['Kola:QEMU'] = {
             shwrap("""
-            cosa kola run --rerun --parallel 5 --no-test-exit-error --tag '!reprovision'
+            cosa kola run --rerun --parallel 5 --no-test-exit-error --denylist-test basic  --tag '!reprovision'
             cosa shell -- tar -c --xz tmp/kola/ > kola-run.tar.xz
             cosa shell -- cat tmp/kola/reports/report.json > report.json
             """)
