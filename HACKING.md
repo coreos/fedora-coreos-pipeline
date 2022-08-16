@@ -295,6 +295,31 @@ echo $coreosbot_token > token
 oc create secret generic github-coreosbot-token --from-file=token
 ```
 
+### [PROD, OPTIONAL] Create additional root CA certificate secret
+
+If an additional root CA certificate is needed, create it as
+a secret:
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: additional-root-ca-cert
+  labels:
+    jenkins.io/credentials-type: "secretFile"
+  annotations:
+    jenkins.io/credentials-description: "Root certificate for XXX"
+type: Opaque
+stringData:
+  filename: ca.crt
+data:
+  data: |
+    # output of $(base64 < ca.crt)
+```
+
+The description can be customized. All other fields must be
+exactly as is.
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 ```
@@ -340,8 +365,8 @@ circumstances. Below are some of the options. To see more run
     - Image of coreos-assembler to use.
 - `--bucket BUCKET`
     - AWS S3 bucket in which to store builds (or blank for none).
-- `--additional-root-ca-certs-secret SECRET`
-    - Secret name to any additional root CA certs
+- `--additional-root-ca-cert-secret SECRET`
+    - Secret name to any additional root CA cert
 
 For example, to target a specific combination of pipeline, FCOS config,
 cosa image, and bucket:
@@ -367,6 +392,12 @@ We can now start a build of the Jenkins controller:
 
 ```
 oc start-build --follow jenkins
+```
+
+If a root CA cert was provided, also start a build of the Jenkins agent:
+
+```
+oc start-build --follow jenkins-agent
 ```
 
 Once the Jenkins controller image is built, Jenkins should start up (verify
