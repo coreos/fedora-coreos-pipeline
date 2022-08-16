@@ -85,10 +85,6 @@ def parse_args():
                         help="The path to the oc binary")
     parser.add_argument("--additional-root-ca-certs-secret", metavar='SECRET',
                         help="Secret name to additional root CA certs")
-    # XXX: to add as a mutually exclusive option with above
-    # parser.add_argument("--cosa", metavar='<URL>[@REF]',
-    #                     help="Repo and ref to use for COSA image",
-    #                     default=DEFAULT_COSA_IMG)
 
     args = parser.parse_args()
 
