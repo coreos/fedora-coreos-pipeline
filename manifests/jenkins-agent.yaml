@@ -3,9 +3,9 @@ kind: Template
 metadata:
   name: jenkins-agent
 parameters:
-  - description: Secret name containing any additional root CA certificates
-    name: ADDITIONAL_ROOT_CA_CERTS_SECRET
-    value: additional-root-ca-certs
+  - description: Secret name containing any additional root CA certificate
+    name: ADDITIONAL_ROOT_CA_CERT_SECRET
+    value: additional-root-ca-cert
 objects:
   - kind: BuildConfig
     apiVersion: v1
@@ -15,12 +15,12 @@ objects:
       source:
         dockerfile: |
           FROM overridden
-          COPY certs/* /etc/pki/ca-trust/source/anchors/
+          COPY certs/data /etc/pki/ca-trust/source/anchors/root-ca.crt
           RUN update-ca-trust
         secrets:
           - destinationDir: certs
             secret:
-              name: ${ADDITIONAL_ROOT_CA_CERTS_SECRET}
+              name: ${ADDITIONAL_ROOT_CA_CERT_SECRET}
       strategy:
         dockerStrategy:
           from:
