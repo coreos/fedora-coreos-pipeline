@@ -1,3 +1,4 @@
+import org.jenkinsci.plugins.credentialsbinding.impl.CredentialNotFoundException
 import org.yaml.snakeyaml.Yaml
 
 // Only add pipeline-specific things here. Otherwise add to coreos-ci-lib
@@ -120,6 +121,17 @@ def withExistingCosaRemoteSession(params = [:], Closure body) {
 // Returns true if the build was triggered by a push notification.
 def triggered_by_push() {
     return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
+}
+
+// Runs closure if credentials exist, otherwise gracefully return.
+def tryWithCredentials(creds, Closure body) {
+    try {
+        withCredentials(creds) {
+            body()
+        }
+    } catch (CredentialNotFoundException e) {
+        echo("${e.getMessage()}: skipping")
+    }
 }
 
 return this
