@@ -134,4 +134,14 @@ def tryWithCredentials(creds, Closure body) {
     }
 }
 
+// Injects the root CA cert into the cosa pod if available.
+def addOptionalRootCA() {
+    tryWithCredentials([file(credentialsId: 'additional-root-ca-cert', variable: 'ROOT_CA')]) {
+        shwrap('''
+            cp $ROOT_CA /etc/pki/ca-trust/source/anchors/
+            /usr/lib/coreos-assembler/update-ca-trust-unpriv
+        ''')
+    }
+}
+
 return this
