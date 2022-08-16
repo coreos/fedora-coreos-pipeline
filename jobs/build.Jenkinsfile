@@ -137,6 +137,9 @@ lock(resource: "build-${params.STREAM}") {
         cat /cosa/coreos-assembler-git.json
         """)
 
+        // add any additional root CA cert before we do anything that fetches
+        pipeutils.addOptionalRootCA()
+
         // declare these early so we can use them in `finally` block
         def newBuildID
         def basearch = shwrapCapture("cosa basearch")

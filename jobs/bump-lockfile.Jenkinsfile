@@ -61,6 +61,9 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi") {
     currentBuild.description = "[${params.STREAM}] Running"
 
+    // add any additional root CA cert before we do anything that fetches
+    pipeutils.addOptionalRootCA()
+
     // set up git user upfront
     shwrap("""
       git config --global user.name "CoreOS Bot"
