@@ -56,7 +56,7 @@ def cosa_memory_request_mb = 6.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
 
 try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { 
-    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE
+    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi") {
     currentBuild.description = "[${params.STREAM}] Running"
 
