@@ -1,8 +1,9 @@
-def pipeutils, streams, official
+def pipeutils, streams, official, arches
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
+    arches = streams.additional_arches.plus("x86_64")
     def pipecfg = pipeutils.load_config()
     official = pipeutils.isOfficial()
 }
@@ -73,7 +74,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     shwrap("cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}")
 
     def lockfile, pkgChecksum, pkgTimestamp
-    def archinfo = [x86_64: [:], aarch64: [:], s390x: [:]]
+    def archinfo = arches.collectEntries{[it, [:]]}
     for (architecture in archinfo.keySet()) {
         def arch = architecture
         // initialize some data
