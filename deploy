@@ -91,8 +91,6 @@ def parse_args():
                         help="Pullspec to use for COSA image")
     parser.add_argument("--oc-cmd", default='oc',
                         help="The path to the oc binary")
-    parser.add_argument("--additional-root-ca-cert-secret", metavar='SECRET',
-                        help="Secret name to additional root CA cert")
 
     args = parser.parse_args()
 
@@ -125,8 +123,7 @@ def process_template(args):
         params['AZURE_TESTING_STORAGE_ACCOUNT'] = args.azure_testing_storage_account
     if args.azure_testing_storage_container:
         params['AZURE_TESTING_STORAGE_CONTAINER'] = args.azure_testing_storage_container
-    if args.additional_root_ca_cert_secret:
-        params['ADDITIONAL_ROOT_CA_CERT_SECRET'] = args.additional_root_ca_cert_secret
+    if has_additional_root_ca(args):
         params['JENKINS_AGENT_IMAGE_TAG'] = "derived"
         templates += ['jenkins-agent.yaml']
 
@@ -153,6 +150,12 @@ def process_template(args):
             param_args))
         resources += j['items']
     return resources
+
+
+def has_additional_root_ca(args):
+    secrets = subprocess.check_output([args.oc_cmd, 'get', 'secrets', '-o=name'],
+                                      encoding='utf-8').splitlines()
+    'secret/additional-root-ca-cert' in secrets
 
 
 def update_resources(args, resources):

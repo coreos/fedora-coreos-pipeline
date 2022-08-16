@@ -365,8 +365,6 @@ circumstances. Below are some of the options. To see more run
     - Image of coreos-assembler to use.
 - `--bucket BUCKET`
     - AWS S3 bucket in which to store builds (or blank for none).
-- `--additional-root-ca-cert-secret SECRET`
-    - Secret name to any additional root CA cert
 
 For example, to target a specific combination of pipeline, FCOS config,
 cosa image, and bucket:
@@ -385,8 +383,9 @@ This will create:
 
 1. the Jenkins controller imagestream,
 2. the Jenkins agent imagestream,
-3. the coreos-assembler imagestream, and
-4. the pipeline-config configmap.
+3. the Jenkins agent BuildConfig (if a root CA cert was provided),
+4. the coreos-assembler imagestream, and
+5. the pipeline-config configmap.
 
 We can now start a build of the Jenkins controller:
 
