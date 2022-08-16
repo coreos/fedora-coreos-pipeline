@@ -38,11 +38,12 @@ def main():
     resources = process_template(args)
     update_resources(args, resources)
 
+
 def targeting_official_namespace(args):
-    ctx_name = subprocess.check_output([args.oc_cmd, 'config', 'current-context'],
-                                       encoding='utf-8').strip()
-    cfg = yaml.safe_load(subprocess.check_output([args.oc_cmd, 'config', 'view'],
-                                                 encoding='utf-8'))
+    ctx_name = subprocess.check_output(
+        [args.oc_cmd, 'config', 'current-context'], encoding='utf-8').strip()
+    cfg = yaml.safe_load(subprocess.check_output(
+        [args.oc_cmd, 'config', 'view'], encoding='utf-8'))
     ctx = [c['context'] for c in cfg['contexts'] if c['name'] == ctx_name]
     assert len(ctx) == 1, f"Found {len(ctx)} contexts named '{ctx_name}'"
     ctx = ctx[0]
@@ -70,15 +71,22 @@ def parse_args():
     parser.add_argument("--config", metavar='<URL>[@REF]',
                         help="Repo and ref to use for FCOS config")
     parser.add_argument("--bucket", metavar='BUCKET',
-                        help="AWS S3 bucket to use")
+                        help="AWS S3 bucket to use for build uploads")
     parser.add_argument("--gcp-gs-bucket", metavar='GCP_GS_BUCKET',
-                        help="GCP GS bucket to use for image uploads during import")
-    parser.add_argument("--azure-testing-resource-group", metavar='AZURE_TESTING_RESOURCE_GROUP',
-                        help="Azure resource group to use for testing")
-    parser.add_argument("--azure-testing-storage-account", metavar='AZURE_TESTING_STORAGE_ACCOUNT',
-                        help="Azure storage account to use for testing image uploads")
-    parser.add_argument("--azure-testing-storage-container", metavar='AZURE_TESTING_STORAGE_CONTAINER',
-                        help="Azure storage container to use for testing image uploads")
+                        help="GCP GS bucket to use for image uploads "
+                             "during import")
+    parser.add_argument("--azure-testing-resource-group",
+                        metavar='AZURE_TESTING_RESOURCE_GROUP',
+                        help="Azure resource group for image uploads "
+                             "for kola tests")
+    parser.add_argument("--azure-testing-storage-account",
+                        metavar='AZURE_TESTING_STORAGE_ACCOUNT',
+                        help="Azure storage account for image uploads "
+                             "for kola tests")
+    parser.add_argument("--azure-testing-storage-container",
+                        metavar='AZURE_TESTING_STORAGE_CONTAINER',
+                        help="Azure storage container for image uploads "
+                             "for kola tests")
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
     parser.add_argument("--oc-cmd", default='oc',
@@ -87,7 +95,6 @@ def parse_args():
                         help="Secret name to additional root CA certs")
 
     args = parser.parse_args()
-
 
     return args
 
@@ -142,7 +149,8 @@ def process_template(args):
         # and generate the --param FOO=bar ... args for this template
         param_args = gen_param_args(tparams)
         j = json.loads(subprocess.check_output(
-            [args.oc_cmd, 'process', '--filename', f'manifests/{template}'] + param_args))
+            [args.oc_cmd, 'process', '--filename', f'manifests/{template}'] +
+            param_args))
         resources += j['items']
     return resources
 
@@ -154,7 +162,8 @@ def update_resources(args, resources):
         if action == 'skip':
             continue
         if args.dry_run:
-            print(f"Would {action} {resource['kind'].lower()} {resource['metadata']['name']}")
+            kind = resource['kind'].lower()
+            print(f"Would {action} {kind} {resource['metadata']['name']}")
             continue
         out = subprocess.run([args.oc_cmd, action, '--filename', '-'],
                              input=json.dumps(resource), encoding='utf-8',
@@ -180,7 +189,6 @@ def resource_exists(args, resource):
                             resource['metadata']['name']],
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL) == 0
-
 
 
 def params_from_git_refspec(refspec, param_prefix):
