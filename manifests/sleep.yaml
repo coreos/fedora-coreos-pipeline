@@ -11,5 +11,16 @@ spec:
      workingDir: /srv/
      command: ['/usr/bin/dumb-init']
      args: ['sleep', 'infinity']
+     volumeMounts:
+     - name: srv
+       mountPath: /srv/
      securityContext:
        privileged: false
+     resources:
+       requests:
+         devices.kubevirt.io/kvm: '1'
+       limits:
+         devices.kubevirt.io/kvm: '1'
+  volumes:
+  - name: srv
+    emptyDir: {}
