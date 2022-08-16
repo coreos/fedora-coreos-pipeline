@@ -1,11 +1,11 @@
+# This template is instantiated only if an additional root CA is needed. Note it
+# doesn't actually need to be a template (there are no parameters), but the way
+# `deploy` currently works expects it as a template.
+
 apiVersion: v1
 kind: Template
 metadata:
   name: jenkins-agent
-parameters:
-  - description: Secret name containing any additional root CA certificate
-    name: ADDITIONAL_ROOT_CA_CERT_SECRET
-    value: additional-root-ca-cert
 objects:
   - kind: BuildConfig
     apiVersion: v1
@@ -20,7 +20,7 @@ objects:
         secrets:
           - destinationDir: certs
             secret:
-              name: ${ADDITIONAL_ROOT_CA_CERT_SECRET}
+              name: additional-root-ca-cert
       strategy:
         dockerStrategy:
           from:
