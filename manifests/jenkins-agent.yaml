@@ -15,10 +15,10 @@ objects:
       source:
         dockerfile: |
           FROM overridden
-          COPY certs/data /etc/pki/ca-trust/source/anchors/root-ca.crt
+          COPY cert/data /etc/pki/ca-trust/source/anchors/root-ca.crt
           RUN update-ca-trust
         secrets:
-          - destinationDir: certs
+          - destinationDir: cert
             secret:
               name: additional-root-ca-cert
       strategy:
