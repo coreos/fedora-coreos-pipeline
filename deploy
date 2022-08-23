@@ -155,7 +155,7 @@ def process_template(args):
 def has_additional_root_ca(args):
     secrets = subprocess.check_output([args.oc_cmd, 'get', 'secrets', '-o=name'],
                                       encoding='utf-8').splitlines()
-    'secret/additional-root-ca-cert' in secrets
+    return 'secret/additional-root-ca-cert' in secrets
 
 
 def update_resources(args, resources):
