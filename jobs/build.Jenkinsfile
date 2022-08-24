@@ -531,7 +531,7 @@ lock(resource: "build-${params.STREAM}") {
             // Key off of uploading: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
-            if (uploading && !is_mechanical) {
+            if (uploading) {
                 parallelruns['Upload AWS'] = {
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
@@ -551,7 +551,7 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             // If there is a config for GCP then we'll upload our image to GCP
-            if (uploading && !is_mechanical && utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
+            if (uploading && utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
                 parallelruns['Upload GCP'] = {
                     shwrap("""
                     # pick up the project to use from the config
@@ -646,7 +646,7 @@ lock(resource: "build-${params.STREAM}") {
         parallelruns = [:]
 
         if (!params.MINIMAL && uploading &&
-                utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}") && !is_mechanical) {
+                utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
             parallelruns['Kola:AWS'] = {
                 // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-aws', wait: false, parameters: [
@@ -670,7 +670,7 @@ lock(resource: "build-${params.STREAM}") {
           //}
         }
         if (!params.MINIMAL && uploading &&
-                utils.pathExists("\${AZURE_KOLA_TESTS_CONFIG}") && !is_mechanical) {
+                utils.pathExists("\${AZURE_KOLA_TESTS_CONFIG}")) {
             parallelruns['Kola:Azure'] = {
                 // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-azure', wait: false, parameters: [
@@ -682,7 +682,7 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
         if (!params.MINIMAL && uploading &&
-                utils.pathExists("\${GCP_KOLA_TESTS_CONFIG}") && !is_mechanical) {
+                utils.pathExists("\${GCP_KOLA_TESTS_CONFIG}")) {
             parallelruns['Kola:GCP'] = {
                 // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-gcp', wait: false, parameters: [
@@ -694,7 +694,7 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
         if (!params.MINIMAL && uploading &&
-                utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}") && !is_mechanical) {
+                utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}")) {
             parallelruns['Kola:OpenStack'] = {
                 // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-openstack', wait: false, parameters: [
