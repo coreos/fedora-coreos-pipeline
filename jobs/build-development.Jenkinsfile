@@ -1,11 +1,12 @@
-def streams
+def streams, pipeutils
 node {
     checkout scm
+    pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
 }
 
 properties([
-    pipelineTriggers(streams.get_push_trigger()),
+    pipelineTriggers(pipeutils.get_push_trigger()),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
@@ -15,12 +16,14 @@ node {
          userRemoteConfigs: [
             [url: 'https://github.com/coreos/fedora-coreos-config']
          ],
-         branches: streams.as_branches(streams.development)
+         branches: pipeutils.streams_as_branches(streams.development)
         ]
     )
 
-    stream = streams.from_branch(change.GIT_BRANCH)
-    if (stream != "") {
-        streams.build_stream(stream)
+    stream = pipeutils.stream_from_branch(change.GIT_BRANCH)
+    if (stream in streams.development) {
+        build job: 'build', wait: false, parameters: [
+          string(name: 'STREAM', value: stream)
+        ]
     }
 }
