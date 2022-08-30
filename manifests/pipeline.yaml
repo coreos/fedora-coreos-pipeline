@@ -24,30 +24,9 @@ parameters:
   - description: Jenkins agent image to use
     name: JENKINS_AGENT_IMAGE_TAG
     value: base
-  - description: Git source URI for FCOS config
-    name: FCOS_CONFIG_URL
-    value: https://github.com/coreos/fedora-coreos-config
-  - description: Git branch/tag reference for FCOS config
-    name: FCOS_CONFIG_REF
-    value: # empty -> based on stream
   - description: Image of coreos-assembler to use
     name: COREOS_ASSEMBLER_IMAGE
     value: quay.io/coreos-assembler/coreos-assembler:main
-  - description: AWS S3 bucket in which to store builds (or blank for none)
-    name: S3_BUCKET
-    value: fcos-builds
-  - description: GCP GS bucket to use for image uploads (or blank for none)
-    name: GCP_GS_BUCKET
-    value: fedora-coreos-cloud-image-uploads
-  - description: Azure resource group to use for testing
-    name: AZURE_TESTING_RESOURCE_GROUP
-    value: fedora-coreos-testing
-  - description: Azure storage account to use for testing image uploads
-    name: AZURE_TESTING_STORAGE_ACCOUNT
-    value: fedoracoreostesting
-  - description: Azure storage container to use for testing image uploads
-    name: AZURE_TESTING_STORAGE_CONTAINER
-    value: fedora-coreos-testing-image-blobs
 
 objects:
 
@@ -85,13 +64,6 @@ objects:
     metadata:
       name: jenkins-config
     data:
-      source-config-url: ${FCOS_CONFIG_URL}
-      source-config-ref: ${FCOS_CONFIG_REF}
-      s3-bucket: ${S3_BUCKET}
-      gcp-gs-bucket: ${GCP_GS_BUCKET}
-      azure-testing-resource-group: ${AZURE_TESTING_RESOURCE_GROUP}
-      azure-testing-storage-account: ${AZURE_TESTING_STORAGE_ACCOUNT}
-      azure-testing-storage-container: ${AZURE_TESTING_STORAGE_CONTAINER}
       jenkins-jobs-url: ${JENKINS_JOBS_URL}
       jenkins-jobs-ref: ${JENKINS_JOBS_REF}
       jenkins-agent-image-tag: ${JENKINS_AGENT_IMAGE_TAG}

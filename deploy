@@ -70,23 +70,6 @@ def parse_args():
                         help="Repo and ref to use for pipeline code")
     parser.add_argument("--config", metavar='<URL>[@REF]',
                         help="Repo and ref to use for FCOS config")
-    parser.add_argument("--bucket", metavar='BUCKET',
-                        help="AWS S3 bucket to use for build uploads")
-    parser.add_argument("--gcp-gs-bucket", metavar='GCP_GS_BUCKET',
-                        help="GCP GS bucket to use for image uploads "
-                             "during import")
-    parser.add_argument("--azure-testing-resource-group",
-                        metavar='AZURE_TESTING_RESOURCE_GROUP',
-                        help="Azure resource group for image uploads "
-                             "for kola tests")
-    parser.add_argument("--azure-testing-storage-account",
-                        metavar='AZURE_TESTING_STORAGE_ACCOUNT',
-                        help="Azure storage account for image uploads "
-                             "for kola tests")
-    parser.add_argument("--azure-testing-storage-container",
-                        metavar='AZURE_TESTING_STORAGE_CONTAINER',
-                        help="Azure storage container for image uploads "
-                             "for kola tests")
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
     parser.add_argument("--oc-cmd", default='oc',
@@ -111,18 +94,8 @@ def process_template(args):
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_JOBS'))
     if args.config:
         params.update(params_from_git_refspec(args.config, 'FCOS_CONFIG'))
-    if args.bucket is not None:
-        params['S3_BUCKET'] = args.bucket
     if args.cosa_img:
         params['COREOS_ASSEMBLER_IMAGE'] = args.cosa_img
-    if args.gcp_gs_bucket:
-        params['GCP_GS_BUCKET'] = args.gcp_gs_bucket
-    if args.azure_testing_resource_group:
-        params['AZURE_TESTING_RESOURCE_GROUP'] = args.azure_testing_resource_group
-    if args.azure_testing_storage_account:
-        params['AZURE_TESTING_STORAGE_ACCOUNT'] = args.azure_testing_storage_account
-    if args.azure_testing_storage_container:
-        params['AZURE_TESTING_STORAGE_CONTAINER'] = args.azure_testing_storage_container
     if has_additional_root_ca(args):
         params['JENKINS_AGENT_IMAGE_TAG'] = "derived"
         templates += ['jenkins-agent.yaml']

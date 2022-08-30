@@ -10,9 +10,9 @@ node {
 
 
     def jenkinscfg = pipeutils.load_jenkins_config()
-    src_config_url = jenkinscfg['source-config-url']
-    src_config_ref = jenkinscfg['source-config-ref']
-    s3_bucket = jenkinscfg['s3-bucket']
+    src_config_url = pipecfg.source_config.url
+    src_config_ref = pipecfg.source_config.ref
+    s3_bucket = pipecfg.s3_bucket
     jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
 
     official = pipeutils.isOfficial()
