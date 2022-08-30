@@ -9,12 +9,12 @@ node {
     config = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
 
-    def pipecfg = pipeutils.load_config()
-    src_config_url = pipecfg['source-config-url']
-    src_config_ref = pipecfg['source-config-ref']
-    s3_bucket = pipecfg['s3-bucket']
-    gcp_gs_bucket = pipecfg['gcp-gs-bucket']
-    jenkins_agent_image_tag = pipecfg['jenkins-agent-image-tag']
+    def jenkinscfg = pipeutils.load_jenkins_config()
+    src_config_url = jenkinscfg['source-config-url']
+    src_config_ref = jenkinscfg['source-config-ref']
+    s3_bucket = jenkinscfg['s3-bucket']
+    gcp_gs_bucket = jenkinscfg['gcp-gs-bucket']
+    jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
 
     official = pipeutils.isOfficial()
     if (official) {

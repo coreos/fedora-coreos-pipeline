@@ -385,7 +385,7 @@ This will create:
 2. the Jenkins agent imagestream,
 3. the Jenkins agent BuildConfig (if a root CA cert was provided),
 4. the coreos-assembler imagestream, and
-5. the pipeline-config configmap.
+5. the jenkins-config configmap.
 
 We can now start a build of the Jenkins controller:
 
