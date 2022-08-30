@@ -2,7 +2,7 @@ def pipeutils, pipecfg, official, arches
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = readYaml file: "config.yaml"
+    pipecfg = pipeutils.load_pipecfg()
     arches = pipecfg.additional_arches.plus("x86_64")
     official = pipeutils.isOfficial()
 }

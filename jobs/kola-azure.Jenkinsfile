@@ -5,7 +5,7 @@ def azure_testing_storage_container
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = readYaml file: "config.yaml"
+    pipecfg = pipeutils.load_pipecfg()
     def jenkinscfg = pipeutils.load_jenkins_config()
     azure_testing_resource_group = pipecfg.azure?.test_resource_group
     azure_testing_storage_account = pipecfg.azure?.test_storage_account

@@ -6,7 +6,7 @@ def gcp_gs_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = readYaml file: "config.yaml"
+    pipecfg = pipeutils.load_pipecfg()
     pod = readFile(file: "manifests/pod.yaml")
 
     def jenkinscfg = pipeutils.load_jenkins_config()

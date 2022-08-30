@@ -5,7 +5,7 @@ def src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = readYaml file: "config.yaml"
+    pipecfg = pipeutils.load_pipecfg()
     pod = readFile(file: "manifests/pod.yaml")
 
 
