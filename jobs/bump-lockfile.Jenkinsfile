@@ -1,9 +1,9 @@
-def pipeutils, config, official, arches
+def pipeutils, pipecfg, official, arches
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    config = readYaml file: "config.yaml"
-    arches = config.additional_arches.plus("x86_64")
+    pipecfg = readYaml file: "config.yaml"
+    arches = pipecfg.additional_arches.plus("x86_64")
     official = pipeutils.isOfficial()
 }
 
@@ -18,7 +18,7 @@ properties([
     pipelineTriggers([]),
     parameters([
         choice(name: 'STREAM',
-               choices: pipeutils.streams_of_type(config, 'development'),
+               choices: pipeutils.streams_of_type(pipecfg, 'development'),
                description: 'Fedora CoreOS development stream to bump'),
         string(name: 'SKIP_TESTS_ARCHES',
                description: 'Space-separated list of architectures to skip tests on',
