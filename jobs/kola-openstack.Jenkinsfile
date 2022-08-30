@@ -1,8 +1,8 @@
-def pipeutils, config, official
+def pipeutils, pipecfg, official
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    config = readYaml file: "config.yaml"
+    pipecfg = readYaml file: "config.yaml"
     official = pipeutils.isOfficial()
 }
 
@@ -10,7 +10,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             choices: pipeutils.get_streams_choices(config),
+             choices: pipeutils.get_streams_choices(pipecfg),
              description: 'Fedora CoreOS stream to test'),
       string(name: 'VERSION',
              description: 'Fedora CoreOS Build ID to test',

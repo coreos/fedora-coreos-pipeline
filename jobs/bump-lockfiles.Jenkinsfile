@@ -12,8 +12,8 @@ properties([
 
 node {
     checkout scm
-    def config = readYaml file: "config.yaml"
-    def development_streams = pipeutils.streams_of_type(config, 'development')
+    def pipecfg = readYaml file: "config.yaml"
+    def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
 
     parallel development_streams.collectEntries { stream -> [stream, {
         build job: 'bump-lockfile', wait: false, parameters: [

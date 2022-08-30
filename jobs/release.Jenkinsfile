@@ -1,8 +1,8 @@
-def pipeutils, config, official, s3_bucket, jenkins_agent_image_tag
+def pipeutils, pipecfg, official, s3_bucket, jenkins_agent_image_tag
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    config = readYaml file: "config.yaml"
+    pipecfg = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
     def jenkinscfg = pipeutils.load_jenkins_config()
     s3_bucket = jenkinscfg['s3-bucket']
@@ -14,7 +14,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             choices: pipeutils.get_streams_choices(config),
+             choices: pipeutils.get_streams_choices(pipecfg),
              description: 'Fedora CoreOS stream to release'),
       string(name: 'VERSION',
              description: 'Fedora CoreOS version to release',
@@ -22,7 +22,7 @@ properties([
              trim: true),
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64" + " " + config.additional_arches.join(" "),
+             defaultValue: "x86_64" + " " + pipecfg.additional_arches.join(" "),
              trim: true),
       booleanParam(name: 'ALLOW_MISSING_ARCHES',
                    defaultValue: false,

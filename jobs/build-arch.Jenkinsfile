@@ -1,11 +1,11 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, config, official, uploading, jenkins_agent_image_tag
+def pipeutils, pipecfg, official, uploading, jenkins_agent_image_tag
 def src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    config = readYaml file: "config.yaml"
+    pipecfg = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
 
 
@@ -34,7 +34,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             choices: pipeutils.get_streams_choices(config),
+             choices: pipeutils.get_streams_choices(pipecfg),
              description: 'Fedora CoreOS stream to build'),
       string(name: 'VERSION',
              description: 'Build version',
@@ -42,7 +42,7 @@ properties([
              trim: true),
       string(name: 'ARCH',
              description: 'The target architecture',
-             choices: config.additional_arches,
+             choices: pipecfg.additional_arches,
              trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
@@ -78,7 +78,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-def stream_info = config.streams[params.STREAM]
+def stream_info = pipecfg.streams[params.STREAM]
 
 // If we are a mechanical stream then we can pin packages but we
 // don't maintin complete lockfiles so we can't build in strict mode.
