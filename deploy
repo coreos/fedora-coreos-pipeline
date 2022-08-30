@@ -70,6 +70,8 @@ def parse_args():
                         help="Repo and ref to use for pipeline code")
     parser.add_argument("--config", metavar='<URL>[@REF]',
                         help="Repo and ref to use for FCOS config")
+    parser.add_argument("--pipecfg", metavar='<URL>[@REF]',
+                        help="Repo and ref to use for pipeline config")
     parser.add_argument("--cosa-img", metavar='FQIN',
                         help="Pullspec to use for COSA image")
     parser.add_argument("--oc-cmd", default='oc',
@@ -92,6 +94,8 @@ def process_template(args):
     if args.pipeline:
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_S2I'))
         params.update(params_from_git_refspec(args.pipeline, 'JENKINS_JOBS'))
+    if args.pipecfg:
+        params.update(params_from_git_refspec(args.pipecfg, 'PIPECFG'))
     if args.config:
         params.update(params_from_git_refspec(args.config, 'FCOS_CONFIG'))
     if args.cosa_img:

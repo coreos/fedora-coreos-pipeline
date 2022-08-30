@@ -3,7 +3,7 @@ def gitref, commit, shortcommit
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = readYaml file: "config.yaml"
+    pipecfg = pipeutils.load_pipecfg()
     official = pipeutils.isOfficial()
 }
 
