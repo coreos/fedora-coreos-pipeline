@@ -1,11 +1,11 @@
-def pipeutils, streams, official
+def pipeutils, config, official
 def azure_testing_resource_group
 def azure_testing_storage_account
 def azure_testing_storage_container
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
     def pipecfg = pipeutils.load_config()
     azure_testing_resource_group = pipecfg['azure-testing-resource-group']
     azure_testing_storage_account = pipecfg['azure-testing-storage-account']
@@ -17,8 +17,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             // list devel first so that it's the default choice
-             choices: (streams.development + streams.production + streams.mechanical),
+             choices: pipeutils.get_streams_choices(config),
              description: 'Fedora CoreOS stream to test'),
       string(name: 'VERSION',
              description: 'Fedora CoreOS Build ID to test',

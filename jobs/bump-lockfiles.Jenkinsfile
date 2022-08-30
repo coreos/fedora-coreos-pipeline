@@ -12,9 +12,10 @@ properties([
 
 node {
     checkout scm
-    def streams = load("streams.groovy")
+    def config = readYaml file: "config.yaml"
+    def development_streams = pipeutils.streams_of_type(config, 'development')
 
-    parallel streams.development.collectEntries { stream -> [stream, {
+    parallel development_streams.collectEntries { stream -> [stream, {
         build job: 'bump-lockfile', wait: false, parameters: [
             string(name: 'STREAM', value: stream)
         ]

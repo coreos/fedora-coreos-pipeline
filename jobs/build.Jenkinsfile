@@ -1,12 +1,12 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, uploading, jenkins_agent_image_tag
+def pipeutils, config, official, uploading, jenkins_agent_image_tag
 def src_config_url, src_config_ref, s3_bucket
 def gcp_gs_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
 
     def pipecfg = pipeutils.load_config()
@@ -35,8 +35,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             // list devel first so that it's the default choice
-             choices: (streams.development + streams.production + streams.mechanical),
+             choices: pipeutils.get_streams_choices(config),
              description: 'Fedora CoreOS stream to build'),
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
@@ -44,7 +43,7 @@ properties([
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
              description: 'Space-separated list of additional target architectures',
-             defaultValue: streams.additional_arches.join(" "),
+             defaultValue: config.additional_arches.join(" "),
              trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
@@ -76,10 +75,11 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-def is_mechanical = (params.STREAM in streams.mechanical)
+def stream_info = config.streams[params.STREAM]
+
 // If we are a mechanical stream then we can pin packages but we
 // don't maintin complete lockfiles so we can't build in strict mode.
-def strict_build_param = is_mechanical ? "" : "--strict"
+def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 
 // Note the supermin VM just uses 2G. The really hungry part is xz, which
 // without lots of memory takes lots of time. For now we just hardcode these
@@ -723,7 +723,7 @@ lock(resource: "build-${params.STREAM}") {
         // Since we are only running this stage for non-production (i.e. mechanical
         // and development) builds we'll default to not doing AWS AMI replication.
         // We'll also default to allowing failures for additonal architectures.
-        if (official && uploading && !(params.STREAM in streams.production)) {
+        if (official && uploading && stream_info.type != "production") {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),

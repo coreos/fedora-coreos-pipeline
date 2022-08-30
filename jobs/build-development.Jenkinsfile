@@ -1,8 +1,8 @@
-def streams, pipeutils
+def config, pipeutils
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
 }
 
 properties([
@@ -11,12 +11,14 @@ properties([
 ])
 
 node {
+    def development_streams = pipeutils.streams_of_type(config, 'development')
+
     change = checkout(
         [$class: 'GitSCM',
          userRemoteConfigs: [
             [url: 'https://github.com/coreos/fedora-coreos-config']
          ],
-         branches: pipeutils.streams_as_branches(streams.development)
+         branches: pipeutils.streams_as_branches(development_streams)
         ]
     )
 
