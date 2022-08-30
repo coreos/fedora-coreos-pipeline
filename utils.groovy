@@ -4,9 +4,9 @@ import org.yaml.snakeyaml.Yaml
 // Only add pipeline-specific things here. Otherwise add to coreos-ci-lib
 // instead.
 
-def load_config() {
+def load_jenkins_config() {
     return readJSON(text: shwrapCapture("""
-        oc get configmap -n ${env.PROJECT_NAME} -o json pipeline-config | jq .data
+        oc get configmap -n ${env.PROJECT_NAME} -o json jenkins-config | jq .data
     """))
 }
 
