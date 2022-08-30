@@ -1,8 +1,8 @@
-def config, pipeutils
+def pipecfg, pipeutils
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    config = readYaml file: "config.yaml"
+    pipecfg = readYaml file: "config.yaml"
 }
 
 properties([
@@ -11,7 +11,7 @@ properties([
 ])
 
 node {
-    def development_streams = pipeutils.streams_of_type(config, 'development')
+    def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
 
     change = checkout(
         [$class: 'GitSCM',

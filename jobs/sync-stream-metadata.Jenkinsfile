@@ -1,7 +1,7 @@
-def config, pipeutils
+def pipecfg, pipeutils
 node {
     checkout scm
-    config = readYaml file: "config.yaml"
+    pipecfg = readYaml file: "config.yaml"
     pipeutils = load("utils.groovy")
 }
 
@@ -24,7 +24,7 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
         // XXX: eventually we want this as part of the pod or built into the image we use
         shwrap("git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng")
 
-        def production_streams = pipeutils.streams_of_type(config, 'production')
+        def production_streams = pipeutils.streams_of_type(pipecfg, 'production')
 
         // NB: we don't use `aws s3 sync` here because it's timestamp-based and
         // so our fresh git clone will always seem newer and always get
