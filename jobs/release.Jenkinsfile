@@ -4,7 +4,7 @@ node {
     pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
     pod = readFile(file: "manifests/pod.yaml")
-    pipecfg = pipeutils.load_config()
+    def pipecfg = pipeutils.load_config()
     s3_bucket = pipecfg['s3-bucket']
     jenkins_agent_image_tag = pipecfg['jenkins-agent-image-tag']
     official = pipeutils.isOfficial()
