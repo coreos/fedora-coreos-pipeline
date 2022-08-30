@@ -1,8 +1,12 @@
 #!/usr/bin/python3
 
 import json
+import yaml
 import os
 import sys
+
+MANAGED = '# do not touch; line managed by `next-devel/manage.py`'
+
 
 def set_enabled(enabled):
     dir = os.path.realpath(os.path.dirname(sys.argv[0]))
@@ -23,21 +27,27 @@ def set_enabled(enabled):
         'message': 'open' if enabled else 'closed',
         'color': 'green' if enabled else 'lightgrey',
     })
-    # Modify next_devel declaration in streams.groovy
+
+    # Modify next_devel declaration in config.yaml. This does a string-level
+    # modification instead of parsing the YAML because we want to keep
+    # comments.
     found = False
-    with open(os.path.join(dir, '../streams.groovy'), 'r+') as fh:
+    with open(os.path.join(dir, '../config.yaml'), 'r+') as fh:
         cur = fh.read()
         fh.seek(0)
         fh.truncate()
         for line in cur.strip().split('\n'):
-            if line.startswith('next_devel = ['):
-                stream_name = "'next-devel'" if enabled else ""
-                print(f'next_devel = [{stream_name}]', file=fh)
+            if MANAGED in line:
+                stripped_line = line.lstrip()
+                indent = line[0:len(line)-len(stripped_line)]
+                if enabled and stripped_line.startswith('# '):
+                    line = f'{indent}{stripped_line[2:]}'
+                if not enabled and not stripped_line.startswith('# '):
+                    line = f'{indent}# {stripped_line}'
                 found = True
-            else:
-                print(line, file=fh)
+            print(line, file=fh)
     if not found:
-        raise Exception("Couldn't find next_devel declaration in streams.groovy")
+        raise Exception("Couldn't find managed line in config.yaml")
 
 
 if __name__ == '__main__':

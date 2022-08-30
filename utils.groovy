@@ -155,6 +155,16 @@ def stream_from_branch(branch) {
     return branch['origin/'.length()..-1]
 }
 
+def streams_of_type(config, type) {
+    return config.streams.findAll{k, v -> v.type == type}.collect{k, v -> k}
+}
+
+def get_streams_choices(config) {
+    def default_stream = config.streams.find{k, v -> v['default'] == true}?.key
+    def other_streams = config.streams.keySet().minus(default_stream) as List
+    return [default_stream] + other_streams
+}
+
 // Returns the default trigger for push notifications. This will trigger builds
 // when SCMs change (either the pipeline code itself, or fedora-coreos-config).
 def get_push_trigger() {

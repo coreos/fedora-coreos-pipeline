@@ -1,8 +1,8 @@
-def pipeutils, streams, official, s3_bucket, jenkins_agent_image_tag
+def pipeutils, config, official, s3_bucket, jenkins_agent_image_tag
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
     def pipecfg = pipeutils.load_config()
     s3_bucket = pipecfg['s3-bucket']
@@ -14,8 +14,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             // list devel first so that it's the default choice
-             choices: (streams.development + streams.production + streams.mechanical),
+             choices: pipeutils.get_streams_choices(config),
              description: 'Fedora CoreOS stream to release'),
       string(name: 'VERSION',
              description: 'Fedora CoreOS version to release',
@@ -23,7 +22,7 @@ properties([
              trim: true),
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64" + " " + streams.additional_arches.join(" "),
+             defaultValue: "x86_64" + " " + config.additional_arches.join(" "),
              trim: true),
       booleanParam(name: 'ALLOW_MISSING_ARCHES',
                    defaultValue: false,
@@ -73,6 +72,8 @@ def quay_registry = "quay.io/coreos-assembler/fcos"
 
 // Get the list of requested architectures to release
 def basearches = params.ARCHES.split() as Set
+
+def stream_info = pipecfg.streams[params.STREAM]
 
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
@@ -139,7 +140,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
             // For production streams, import the OSTree into the prod
             // OSTree repo.
-            if ((params.STREAM in streams.production) && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            if ((stream_info.type == 'production') && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
                 stage("OSTree Import ${basearch}: Prod Repo") {
                     shwrap("""
                     /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
@@ -156,7 +157,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // will be the chosen image in an image family and deprecate
             // all others. `ore gcloud promote-image` does this for us.
             if ((basearch == 'x86_64') && (meta.gcp?.image) &&
-                    (params.STREAM in streams.production)) {
+                    (stream_info.type == 'production')) {
                 stage("GCP ${basearch}: Image Promotion") {
                     shwrap("""
                     # pick up the project to use from the config

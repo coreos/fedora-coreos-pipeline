@@ -1,9 +1,9 @@
-def pipeutils, streams, official, arches
+def pipeutils, config, official, arches
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
-    arches = streams.additional_arches.plus("x86_64")
+    config = readYaml file: "config.yaml"
+    arches = config.additional_arches.plus("x86_64")
     official = pipeutils.isOfficial()
 }
 
@@ -18,7 +18,7 @@ properties([
     pipelineTriggers([]),
     parameters([
         choice(name: 'STREAM',
-               choices: streams.development,
+               choices: pipeutils.streams_of_type(config, 'development'),
                description: 'Fedora CoreOS development stream to bump'),
         string(name: 'COREOS_ASSEMBLER_IMAGE',
                description: 'Override coreos-assembler image to use',
