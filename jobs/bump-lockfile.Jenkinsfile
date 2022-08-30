@@ -4,7 +4,6 @@ node {
     pipeutils = load("utils.groovy")
     streams = load("streams.groovy")
     arches = streams.additional_arches.plus("x86_64")
-    def pipecfg = pipeutils.load_config()
     official = pipeutils.isOfficial()
 }
 
