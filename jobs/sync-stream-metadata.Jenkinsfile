@@ -1,8 +1,8 @@
 def pipecfg, pipeutils
 node {
     checkout scm
-    pipecfg = readYaml file: "config.yaml"
     pipeutils = load("utils.groovy")
+    pipecfg = pipeutils.load_pipecfg()
 }
 
 properties([

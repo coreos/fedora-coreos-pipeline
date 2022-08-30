@@ -10,6 +10,26 @@ def load_jenkins_config() {
     """))
 }
 
+def load_pipecfg() {
+    def jenkinscfg = load_jenkins_config()
+    def url = jenkinscfg['pipecfg-url']
+    def ref = jenkinscfg['pipecfg-ref']
+
+    if (url == 'in-tree') {
+        return readYaml file: "config.yaml"
+    }
+
+    // this uses the `checkout` workflow step instead of just manually cloning so
+    // that changes show up in the Jenkins UI
+    checkout([
+        $class: 'GitSCM',
+        branches: [[name: "origin/${ref}"]],
+        extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pipecfg']],
+        userRemoteConfigs: [[url: url]]
+    ])
+    return readYaml file: "pipecfg/config.yaml"
+}
+
 // Tells us if we're running if the official Jenkins for the FCOS pipeline
 boolean isOfficial() {
     return (env.JENKINS_URL in ['https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])

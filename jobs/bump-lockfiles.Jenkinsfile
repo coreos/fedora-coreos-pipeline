@@ -12,7 +12,8 @@ properties([
 
 node {
     checkout scm
-    def pipecfg = readYaml file: "config.yaml"
+    def pipeutils = load("utils.groovy")
+    def pipecfg = pipeutils.load_pipecfg()
     def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
 
     parallel development_streams.collectEntries { stream -> [stream, {

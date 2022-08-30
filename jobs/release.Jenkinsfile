@@ -2,7 +2,7 @@ def pipeutils, pipecfg, official, s3_bucket, jenkins_agent_image_tag
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = readYaml file: "config.yaml"
+    pipecfg = pipeutils.load_pipecfg()
     pod = readFile(file: "manifests/pod.yaml")
     def jenkinscfg = pipeutils.load_jenkins_config()
     s3_bucket = pipecfg.s3_bucket
