@@ -20,3 +20,18 @@ streams:
     #   type: mechanical
 
 additional_arches: [aarch64, ppc64le, s390x]
+
+source_config:
+  url: https://github.com/coreos/fedora-coreos-config
+  ref: testing-devel
+
+# remove to disable S3 uploads
+s3_bucket: fcos-builds
+
+clouds:
+  gcp:
+    bucket: fedora-coreos-cloud-image-uploads
+  azure:
+    test_resource_group: fedora-coreos-testing
+    test_storage_account: fedoracoreostesting
+    test_storage_container: fedora-coreos-testing-image-blobs

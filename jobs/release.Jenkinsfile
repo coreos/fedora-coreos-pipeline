@@ -5,7 +5,7 @@ node {
     pipecfg = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
     def jenkinscfg = pipeutils.load_jenkins_config()
-    s3_bucket = jenkinscfg['s3-bucket']
+    s3_bucket = pipecfg.s3_bucket
     jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
     official = pipeutils.isOfficial()
 }
