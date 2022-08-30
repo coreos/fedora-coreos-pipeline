@@ -1,11 +1,11 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, streams, official, uploading, jenkins_agent_image_tag
+def pipeutils, config, official, uploading, jenkins_agent_image_tag
 def src_config_url, src_config_ref, s3_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
     pod = readFile(file: "manifests/pod.yaml")
 
 
@@ -34,8 +34,7 @@ properties([
     pipelineTriggers([]),
     parameters([
       choice(name: 'STREAM',
-             // list devel first so that it's the default choice
-             choices: (streams.development + streams.production + streams.mechanical),
+             choices: pipeutils.get_streams_choices(config),
              description: 'Fedora CoreOS stream to build'),
       string(name: 'VERSION',
              description: 'Build version',
@@ -43,7 +42,7 @@ properties([
              trim: true),
       string(name: 'ARCH',
              description: 'The target architecture',
-             choices: streams.additional_arches,
+             choices: config.additional_arches,
              trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
@@ -79,10 +78,11 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-def is_mechanical = (params.STREAM in streams.mechanical)
+def stream_info = config.streams[params.STREAM]
+
 // If we are a mechanical stream then we can pin packages but we
 // don't maintin complete lockfiles so we can't build in strict mode.
-def strict_build_param = is_mechanical ? "" : "--strict"
+def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 
 // Note that the heavy lifting is done on a remote node via podman
 // --remote so we shouldn't need much memory.

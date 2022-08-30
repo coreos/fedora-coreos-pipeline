@@ -1,8 +1,8 @@
-def streams, pipeutils
+def config, pipeutils
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
 }
 
 properties([
@@ -14,12 +14,14 @@ properties([
 ])
 
 node {
+    def mechanical_streams = pipeutils.streams_of_type(config, 'mechanical')
+
     change = checkout(
         [$class: 'GitSCM',
          userRemoteConfigs: [
             [url: 'https://github.com/coreos/fedora-coreos-config']
          ],
-         branches: pipeutils.streams_as_branches(streams.mechanical)
+         branches: pipeutils.streams_as_branches(mechanical_streams)
         ]
     )
 
@@ -32,7 +34,7 @@ node {
         }
     } else {
         // cron or manual build: build all mechanical streams
-        streams.mechanical.each{
+        mechanical_streams.each{
             build job: 'build', wait: false, parameters: [
               string(name: 'STREAM', value: it)
             ]

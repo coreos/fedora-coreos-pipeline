@@ -1,10 +1,10 @@
-def pipeutils, streams, official
+def pipeutils, config, official
 def gitref, commit, shortcommit
 def containername = 'coreos-assembler'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
+    config = readYaml file: "config.yaml"
     official = pipeutils.isOfficial()
 }
 
@@ -33,7 +33,7 @@ properties([
     parameters([
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64" + " " + streams.additional_arches.join(" "),
+             defaultValue: "x86_64" + " " + config.additional_arches.join(" "),
              trim: true),
       string(name: 'COREOS_ASSEMBLER_GIT_URL',
              description: 'Override the coreos-assembler git repo to use',
