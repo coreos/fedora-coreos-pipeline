@@ -19,17 +19,23 @@ node {
          userRemoteConfigs: [
             [url: 'https://github.com/coreos/fedora-coreos-config']
          ],
-         branches: streams.as_branches(streams.mechanical)
+         branches: pipeutils.streams_as_branches(streams.mechanical)
         ]
     )
 
     if (pipeutils.triggered_by_push()) {
-        stream = streams.from_branch(change.GIT_BRANCH)
-        if (stream != "") {
-            streams.build_stream(stream)
+        stream = pipeutils.stream_from_branch(change.GIT_BRANCH)
+        if (stream in streams.mechanical) {
+            build job: 'build', wait: false, parameters: [
+              string(name: 'STREAM', value: stream)
+            ]
         }
     } else {
         // cron or manual build: build all mechanical streams
-        streams.mechanical.each{ streams.build_stream(it) }
+        streams.mechanical.each{
+            build job: 'build', wait: false, parameters: [
+              string(name: 'STREAM', value: it)
+            ]
+        }
     }
 }

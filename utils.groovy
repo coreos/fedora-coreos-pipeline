@@ -144,4 +144,29 @@ def addOptionalRootCA() {
     }
 }
 
+// Maps a list of streams to a list of GitSCM branches.
+def streams_as_branches(streams) {
+    return streams.collect{ [name: "origin/${it}"] }
+}
+
+// Retrieves the stream name from a branch name.
+def stream_from_branch(branch) {
+    assert branch.startsWith('origin/')
+    return branch['origin/'.length()..-1]
+}
+
+// Returns the default trigger for push notifications. This will trigger builds
+// when SCMs change (either the pipeline code itself, or fedora-coreos-config).
+def get_push_trigger() {
+    return [
+        // this corresponds to the "GitHub hook trigger for GITScm polling"
+        // checkbox; i.e. trigger a poll when a webhook event comes in at
+        // /github-webhook/ for the repo we care about
+        githubPush(),
+        // but still also force poll SCM every 30m as fallback in case hooks
+        // are down/we miss one
+        pollSCM('H/30 * * * *')
+    ]
+}
+
 return this
