@@ -73,12 +73,17 @@ objects:
           referencePolicy:
             type: Local
 
-  ### PIPELINE CONFIG ###
+  ### JENKINS CONFIG ###
+
+  # Only keep here base Jenkins configuration knobs. Higher-level "variant"
+  # configuration should live in the `config.yaml` instead. A litmus test to identify
+  # such knobs is: would this knob still be needed if the pipeline were not
+  # Jenkins-based?
 
   - kind: ConfigMap
     apiVersion: v1
     metadata:
-      name: pipeline-config
+      name: jenkins-config
     data:
       source-config-url: ${FCOS_CONFIG_URL}
       source-config-ref: ${FCOS_CONFIG_REF}

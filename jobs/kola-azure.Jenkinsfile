@@ -6,10 +6,10 @@ node {
     checkout scm
     pipeutils = load("utils.groovy")
     config = readYaml file: "config.yaml"
-    def pipecfg = pipeutils.load_config()
-    azure_testing_resource_group = pipecfg['azure-testing-resource-group']
-    azure_testing_storage_account = pipecfg['azure-testing-storage-account']
-    azure_testing_storage_container = pipecfg['azure-testing-storage-container']
+    def jenkinscfg = pipeutils.load_jenkins_config()
+    azure_testing_resource_group = jenkinscfg['azure-testing-resource-group']
+    azure_testing_storage_account = jenkinscfg['azure-testing-storage-account']
+    azure_testing_storage_container = jenkinscfg['azure-testing-storage-container']
     official = pipeutils.isOfficial()
 }
 
