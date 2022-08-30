@@ -23,7 +23,7 @@ parameters:
     value: main
   - description: Git source URI for pipeline configuration
     name: PIPECFG_URL
-    value: in-tree
+    value: https://github.com/jlebon/fedora-coreos-pipecfg
   - description: Git branch/tag reference for pipeline configuration
     name: PIPECFG_REF
     value: main

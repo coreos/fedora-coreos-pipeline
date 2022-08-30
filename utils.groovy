@@ -15,10 +15,6 @@ def load_pipecfg() {
     def url = jenkinscfg['pipecfg-url']
     def ref = jenkinscfg['pipecfg-ref']
 
-    if (url == 'in-tree') {
-        return readYaml file: "config.yaml"
-    }
-
     // this uses the `checkout` workflow step instead of just manually cloning so
     // that changes show up in the Jenkins UI
     checkout([
