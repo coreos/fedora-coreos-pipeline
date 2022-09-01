@@ -5,6 +5,7 @@ node {
     streams = load("streams.groovy")
     arches = streams.additional_arches.plus("x86_64")
     def pipecfg = pipeutils.load_config()
+    def s3_bucket = pipecfg['s3-bucket']
     official = pipeutils.isOfficial()
 }
 
@@ -56,7 +57,7 @@ def getLockfileInfo(lockfile) {
 def cosa_memory_request_mb = 6.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
 
-try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { 
+try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi") {
     currentBuild.description = "[${params.STREAM}] Running"
@@ -115,7 +116,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     }
 
     // do a first fetch where we only fetch metadata; no point in
-    // importing RPMs if nothing actually changed. We also do a 
+    // importing RPMs if nothing actually changed. We also do a
     // buildfetch here so we can see in the build output (that happens
     // later) what packages changed.
     stage("Fetch Metadata") {
@@ -192,6 +193,41 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
             outerparallelruns[arch] = {
                 def buildAndTest = {
                     def parallelruns = [:]
+                    stage("${arch}:BuildFetch") {
+                  		//build fetch for the parent build
+                  		def parent_version = ""
+                  		def parent_commit = ""
+                  		def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+
+                  		pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "releases.json")
+                  		if (utils.pathExists("releases.json")) {
+                  			def releases = readJSON file: "releases.json"
+                  			// check if there's a previous release we should use as parent
+                  			release = releases["releases"].reverse()
+                  			if (release != null) {
+                  				def commit_obj = release["commits"].find { commit -> commit["architecture"] == basearch }
+                  				try {
+                              parent_commit = commit_obj["checksum"]
+                  					       parent_version = release["version"]
+                  					            shwrap("""cosa buildfetch --arch=${arch} --build ${parent_version} --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds""")
+                            }
+                           catch(e) {
+                              if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
+                                warnError(message: 'Unable to BuildFetch parent version for upgrade') {
+                                    error(e.getMessage())
+                            }
+                          } else {
+                              throw e
+                          }
+                        }
+                    }
+                    	  }else{
+                    			  // if there exists no previous release information, then default to testing-devel branch
+                    			  //refer: https://github.com/coreos/coreos-assembler/issues/3017
+                    			  shwrap("""cosa buildfetch --arch=${arch} --url=${BUILDS_BASE_HTTP_URL}/testing-devel/builds""")
+                    			}
+
+	                  }
                     stage("${arch}:Fetch") {
                         shwrap("cosa fetch --strict")
                     }
