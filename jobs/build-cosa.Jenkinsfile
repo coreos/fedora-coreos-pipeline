@@ -30,7 +30,7 @@ properties([
              trim: true),
       string(name: 'CONTAINER_REGISTRY_STAGING_REPO',
              description: 'Override the staging registry where intermediate images go',
-             defaultValue: "quay.io/coreos-assembler/coreos-assembler-staging",
+             defaultValue: "quay.io/coreos-assembler/staging",
              trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
