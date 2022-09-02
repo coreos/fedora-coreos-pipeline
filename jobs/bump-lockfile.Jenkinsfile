@@ -102,25 +102,23 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     // Initialize the sessions on the remote builders
     stage("Initialize Remotes") {
-        for (architecture in archinfo.keySet()) {
-            def arch = architecture
-            if (arch == "x86_64") {
-                continue
-            }
-            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                archinfo[arch]['session'] = \
-                    shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
-                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
-                    shwrap("""
-                    cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
-                    """)
+        parallel archinfo.keySet().collectEntries{arch -> [arch, {
+            if (arch != "x86_64") {
+                pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                    archinfo[arch]['session'] = \
+                        shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
+                    withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
+                        shwrap("""
+                        cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
+                        """)
+                    }
                 }
             }
-        }
+        }]}
     }
 
     // do a first fetch where we only fetch metadata; no point in
-    // importing RPMs if nothing actually changed. We also do a 
+    // importing RPMs if nothing actually changed. We also do a
     // buildfetch here so we can see in the build output (that happens
     // later) what packages changed.
     stage("Fetch Metadata") {
@@ -322,16 +320,14 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     // Destroy the remote sessions. We don't need them anymore
     stage("Destroy Remotes") {
-        for (architecture in archinfo.keySet()) {
-            def arch = architecture
-            if (arch == "x86_64") {
-                continue
+        parallel archinfo.keySet().collectEntries{arch -> [arch, {
+            if (arch != "x86_64") {
+                pipeutils.withExistingCosaRemoteSession(
+                    arch: arch, session: archinfo[arch]['session']) {
+                    shwrap("cosa remote-session destroy")
+                }
             }
-            pipeutils.withExistingCosaRemoteSession(
-                arch: arch, session: archinfo[arch]['session']) {
-                shwrap("cosa remote-session destroy")
-            }
-        }
+        }]}
     }
 
     // OK, we're ready to push: just push to the branch. In the future, we might be
