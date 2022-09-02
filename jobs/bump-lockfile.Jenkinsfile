@@ -21,6 +21,10 @@ properties([
         choice(name: 'STREAM',
                choices: streams.development,
                description: 'Fedora CoreOS development stream to bump'),
+        string(name: 'SKIP_TESTS_ARCHES',
+               description: 'Space-separated list of architectures to skip tests on',
+               defaultValue: "",
+               trim: true),
         string(name: 'COREOS_ASSEMBLER_IMAGE',
                description: 'Override coreos-assembler image to use',
                defaultValue: "coreos-assembler:main",
@@ -77,6 +81,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     shwrap("cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}")
 
     def lockfile, pkgChecksum, pkgTimestamp
+    def skip_tests_arches = params.SKIP_TESTS_ARCHES.split()
     def archinfo = arches.collectEntries{[it, [:]]}
     for (architecture in archinfo.keySet()) {
         def arch = architecture
@@ -189,6 +194,12 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         def outerparallelruns = [:]
         for (architecture in archinfo.keySet()) {
             def arch = architecture
+            if (arch in skip_tests_arches) {
+                // The user has explicitly told us that it is OK to
+                // skip tests on this architecture. Presumably because
+                // they already passed in a previous run.
+                continue
+            }
             outerparallelruns[arch] = {
                 def buildAndTest = {
                     def parallelruns = [:]
