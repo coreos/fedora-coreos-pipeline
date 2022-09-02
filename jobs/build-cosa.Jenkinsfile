@@ -94,7 +94,18 @@ try {
 
         currentBuild.description = "[${gitref}@${shortcommit}] Running"
 
-        def force = params.FORCE ? "--force" : ""
+        // By default we will allow re-using cache layers for one day.
+        // This is mostly so we can prevent re-downloading the RPMS
+        // and repo metadata and over again in a given day for successive
+        // builds.
+        def cacheTTL = "24h"
+        def force = ""
+        if (params.FORCE) {
+            force = '--force'
+            // Also set cacheTTL to 0.1s to allow users an escape hatch
+            // to force no cache layer usage.
+            cacheTTL = "0.1s"
+        }
 
         withCredentials([file(credentialsId: 'cosa-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
             stage('Build COSA') {
@@ -102,7 +113,8 @@ try {
                     pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                         shwrap("""
                         cosa remote-build-container \
-                            --arch $arch --git-ref $commit ${force} \
+                            --arch $arch --cache-ttl ${cacheTTL} \
+                            --git-ref $commit ${force} \
                             --git-url ${params.COREOS_ASSEMBLER_GIT_URL} \
                             --repo ${params.CONTAINER_REGISTRY_STAGING_REPO} \
                             --push-to-registry --auth=\$REGISTRY_SECRET
