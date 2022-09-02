@@ -1,5 +1,6 @@
 def pipeutils, streams, official
 def gitref, commit, shortcommit
+def containername = 'fcos-buildroot'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -26,7 +27,7 @@ properties([
              trim: true),
       string(name: 'CONTAINER_REGISTRY_REPO',
              description: 'Override the registry to push the container to',
-             defaultValue: "quay.io/coreos-assembler/fcos-buildroot",
+             defaultValue: "quay.io/coreos-assembler/${containername}",
              trim: true),
       string(name: 'CONTAINER_REGISTRY_STAGING_REPO',
              description: 'Override the staging registry where intermediate images go',
@@ -84,7 +85,7 @@ currentBuild.description = "[${gitref}@${shortcommit}] Waiting"
 def basearches = params.ARCHES.split() as Set
 
 try {
-    lock(resource: "build-fcos-buildroot") {
+    lock(resource: "build-${containername}") {
     timeout(time: 60, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false) {
