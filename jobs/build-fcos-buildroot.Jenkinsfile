@@ -10,7 +10,35 @@ node {
 
 properties([
     pipelineTriggers([
-        githubPush()
+        // run every 3 days to ensure regular updates
+        cron("H H */3 * *"),
+        // and trigger on webhooks when ci/buildroot/ files have changed
+        [$class: 'GenericTrigger',
+         genericVariables: [
+          [
+           key: 'CONFIG_GIT_REF',
+           value: '$.ref',
+           expressionType: 'JSONPath',
+           regexpFilter: 'refs/heads/', //Optional, defaults to empty string
+           defaultValue: ''  //Optional, defaults to empty string
+          ],
+          [
+           key: 'changed_files',
+           value: "\$.commits[*].['modified','added','removed'][*]",
+           expressionType: 'JSONPath',
+           regexpFilter: '', //Optional, defaults to empty string
+           defaultValue: ''  //Optional, defaults to empty string
+          ]
+         ],
+         causeString: 'Triggered on $ref',
+         token: 'build-fcos-buildroot',
+         tokenCredentialId: '',
+         printContributedVariables: true,
+         printPostContent: true,
+         silentResponse: false,
+         regexpFilterText: '$CONFIG_GIT_REF $changed_files',
+         regexpFilterExpression: 'testing-devel .*ci/buildroot/.*'
+        ]
     ]),
     parameters([
       string(name: 'ARCHES',
@@ -54,7 +82,7 @@ node {
         poll: false,
         scm: [
             $class: 'GitSCM',
-            branches: [[name: 'origin/testing-devel']],
+            branches: [[name: "origin/${params.CONFIG_GIT_REF}"]],
             userRemoteConfigs: [[url: params.CONFIG_GIT_URL]],
             extensions: [[$class: 'CloneOption',
                           noTags: true,
@@ -63,17 +91,7 @@ node {
         ]
     )
 
-    // Handle here if we were triggered by a git webhook or triggered
-    // manually by a human. If trigerred by a webhook we can pick up
-    // the branch that was pushed to from $change. If not we need to
-    // pick it up from params.CONFIG_GIT_REF specified by
-    // the user (or "main" if not specified).
     gitref = params.CONFIG_GIT_REF
-    if (pipeutils.triggered_by_push()) {
-        gitref = change.GIT_BRANCH['origin/'.length()..-1]
-    } else {
-        shwrap("git fetch --depth=1 origin ${gitref} && git checkout FETCH_HEAD")
-    }
     def output = shwrapCapture("git rev-parse HEAD")
     commit = output.substring(0,40)
     shortcommit = commit.substring(0,7)
