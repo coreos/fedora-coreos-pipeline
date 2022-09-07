@@ -502,12 +502,6 @@ lock(resource: "build-${params.STREAM}") {
                     }
                     parallelruns['uefi'] = {
                         shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
-                        shwrap("""
-                        cosa shell -- mkdir tmp/iso-live-login-with-rd-debug
-                        iso=tmp/iso-live-login-with-rd-debug/test.iso
-                        cosa shell -- coreos-installer iso kargs modify --append rd.debug builds/${newBuildID}/${basearch}/*.iso -o \$iso
-                        cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --qemu-iso \$iso --output-dir tmp/kola-testiso-uefi/rd-debug
-                        """)
                         shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
                         shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
                     }
