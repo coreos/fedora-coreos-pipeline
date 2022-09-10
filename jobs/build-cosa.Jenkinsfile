@@ -10,7 +10,25 @@ node {
 
 properties([
     pipelineTriggers([
-        githubPush()
+        [$class: 'GenericTrigger',
+         genericVariables: [
+          [
+           key: 'COREOS_ASSEMBLER_GIT_REF',
+           value: '$.ref',
+           expressionType: 'JSONPath',
+           regexpFilter: 'refs/heads/', //Optional, defaults to empty string
+           defaultValue: ''  //Optional, defaults to empty string
+          ]
+         ],
+         causeString: 'Triggered on $ref',
+         token: 'build-cosa',
+         tokenCredentialId: '',
+         printContributedVariables: true,
+         printPostContent: true,
+         silentResponse: false,
+         regexpFilterText: '$COREOS_ASSEMBLER_GIT_REF',
+         regexpFilterExpression: 'main|rhcos-.*'
+        ]
     ]),
     parameters([
       string(name: 'ARCHES',
@@ -23,7 +41,7 @@ properties([
              trim: true),
       string(name: 'COREOS_ASSEMBLER_GIT_REF',
              description: 'Override the coreos-assembler git ref to use',
-             defaultValue: "",
+             defaultValue: "main",
              trim: true),
       string(name: 'CONTAINER_REGISTRY_REPO',
              description: 'Override the registry to push the container to',
@@ -54,7 +72,7 @@ node {
         poll: false,
         scm: [
             $class: 'GitSCM',
-            branches: [[name: 'origin/main']],
+            branches: [[name: "origin/${params.COREOS_ASSEMBLER_GIT_REF}"]],
             userRemoteConfigs: [[url: params.COREOS_ASSEMBLER_GIT_URL]],
             extensions: [[$class: 'CloneOption',
                           noTags: true,
@@ -63,20 +81,7 @@ node {
         ]
     )
 
-    // Handle here if we were triggered by a git webhook or triggered
-    // manually by a human. If trigerred by a webhook we can pick up
-    // the branch that was pushed to from $change. If not we need to
-    // pick it up from params.COREOS_ASSEMBLER_GIT_REF specified by
-    // the user (or "main" if not specified).
     gitref = params.COREOS_ASSEMBLER_GIT_REF
-    if (pipeutils.triggered_by_push()) {
-        gitref = change.GIT_BRANCH['origin/'.length()..-1]
-    } else {
-        if (gitref == "") {
-            gitref = "main"
-        }
-        shwrap("git fetch --depth=1 origin ${gitref} && git checkout FETCH_HEAD")
-    }
     def output = shwrapCapture("git rev-parse HEAD")
     commit = output.substring(0,40)
     shortcommit = commit.substring(0,7)
