@@ -67,7 +67,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
         s3_stream_dir = "fcos-builds/prod/streams/${params.STREAM}"
     }
 
-    try { timeout(time: 60, unit: 'MINUTES') {
+    try { timeout(time: 75, unit: 'MINUTES') {
         cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
                 memory: "256Mi", kvm: false,
                 secrets: ["aws-fcos-builds-bot-config", "azure-kola-tests-config"]) {
