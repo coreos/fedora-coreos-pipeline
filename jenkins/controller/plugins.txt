@@ -1,3 +1,13 @@
+# This file controls the plugins that get installed in Jenkins
+# To get a list of these from a running jenkins instance go to
+# <jenkins_url>/pluginManager/api/json?depth=1 in your web browser
+# (with authentication) then save that json output and filter it
+# with:
+#
+# cat json.json \
+#   | jq -r '.plugins[] | "\(.shortName):\(.version)"' | sort > plugins.txt
+#
+# Inspired by https://stackoverflow.com/a/52836951
 github-oauth:0.38
 configuration-as-code:1429.v09b_044a_c93de
 slack:608.v19e3b_44b_b_9ff
