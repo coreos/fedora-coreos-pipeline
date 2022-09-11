@@ -252,6 +252,25 @@ uuidgen -r > secret
 oc create secret generic github-webhook-shared-secret --from-file=secret
 ```
 
+NOTE: the secret will be used again when setting up the generic webhooks in the next section.
+
+### [PROD] Setup webhooks for the Generic webhook plugin
+
+Add a new webhook to the following repos:
+
+- [`coreos/fedora-coreos-config`](https://github.com/coreos/fedora-coreos-config.git) for the `build-fcos-buildroot` job.
+- [`coreos/coreos-assembler`](https://github.com/coreos/coreos-assembler.git) for the `build-cosa` job.
+
+In this case we'll re-use the GitHub webhook shared secret text that
+was created in the previous section. Add a webhook for each repo that
+follows:
+
+- Payload URL: `https://<JENKINS_URL>/generic-webhook-trigger/invoke?token=<JOB>`
+    - replace `<JENKINS_URL>` with the URL of the jenkins instance
+    - replace `<JOB>` with `build-fcos-buildroot` or `build-cosa` based on the repo you are adding the webhook to.
+- Content Type: `application/json`
+- Secret: Use the secret text from the GitHub webhook shared secret above
+
 ### [PROD] Create quay.io FCOS image push secret
 
 This secret is used to push the resulting OCI image to Quay.io
