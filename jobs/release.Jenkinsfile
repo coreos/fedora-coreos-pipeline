@@ -128,14 +128,6 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
             def meta = readJSON file: meta_json
 
-            // for now we only support pushing x86_64 images
-            if (basearch == 'x86_64') {
-                stage("Push Container") {
-                    withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
-                        shwrap("cosa push-container --authfile=\${OSCONTAINER_SECRET} ${quay_registry}:${params.STREAM}")
-                    }
-                }
-            }
 
             // For production streams, import the OSTree into the prod
             // OSTree repo.
@@ -180,6 +172,22 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                     cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
                     """)
                 }
+            }
+        }
+
+        stage("Push OSContainer Manifest") {
+            // Ship a manifest list containing all requested architectures.
+            withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
+                def archparams = ''
+                for (basearch in basearches) {
+                    archparams += ' --arch=${basearch}'
+                }
+                shwrap("""
+                cosa push-container-manifest --auth=\${OSCONTAINER_SECRET} \
+                    --repo=${quay_registry} --tag=${params.STREAM} \
+                    --artifact=ostree --metajsonname=base-oscontainer \
+                    --build=${params.VERSION} ${archparams}
+                """)
             }
         }
 
