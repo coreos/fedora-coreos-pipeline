@@ -1,31 +1,43 @@
 streams:
-    stable:
+    master:
       type: production
-    testing:
+      variants: []
+      branch: master
+      cosa_image: "coreos-assembler:main"
+    "4.11":
       type: production
-    next:
+      branch: release-4.11
+      cosa_image: "coreos-assembler:rhcos-4.11"
+    "4.10":
       type: production
-    testing-devel:
-      type: development
-      default: true
-    next-devel:         # do not touch; line managed by `next-devel/manage.py`
-      type: development # do not touch; line managed by `next-devel/manage.py`
-    rawhide:
-      type: mechanical
-    # branched:
-    #  type: mechanical
-    # bodhi-updates:
-    #   type: mechanical
-    # bodhi-updates-testing:
-    #   type: mechanical
+      branch: release-4.10
+      cosa_image: "coreos-assembler:rhcos-4.10"
+    "4.9":
+      type: production
+      branch: release-4.9
+      cosa_image: "coreos-assembler:rhcos-4.9"
+    "4.8":
+      type: production
+      branch: release-4.8
+      cosa_image: "coreos-assembler:rhcos-4.8"
+    "4.7":
+      type: production
+      branch: release-4.7
+      cosa_image: "coreos-assembler:rhcos-4.7"
+    "4.6":
+      type: production
+      branch: release-4.6
+      cosa_image: "coreos-assembler:rhcos-4.6"
 
-additional_arches: [aarch64, ppc64le, s390x]
+# additional_arches: [aarch64, ppc64le, s390x]
+additional_arches: [ppc64le]
 
 source_config:
-  url: https://github.com/coreos/fedora-coreos-config
+  url: https://github.com/openshift/os
 
 # remove to disable S3 uploads
-s3_bucket: fcos-builds
+s3_bucket: rhcos-ci
+# path: releases/4.11-devel
 
 registry_repos:
   oscontainer: quay.io/fedora/fedora-coreos
