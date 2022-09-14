@@ -1,10 +1,9 @@
-def pipeutils, streams, official
+def pipeutils, official
 def gitref, commit, shortcommit
 def containername = 'fcos-buildroot'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    streams = load("streams.groovy")
     official = pipeutils.isOfficial()
 }
 
