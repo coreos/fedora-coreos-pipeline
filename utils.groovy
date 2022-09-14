@@ -16,7 +16,7 @@ def load_pipecfg() {
     def ref = jenkinscfg['pipecfg-ref']
 
     if (url == 'in-tree') {
-        return readYaml file: "config.yaml"
+        return readYaml(file: "config.yaml")
     }
 
     // this uses the `checkout` workflow step instead of just manually cloning so
@@ -27,7 +27,7 @@ def load_pipecfg() {
         extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pipecfg']],
         userRemoteConfigs: [[url: url]]
     ])
-    return readYaml file: "pipecfg/config.yaml"
+    return readYaml(file: "pipecfg/config.yaml")
 }
 
 // Tells us if we're running if the official Jenkins for the FCOS pipeline
@@ -38,7 +38,7 @@ boolean isOfficial() {
 // Parse and handle the result of Kola
 boolean checkKolaSuccess(file) {
     // archive the image if the tests failed
-    def report = readJSON file: "${file}"
+    def report = readJSON(file: "${file}")
     def result = report["result"]
     print("kola result: ${result}")
     if (result != "PASS") {
