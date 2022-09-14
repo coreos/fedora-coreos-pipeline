@@ -165,6 +165,9 @@ objects:
           - name: cosa-push-registry-secret
             mountPath: /var/run/secrets/cosa-push-registry-secret
             readOnly: true
+          - name: fedora-push-registry-secret
+            mountPath: /var/run/secrets/fedora-push-registry-secret
+            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -219,6 +222,10 @@ objects:
         - name: cosa-push-registry-secret
           secret:
             secretName: cosa-push-registry-secret
+            optional: true
+        - name: fedora-push-registry-secret
+          secret:
+            secretName: fedora-push-registry-secret
             optional: true
     triggers:
     - imageChangeParams:
