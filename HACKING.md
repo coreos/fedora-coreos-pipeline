@@ -271,12 +271,12 @@ follows:
 - Content Type: `application/json`
 - Secret: Use the secret text from the GitHub webhook shared secret above
 
-### [PROD] Create quay.io FCOS image push secret
+### [PROD] Create quay.io Fedora image push secret
 
-This secret is used to push the resulting OCI image to Quay.io
+This secret is used to push the oscontainer and others to Quay.io
 
-1. Obtain the file `oscontainer-secret` from BitWarden.
-2. Run: `$ oc create secret generic oscontainer-secret --from-file=dockercfg=oscontainer-secret`.
+1. Obtain the file `fedora-push-registry-secret` from BitWarden.
+2. Run: `$ oc create secret generic fedora-push-registry-secret --from-file=dockercfg=fedora-push-registry-secret`.
 
 ### [PROD] Create quay.io COSA image push secret
 

@@ -68,8 +68,8 @@ echo "Final podspec: ${pod}"
 def pod_label = "cosa-${UUID.randomUUID().toString()}"
 
 // Destination for OCI image push
-// TODO: Change this to quay.io/fedora/coreos per https://fedoraproject.org/wiki/Changes/OstreeNativeContainer
-def quay_registry = "quay.io/coreos-assembler/fcos"
+def quay_registry = "quay.io/fedora/fedora-coreos"
+def old_quay_registry = "quay.io/coreos-assembler/fcos"
 
 // Get the list of requested architectures to release
 def basearches = params.ARCHES.split() as Set
@@ -177,13 +177,22 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
         stage("Push OSContainer Manifest") {
             // Ship a manifest list containing all requested architectures.
-            withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
+            withCredentials([file(credentialsId: 'fedora-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
                 def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
                 shwrap("""
-                cosa push-container-manifest --auth=\${OSCONTAINER_SECRET} \
+                cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
                     --repo=${quay_registry} --tag=${params.STREAM} \
                     --artifact=ostree --metajsonname=base-oscontainer \
                     --build=${params.VERSION} ${arch_args}
+                """)
+            }
+            // For a period of time let's also mirror into the old location too
+            // Drop this after October 2022
+            withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'REGISTRY_SECRET')]) {
+                shwrap("""
+                skopeo copy --all --authfile \$REGISTRY_SECRET \
+                    docker://${quay_registry}:${params.STREAM} \
+                    docker://${old_quay_registry}:${params.STREAM}
                 """)
             }
         }
