@@ -178,15 +178,12 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         stage("Push OSContainer Manifest") {
             // Ship a manifest list containing all requested architectures.
             withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'OSCONTAINER_SECRET')]) {
-                def archparams = ''
-                for (basearch in basearches) {
-                    archparams += ' --arch=${basearch}'
-                }
+                def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
                 shwrap("""
                 cosa push-container-manifest --auth=\${OSCONTAINER_SECRET} \
                     --repo=${quay_registry} --tag=${params.STREAM} \
                     --artifact=ostree --metajsonname=base-oscontainer \
-                    --build=${params.VERSION} ${archparams}
+                    --build=${params.VERSION} ${arch_args}
                 """)
             }
         }
