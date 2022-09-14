@@ -43,6 +43,42 @@ objects:
             scheduled: true
           referencePolicy:
             type: Local
+        - name: "rhcos-4.11"
+          from:
+            kind: DockerImage
+            name: quay.io/coreos-assembler/coreos-assembler:rhcos-4.11
+          importPolicy:
+            scheduled: true
+        - name: "rhcos-4.10"
+          from:
+            kind: DockerImage
+            name: quay.io/coreos-assembler/coreos-assembler:rhcos-4.10
+          importPolicy:
+            scheduled: true
+        - name: "rhcos-4.9"
+          from:
+            kind: DockerImage
+            name: quay.io/coreos-assembler/coreos-assembler:rhcos-4.9
+          importPolicy:
+            scheduled: true
+        - name: "rhcos-4.8"
+          from:
+            kind: DockerImage
+            name: quay.io/coreos-assembler/coreos-assembler:rhcos-4.8
+          importPolicy:
+            scheduled: true
+        - name: "rhcos-4.7"
+          from:
+            kind: DockerImage
+            name: quay.io/coreos-assembler/coreos-assembler:rhcos-4.7
+          importPolicy:
+            scheduled: true
+        - name: "rhcos-4.6"
+          from:
+            kind: DockerImage
+            name: quay.io/coreos-assembler/coreos-assembler:rhcos-4.6
+          importPolicy:
+            scheduled: true
 
   ### JENKINS CONFIG ###
 
