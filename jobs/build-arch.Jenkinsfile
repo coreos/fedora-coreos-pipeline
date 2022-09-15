@@ -92,9 +92,24 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "1")
 pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "1")
 
+// We recently did some golang migration [1] and happened to add the
+// `cosa remote-session` pieces [2] after that migration. This makes
+// it not easy to backport to ther branches. For a period of time
+// let's use the latest COSA for our COSA pod for multi-arch builds
+// instead of the versioned COSA. We will still use the versioned COSA
+// on the remote so the actual building will happened with the correctly
+// versioned COSA (substituted below and passed as an argument to
+// `cosa remote-session create --image=`).
+// [1] https://github.com/coreos/coreos-assembler/pull/2919
+// [2] https://github.com/coreos/coreos-assembler/pull/2979
+def cosa_pod_image = params.COREOS_ASSEMBLER_IMAGE
+if (cosa_pod_image =~ '^coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
+    cosa_pod_image = "coreos-assembler:main"
+}
+
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
+pod = pod.replace("COREOS_ASSEMBLER_IMAGE", cosa_pod_image)
 pod = pod.replace("JENKINS_AGENT_IMAGE_TAG", jenkins_agent_image_tag)
 
 def podYaml = readYaml(text: pod);
