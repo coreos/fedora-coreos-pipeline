@@ -14,12 +14,11 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmMuXJ9BSNQo8Dh7KMINvRbos/OfXlUMXCStZw72m6p builder@fcos-x86_64-builder
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsZ+IH1M1TWoBXz5uRe03gmk8waNrij0sDrPgTTb/rf builder@coreos-ppc64le-builder
 storage:
   files:
     - path: /etc/hostname
       mode: 0644
       overwrite: true
       contents:
-        # no underscore in the hostname
-        inline: fcos-x86-64-builder
+        inline: buildvm-ppc64le-fcos01.iad2.fedoraproject.org

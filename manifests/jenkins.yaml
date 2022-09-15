@@ -147,17 +147,17 @@ objects:
           - name: github-coreosbot-token
             mountPath: /var/run/secrets/github-coreosbot-token
             readOnly: true
-          - name: fcos-aarch64-builder
-            mountPath: /var/run/secrets/fcos-aarch64-builder
+          - name: coreos-aarch64-builder
+            mountPath: /var/run/secrets/coreos-aarch64-builder
             readOnly: true
-          - name: fcos-ppc64le-builder
-            mountPath: /var/run/secrets/fcos-ppc64le-builder
+          - name: coreos-ppc64le-builder
+            mountPath: /var/run/secrets/coreos-ppc64le-builder
             readOnly: true
-          - name: fcos-s390x-builder
-            mountPath: /var/run/secrets/fcos-s390x-builder
+          - name: coreos-s390x-builder
+            mountPath: /var/run/secrets/coreos-s390x-builder
             readOnly: true
-          - name: fcos-x86-64-builder
-            mountPath: /var/run/secrets/fcos-x86-64-builder
+          - name: coreos-x86-64-builder
+            mountPath: /var/run/secrets/coreos-x86-64-builder
             readOnly: true
           - name: oscontainer-secret
             mountPath: /var/run/secrets/oscontainer-secret
@@ -199,21 +199,21 @@ objects:
           secret:
             secretName: github-coreosbot-token
             optional: true
-        - name: fcos-aarch64-builder
+        - name: coreos-aarch64-builder
           secret:
-            secretName: fcos-aarch64-builder
+            secretName: coreos-aarch64-builder
             optional: true
-        - name: fcos-ppc64le-builder
+        - name: coreos-ppc64le-builder
           secret:
-            secretName: fcos-ppc64le-builder
+            secretName: coreos-ppc64le-builder
             optional: true
-        - name: fcos-s390x-builder
+        - name: coreos-s390x-builder
           secret:
-            secretName: fcos-s390x-builder
+            secretName: coreos-s390x-builder
             optional: true
-        - name: fcos-x86-64-builder
+        - name: coreos-x86-64-builder
           secret:
-            secretName: fcos-x86-64-builder
+            secretName: coreos-x86-64-builder
             optional: true
         - name: oscontainer-secret
           secret:

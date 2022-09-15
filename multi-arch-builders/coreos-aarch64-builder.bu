@@ -14,11 +14,11 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBYuN4Crt4kwszp25BPpNGc8xPiVyXwXAGILQmBOOvCq builder@fcos-s390x-builder
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILJJquUOL/NRZEIRrMLW0T8H/zmBQA4XMZxoI0ElwvGp builder@coreos-aarch64-builder
 storage:
   files:
     - path: /etc/hostname
       mode: 0644
       overwrite: true
       contents:
-        inline: fcos-s390x-builder
+        inline: coreos-aarch64-builder

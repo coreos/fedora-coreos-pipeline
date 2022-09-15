@@ -1,0 +1,27 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: coreos-x86-64-builder-host-string
+            secret: ${coreos-x86-64-builder/host}
+            description: coreos x86_64 Builder Host
+        - string:
+            scope: GLOBAL
+            id: coreos-x86-64-builder-user-string
+            secret: ${coreos-x86-64-builder/user}
+            description: coreos x86_64 Builder User
+        - string:
+            scope: GLOBAL
+            id: coreos-x86-64-builder-uid-string
+            secret: ${coreos-x86-64-builder/uid}
+            description: coreos x86_64 Builder UID
+        - basicSSHUserPrivateKey:
+            scope: GLOBAL
+            id: coreos-x86-64-builder-sshkey-key
+            username: builder
+            description: coreos x86_64 Builder SSH Key
+            privateKeySource:
+              directEntry:
+                privateKey: "${readFile:${coreos-x86-64-builder/sshkey}}"

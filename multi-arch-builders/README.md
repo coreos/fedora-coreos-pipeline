@@ -18,19 +18,19 @@ Create the Ignition config
 
 ```bash
 cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat fcos-aarch64-builder.bu | butane --pretty --strict --files-dir=. > fcos-aarch64-builder.ign
+cat coreos-aarch64-builder.bu | butane --pretty --strict --files-dir=. > coreos-aarch64-builder.ign
 ```
 
 Bring the instance up with appropriate details:
 
 ```bash
-NAME='fcos-aarch64-builder'
+NAME='coreos-aarch64-builder'
 AMI='ami-0cd88be9379abf352'
 TYPE='a1.metal'
 DISK='200'
 SUBNET='subnet-0732e4cda7466a2ae'
 SECURITY_GROUPS='sg-7d0b4c05'
-USERDATA="${PWD}/fcos-aarch64-builder.ign"
+USERDATA="${PWD}/coreos-aarch64-builder.ign"
 aws ec2 run-instances                     \
     --output json                         \
     --image-id $AMI                       \
@@ -125,14 +125,14 @@ container where ibmcloud is running:
 
 ```bash
 cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat fcos-s390x-builder.bu | butane --pretty --strict --files-dir=. > fcos-s390x-builder.ign
-podman cp fcos-s390x-builder.ign ibmcloud:/root/fcos-s390x-builder.ign
+cat coreos-s390x-builder.bu | butane --pretty --strict --files-dir=. > coreos-s390x-builder.ign
+podman cp coreos-s390x-builder.ign ibmcloud:/root/coreos-s390x-builder.ign
 ```
 
 Now we can start the instance:
 
 ```bash
-NAME="fcos-s390x-builder-$(date +%Y%m%d)"
+NAME="coreos-s390x-builder-$(date +%Y%m%d)"
 VPC='r038-a29e1c05-8a07-4ddc-8216-c75cbd459daa'
 ZONE='ca-tor-1' # s390x only available in Toronto in North America
 PROFILE='bz2-8x32'
@@ -140,7 +140,7 @@ IMAGE='r038-369d6b9c-f0d1-4daf-bda4-252df3aa4728'
 SUBNET='02q7-1df6496a-b363-4f3b-9204-0a2b06855a2f'
 ibmcloud is instance-create $NAME $VPC $ZONE $PROFILE $SUBNET --output json --image-id $IMAGE \
      --boot-volume '{"name": "my-boot-vol-1", "volume": {"capacity": 200, "profile": {"name": "general-purpose"}}}' \
-     --user-data @fcos-s390x-builder.ign > out.json
+     --user-data @coreos-s390x-builder.ign > out.json
 ```
 
 
@@ -149,7 +149,7 @@ and then log in:
 
 ```bash
 NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update fcos-s390x-builder-backup --nic $NIC
+ibmcloud is floating-ip-update coreos-s390x-builder-backup --nic $NIC
 
 INSTANCE=$(jq --raw-output .id out.json)
 IP=$(ibmcloud is instance $INSTANCE --output json \
@@ -173,7 +173,7 @@ s390x jobs are running).
 
 ```bash
 NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update fcos-s390x-builder --nic $NIC
+ibmcloud is floating-ip-update coreos-s390x-builder --nic $NIC
 
 INSTANCE=$(jq --raw-output .id out.json)
 IP=$(ibmcloud is instance $INSTANCE --output json \
@@ -209,19 +209,19 @@ Create the Ignition config
 
 ```bash
 cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat fcos-x86_64-builder.bu | butane --pretty --strict --files-dir=. > fcos-x86_64-builder.ign
+cat coreos-x86_64-builder.bu | butane --pretty --strict --files-dir=. > coreos-x86_64-builder.ign
 ```
 
 Bring the instance up with appropriate details:
 
 ```bash
-NAME='fcos-x86_64-builder'
+NAME='coreos-x86_64-builder'
 AMI='ami-068df0b4ca626835d'
 TYPE='c6a.xlarge'
 DISK='100'
 SUBNET='subnet-0732e4cda7466a2ae'
 SECURITY_GROUPS='sg-7d0b4c05'
-USERDATA="${PWD}/fcos-x86_64-builder.ign"
+USERDATA="${PWD}/coreos-x86_64-builder.ign"
 aws ec2 run-instances                     \
     --output json                         \
     --image-id $AMI                       \

@@ -14,11 +14,12 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILJJquUOL/NRZEIRrMLW0T8H/zmBQA4XMZxoI0ElwvGp builder@fcos-aarch64-builder
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmMuXJ9BSNQo8Dh7KMINvRbos/OfXlUMXCStZw72m6p builder@coreos-x86_64-builder
 storage:
   files:
     - path: /etc/hostname
       mode: 0644
       overwrite: true
       contents:
-        inline: fcos-aarch64-builder
+        # no underscore in the hostname
+        inline: coreos-x86-64-builder
