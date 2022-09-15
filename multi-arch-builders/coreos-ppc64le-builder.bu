@@ -14,11 +14,12 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsZ+IH1M1TWoBXz5uRe03gmk8waNrij0sDrPgTTb/rf builder@coreos-ppc64le-builder
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsZ+IH1M1TWoBXz5uRe03gmk8waNrij0sDrPgTTb/rf builder@fcos-pipeline-ppc64le
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID8cIzlrmq9NXHT320rg0J+eplyWUdAfNsDvHNBadUxx builder@rhcos-pipeline-ppc64le
 storage:
   files:
     - path: /etc/hostname
       mode: 0644
       overwrite: true
       contents:
-        inline: buildvm-ppc64le-fcos01.iad2.fedoraproject.org
+        inline: coreos-ppc64le-builder

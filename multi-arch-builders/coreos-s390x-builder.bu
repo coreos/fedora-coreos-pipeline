@@ -14,7 +14,9 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBYuN4Crt4kwszp25BPpNGc8xPiVyXwXAGILQmBOOvCq builder@coreos-s390x-builder
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBYuN4Crt4kwszp25BPpNGc8xPiVyXwXAGILQmBOOvCq builder@fcos-pipeline-s390x
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEA9fEPuFwffqoqOFa9R0mIbUCaeHB03ql/QcTQ5Bqlx builder@rhcos-pipeline-s390x
+
 storage:
   files:
     - path: /etc/hostname

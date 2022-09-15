@@ -14,7 +14,8 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmMuXJ9BSNQo8Dh7KMINvRbos/OfXlUMXCStZw72m6p builder@coreos-x86_64-builder
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmMuXJ9BSNQo8Dh7KMINvRbos/OfXlUMXCStZw72m6p builder@fcos-pipeline-x86_64
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFb2urqFBm023Po1axRR6Jphvi30mRupwBrz3WM30ShM builder@rhcos-pipeline-x86_64
 storage:
   files:
     - path: /etc/hostname
