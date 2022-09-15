@@ -1,7 +1,7 @@
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, pipecfg, official, uploading, jenkins_agent_image_tag
-def src_config_url, src_config_ref, s3_bucket
+def src_config_url, s3_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -11,7 +11,6 @@ node {
 
     def jenkinscfg = pipeutils.load_jenkins_config()
     src_config_url = pipecfg.source_config.url
-    src_config_ref = pipecfg.source_config.ref
     s3_bucket = pipecfg.s3_bucket
     jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
 
@@ -178,9 +177,6 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = params.STREAM
-        if (src_config_ref != "") {
-            ref = src_config_ref
-        }
         def fcos_config_commit
         if (params.FCOS_CONFIG_COMMIT) {
             fcos_config_commit = params.FCOS_CONFIG_COMMIT
