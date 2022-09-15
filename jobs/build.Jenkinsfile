@@ -139,7 +139,6 @@ lock(resource: "build-${params.STREAM}") {
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)
-
             // If the cache img is larger than 7G, then nuke it. Otherwise
             // it'll just keep growing and we'll hit ENOSPC. It'll get rebuilt.
             shwrap("""
