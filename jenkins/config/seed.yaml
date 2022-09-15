@@ -23,7 +23,7 @@ jobs:
 
               node {
                 // XXX: hack, should put this in coreos-ci-lib
-                sh("curl -LO https://raw.githubusercontent.com/coreos/fedora-coreos-pipeline/main/utils.groovy")
+                sh("curl -LO https://raw.githubusercontent.com/travier/fedora-coreos-pipeline/rhcos/utils.groovy")
                 def pipeutils = load("utils.groovy")
                 def jenkinscfg = pipeutils.load_jenkins_config()
                 def url = jenkinscfg["jenkins-jobs-url"]
