@@ -1,0 +1,27 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: coreos-ppc64le-builder-host-string
+            secret: ${coreos-ppc64le-builder/host}
+            description: coreos ppc64le Builder Host
+        - string:
+            scope: GLOBAL
+            id: coreos-ppc64le-builder-user-string
+            secret: ${coreos-ppc64le-builder/user}
+            description: coreos ppc64le Builder User
+        - string:
+            scope: GLOBAL
+            id: coreos-ppc64le-builder-uid-string
+            secret: ${coreos-ppc64le-builder/uid}
+            description: coreos ppc64le Builder UID
+        - basicSSHUserPrivateKey:
+            scope: GLOBAL
+            id: coreos-ppc64le-builder-sshkey-key
+            username: builder
+            description: coreos ppc64le Builder SSH Key
+            privateKeySource:
+              directEntry:
+                privateKey: "${readFile:${coreos-ppc64le-builder/sshkey}}"

@@ -115,9 +115,9 @@ def withPodmanRemoteArchBuilder(params = [:], Closure body) {
         // translate it to 'x86-64'
         arch = "x86-64"
     }
-    withPodmanRemote(remoteHost: "fcos-${arch}-builder-host-string",
-                     remoteUid:  "fcos-${arch}-builder-uid-string",
-                     sshKey:     "fcos-${arch}-builder-sshkey-key") {
+    withPodmanRemote(remoteHost: "coreos-${arch}-builder-host-string",
+                     remoteUid:  "coreos-${arch}-builder-uid-string",
+                     sshKey:     "coreos-${arch}-builder-sshkey-key") {
         body()
     }
 }

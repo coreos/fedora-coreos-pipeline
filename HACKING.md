@@ -232,14 +232,14 @@ cat /path/to/sshkey > dir/sshkey
 Then create the secret in OpenShift:
 
 ```
-oc create secret generic fcos-aarch64-builder --from-file=dir
+oc create secret generic coreos-aarch64-builder --from-file=dir
 ```
 
 In the prod pipeline we create secrets for aarch64, ppc64le,
 and x86_64 (for the build-cosa job).
 
 NOTE: For x86_64 you need to use a hyphen/dash (`-`) instead of an
-      underscore in the secret name: `fcos-x86-64-builder`.
+      underscore in the secret name: `coreos-x86-64-builder`.
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden
 
