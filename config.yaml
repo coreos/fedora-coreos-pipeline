@@ -28,6 +28,10 @@ source_config:
 s3_bucket: fcos-builds
 
 clouds:
+  aws:
+    # Accounts to share newly created AMIs with
+    test_accounts:
+      - "013116697141"
   gcp:
     bucket: fedora-coreos-cloud-image-uploads
   azure:

@@ -1,7 +1,7 @@
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, pipecfg, official, uploading, jenkins_agent_image_tag
-def src_config_url, s3_bucket
+def src_config_url, s3_bucket, aws_test_accounts
 def gcp_gs_bucket
 node {
     checkout scm
@@ -15,6 +15,9 @@ node {
     gcp_gs_bucket = pipecfg.clouds?.gcp?.bucket
     jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
 
+    // Extra AWS testing accounts to share images with
+    aws_test_accounts = pipecfg.clouds?.aws?.test_accounts
+
     official = pipeutils.isOfficial()
     if (official) {
         echo "Running in official (prod) mode."
@@ -22,9 +25,6 @@ node {
         echo "Running in unofficial pipeline on ${env.JENKINS_URL}."
     }
 }
-
-// Share with the Fedora testing account so we can test it afterwards
-FEDORA_AWS_TESTING_USER_ID = "013116697141"
 
 // Base URL through which to download artifacts
 BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
@@ -540,14 +540,14 @@ lock(resource: "build-${params.STREAM}") {
                     // XXX: use the temporary 'ami-import' subpath for now; once we
                     // also publish vmdks, we could make this more efficient by
                     // uploading first, and then pointing ore at our uploaded vmdk
+                    def grant_user_args = aws_test_accounts.collect{"--grant-user ${it}"}.join(" ")
                     shwrap("""
                     cosa buildextend-aws \
                         --upload \
                         --arch=${basearch} \
                         --build=${newBuildID} \
-                        --region=us-east-1 \
+                        --region=us-east-1 ${grant_user_args} \
                         --bucket s3://${s3_bucket}/ami-import \
-                        --grant-user ${FEDORA_AWS_TESTING_USER_ID} \
                         --credentials-file=\${AWS_FCOS_BUILDS_BOT_CONFIG}
                     """)
                 }
