@@ -546,6 +546,14 @@ value from the `manifests/pipeline.yaml` OpenShift template. This is
 currently as designed (see
 [#65](https://github.com/coreos/fedora-coreos-pipeline/issues/65)).
 
+If you update the Jenkins config in `jenkins/config`, then you need to update
+it in the clsuter too:
+
+```
+oc delete configmap/jenkins-casc-cfg
+oc create configmap jenkins-casc-cfg --from-file=jenkins/config
+```
+
 ### Nuking everything
 
 One can leverage Kubernetes labels to delete all objects
