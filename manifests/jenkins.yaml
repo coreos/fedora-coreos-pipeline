@@ -27,18 +27,18 @@ objects:
     to:
       kind: Service
       name: ${JENKINS_SERVICE_NAME}
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    name: ${JENKINS_SERVICE_NAME}
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${VOLUME_CAPACITY}
-    # DELTA: support specifying storage class
-    storageClassName: "${STORAGE_CLASS_NAME}"
+# - apiVersion: v1
+#   kind: PersistentVolumeClaim
+#   metadata:
+#     name: ${JENKINS_SERVICE_NAME}
+#   spec:
+#     accessModes:
+#     - ReadWriteOnce
+#     resources:
+#       requests:
+#         storage: ${VOLUME_CAPACITY}
+#     # DELTA: support specifying storage class
+#     storageClassName: "${STORAGE_CLASS_NAME}"
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -128,20 +128,20 @@ objects:
             privileged: false
           terminationMessagePath: /dev/termination-log
           volumeMounts:
-          - mountPath: /var/lib/jenkins
-            name: ${JENKINS_SERVICE_NAME}-data
-          # DELTA: mount c-as-c config map
+          # - mountPath: /var/lib/jenkins
+          #   name: ${JENKINS_SERVICE_NAME}-data
+          # # DELTA: mount c-as-c config map
           - name: ${JENKINS_SERVICE_NAME}-casc-cfg
             mountPath: /var/lib/jenkins/configuration-as-code
             readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
-        volumes:
-        - name: ${JENKINS_SERVICE_NAME}-data
-          persistentVolumeClaim:
-            claimName: ${JENKINS_SERVICE_NAME}
-        # DELTA: add a configmap -- it's defined in pipeline.yaml
+        # volumes:
+        # - name: ${JENKINS_SERVICE_NAME}-data
+        #   persistentVolumeClaim:
+        #     claimName: ${JENKINS_SERVICE_NAME}
+        # # DELTA: add a configmap -- it's defined in pipeline.yaml
         - name: ${JENKINS_SERVICE_NAME}-casc-cfg
           configMap:
             name: jenkins-casc-cfg
