@@ -91,6 +91,13 @@ This machine is a VM on a koji builder set up for us by Kevin Fenzi
 (nirik). We'll work to automate this bringup and store the information
 about how to provision this machine here in the future.
 
+To create the Ignition config for this machine:
+
+```bash
+cat builder-common.bu | butane --pretty --strict > builder-common.ign
+cat coreos-ppc64le-builder.bu | butane --pretty --strict --files-dir=. > coreos-ppc64le-builder.ign
+```
+
 To connect to this machine first add 
 [custom ssh configuration](https://docs.fedoraproject.org/en-US/infra/sysadmin_guide/sshaccess/#_ssh_configuration)
 for connecting to machines via Fedora bastion hosts.
