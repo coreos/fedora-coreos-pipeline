@@ -2,7 +2,7 @@
 # doesn't actually need to be a template (there are no parameters), but the way
 # `deploy` currently works expects it as a template.
 
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   name: jenkins-agent
