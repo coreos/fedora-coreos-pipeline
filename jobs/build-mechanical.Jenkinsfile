@@ -27,7 +27,7 @@ node {
 
     if (pipeutils.triggered_by_push()) {
         stream = pipeutils.stream_from_branch(change.GIT_BRANCH)
-        if (stream in streams.mechanical) {
+        if (stream in mechanical_streams) {
             build job: 'build', wait: false, parameters: [
               string(name: 'STREAM', value: stream)
             ]
