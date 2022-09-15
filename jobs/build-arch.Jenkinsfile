@@ -144,10 +144,12 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         def basearch = params.ARCH
 
         // If we are using the image stream (the default) then just translate
-        // that into 'quay.io/coreos-assembler/coreos-assembler:main'.
+        // that into a quay registry equivalent (the multi-arch builders can't
+        // run containers from image streams).
         def image = params.COREOS_ASSEMBLER_IMAGE
-        if (image == "coreos-assembler:main") {
-            image = "quay.io/coreos-assembler/coreos-assembler:main"
+        if (image.startsWith("coreos-assembler:")) {
+            image = image.replaceAll("coreos-assembler:",
+                                     "quay.io/coreos-assembler/coreos-assembler:")
         }
 
         try { timeout(time: 240, unit: 'MINUTES') {
