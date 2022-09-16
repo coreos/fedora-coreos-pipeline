@@ -528,27 +528,27 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             // reset for the next batch of independent tasks
             parallelruns = [:]
 
-        // Key off of uploading: i.e. if we're configured to upload artifacts
-        // to S3, we also take that to mean we should upload an AMI. We could
-        // split this into two separate developer knobs in the future.
-        if (basearch =="aarch64" && uploading) {
-            parallelruns['Upload AWS'] = {
-                // XXX: hardcode us-east-1 for now
-                // XXX: use the temporary 'ami-import' subpath for now; once we
-                // also publish vmdks, we could make this more efficient by
-                // uploading first, and then pointing ore at our uploaded vmdk
-                def grant_user_args = aws_test_accounts.collect{"--grant-user ${it}"}.join(" ")
-                shwrap("""
-                cosa buildextend-aws \
-                    --upload \
-                    --arch=${basearch} \
-                    --build=${newBuildID} \
-                    --region=us-east-1 ${grant_user_args} \
-                    --bucket s3://${s3_bucket}/ami-import \
-                    --credentials-file=\${AWS_FCOS_BUILDS_BOT_CONFIG}
-                """)
+            // Key off of uploading: i.e. if we're configured to upload artifacts
+            // to S3, we also take that to mean we should upload an AMI. We could
+            // split this into two separate developer knobs in the future.
+            if (basearch =="aarch64" && uploading) {
+                parallelruns['Upload AWS'] = {
+                    // XXX: hardcode us-east-1 for now
+                    // XXX: use the temporary 'ami-import' subpath for now; once we
+                    // also publish vmdks, we could make this more efficient by
+                    // uploading first, and then pointing ore at our uploaded vmdk
+                    def grant_user_args = aws_test_accounts.collect{"--grant-user ${it}"}.join(" ")
+                    shwrap("""
+                    cosa buildextend-aws \
+                        --upload \
+                        --arch=${basearch} \
+                        --build=${newBuildID} \
+                        --region=us-east-1 ${grant_user_args} \
+                        --bucket s3://${s3_bucket}/ami-import \
+                        --credentials-file=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                    """)
+                }
             }
-        }
 
             // process this batch
             parallel parallelruns
