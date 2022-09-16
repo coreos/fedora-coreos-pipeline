@@ -28,7 +28,7 @@ properties([
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
              trim: true),
-      string(name: 'FCOS_CONFIG_COMMIT',
+      string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to run tests against',
              defaultValue: '',
              trim: true),
@@ -54,8 +54,8 @@ try { timeout(time: 60, unit: 'MINUTES') {
 
         stage('Fetch Metadata') {
             def commitopt = ''
-            if (params.FCOS_CONFIG_COMMIT != '') {
-                commitopt = "--commit=${params.FCOS_CONFIG_COMMIT}"
+            if (params.SRC_CONFIG_COMMIT != '') {
+                commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
             }
             shwrap("""
             export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config

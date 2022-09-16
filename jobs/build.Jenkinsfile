@@ -170,14 +170,14 @@ lock(resource: "build-${params.STREAM}") {
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = params.STREAM
-        def fcos_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
+        def src_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
             // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
             def cache_img = "/srv/prod/${params.STREAM}/cache.qcow2"
 
             shwrap("""
-            cosa init --force --branch ${ref} --commit=${fcos_config_commit} ${src_config_url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${src_config_url}
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)
@@ -441,7 +441,7 @@ lock(resource: "build-${params.STREAM}") {
                         booleanParam(name: 'FORCE', value: true),
                         booleanParam(name: 'MINIMAL', value: params.MINIMAL),
                         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
-                        string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit),
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit),
                         string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
                         string(name: 'STREAM', value: params.STREAM),
                         string(name: 'VERSION', value: newBuildID),
@@ -657,7 +657,7 @@ lock(resource: "build-${params.STREAM}") {
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                     string(name: 'ARCH', value: basearch),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                    string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
                 ]
             }
           // XXX: This is failing right now. Disable until the New
@@ -668,7 +668,7 @@ lock(resource: "build-${params.STREAM}") {
           //        string(name: 'STREAM', value: params.STREAM),
           //        string(name: 'VERSION', value: newBuildID),
           //        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-          //        string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+          //        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
           //    ]
           //}
         }
@@ -680,7 +680,7 @@ lock(resource: "build-${params.STREAM}") {
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                    string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
                 ]
             }
         }
@@ -692,7 +692,7 @@ lock(resource: "build-${params.STREAM}") {
                     string(name: 'STREAM', value: params.STREAM),
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                    string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
                 ]
             }
         }
@@ -705,7 +705,7 @@ lock(resource: "build-${params.STREAM}") {
                     string(name: 'VERSION', value: newBuildID),
                     string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                     string(name: 'ARCH', value: basearch),
-                    string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                    string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
                 ]
             }
         }

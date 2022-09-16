@@ -67,7 +67,7 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
-      string(name: 'FCOS_CONFIG_COMMIT',
+      string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',
              defaultValue: '',
              trim: true),
@@ -196,11 +196,11 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = params.STREAM
-        def fcos_config_commit
-        if (params.FCOS_CONFIG_COMMIT) {
-            fcos_config_commit = params.FCOS_CONFIG_COMMIT
+        def src_config_commit
+        if (params.SRC_CONFIG_COMMIT) {
+            src_config_commit = params.SRC_CONFIG_COMMIT
         } else {
-            fcos_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
+            src_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
         }
 
 
@@ -237,7 +237,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             # sync over the send-ostree-import-request.py from the automation repo
             cosa remote-session sync {,:}/var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py
 
-            cosa init --force --branch ${ref} --commit=${fcos_config_commit} ${src_config_url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${src_config_url}
             """)
 
         }
@@ -637,7 +637,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                         string(name: 'VERSION', value: newBuildID),
                         string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                         string(name: 'ARCH', value: basearch),
-                        string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
                     ]
                 }
             }
@@ -650,7 +650,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                         string(name: 'VERSION', value: newBuildID),
                         string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                         string(name: 'ARCH', value: basearch),
-                        string(name: 'FCOS_CONFIG_COMMIT', value: fcos_config_commit)
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
                     ]
                 }
             }
