@@ -1,3 +1,6 @@
+# this is an FCOS pipeline
+type: fcos
+
 streams:
     stable:
       type: production
