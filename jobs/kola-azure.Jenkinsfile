@@ -1,4 +1,4 @@
-def pipeutils, pipecfg, official
+def pipeutils, pipecfg, s3_bucket, official
 def azure_testing_resource_group
 def azure_testing_storage_account
 def azure_testing_storage_container
@@ -6,6 +6,7 @@ node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
+    s3_bucket = pipecfg.s3_bucket
     def jenkinscfg = pipeutils.load_jenkins_config()
     azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
     azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
@@ -63,7 +64,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
 
     def s3_stream_dir = params.S3_STREAM_DIR
     if (s3_stream_dir == "") {
-        s3_stream_dir = "fcos-builds/prod/streams/${params.STREAM}"
+        s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
     }
 
     try { timeout(time: 75, unit: 'MINUTES') {

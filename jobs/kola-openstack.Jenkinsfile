@@ -1,8 +1,9 @@
-def pipeutils, pipecfg, official
+def pipeutils, pipecfg, s3_bucket, official
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
+    s3_bucket = pipecfg.s3_bucket
     official = pipeutils.isOfficial()
 }
 
@@ -57,7 +58,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
 
     def s3_stream_dir = params.S3_STREAM_DIR
     if (s3_stream_dir == "") {
-        s3_stream_dir = "fcos-builds/prod/streams/${params.STREAM}"
+        s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
     }
 
     try { timeout(time: 90, unit: 'MINUTES') {
