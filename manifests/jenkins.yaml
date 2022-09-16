@@ -136,8 +136,8 @@ objects:
             mountPath: /var/run/secrets/slack-api-token
             readOnly: true
           # DELTA: mount AWS creds; see below
-          - name: aws-fcos-builds-bot-creds
-            mountPath: /var/run/secrets/aws-fcos-builds-bot-config
+          - name: aws-build-upload-config
+            mountPath: /var/run/secrets/aws-build-upload-config
             readOnly: true
           # DELTA: mount GitHub webhook shared secret
           - name: github-webhook-shared-secret
@@ -185,9 +185,9 @@ objects:
             secretName: slack-api-token
             optional: true
         # DELTA: add AWS creds (used by the sync-stream-metadata job)
-        - name: aws-fcos-builds-bot-creds
+        - name: aws-build-upload-config
           secret:
-            secretName: aws-fcos-builds-bot-config
+            secretName: aws-build-upload-config
             optional: true
         # DELTA: add the GitHub webhook shared secret
         - name: github-webhook-shared-secret
