@@ -76,8 +76,8 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     def branch = params.STREAM
     def forceTimestamp = false
     def haveChanges = false
-    def fcos_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} ${branch} | cut -d \$'\t' -f 1")
-    shwrap("cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}")
+    def src_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} ${branch} | cut -d \$'\t' -f 1")
+    shwrap("cosa init --branch ${branch} --commit=${src_config_commit} https://github.com/${repo}")
 
     def lockfile, pkgChecksum, pkgTimestamp
     def skip_tests_arches = params.SKIP_TESTS_ARCHES.split()
@@ -108,7 +108,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
                         shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
                     withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                         shwrap("""
-                        cosa init --branch ${branch} --commit=${fcos_config_commit} https://github.com/${repo}
+                        cosa init --branch ${branch} --commit=${src_config_commit} https://github.com/${repo}
                         """)
                     }
                 }

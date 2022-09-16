@@ -32,7 +32,7 @@ properties([
              description: 'Override the coreos-assembler image to use',
              defaultValue: "coreos-assembler:main",
              trim: true),
-      string(name: 'FCOS_CONFIG_COMMIT',
+      string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to run tests against',
              defaultValue: '',
              trim: true),
@@ -68,8 +68,8 @@ lock(resource: "kola-openstack-${params.ARCH}") {
             def openstack_image_name, openstack_image_filepath
             stage('Fetch Metadata/Image') {
                 def commitopt = ''
-                if (params.FCOS_CONFIG_COMMIT != '') {
-                    commitopt = "--commit=${params.FCOS_CONFIG_COMMIT}"
+                if (params.SRC_CONFIG_COMMIT != '') {
+                    commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
                 // Grab the metadata. Also grab the image so we can upload it.
                 shwrap("""
