@@ -46,7 +46,7 @@ properties([
                    description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
-             defaultValue: "coreos-assembler:main",
+             defaultValue: "",
              trim: true),
       booleanParam(name: 'KOLA_RUN_SLEEP',
                    defaultValue: false,
@@ -82,6 +82,12 @@ def cosa_memory_request_mb = 8.5 * 1024 as Integer
 // cleaner
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
+string cosa_image = params.COREOS_ASSEMBLER_IMAGE
+if(cosa_image?.trim().length() == 0) {
+    cosa_image = stream_info.cosa_image
+}
+echo "Using COSA: ${cosa_image}"
+
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
@@ -92,7 +98,7 @@ lock(resource: "build-${params.STREAM}") {
     timeout(time: 240, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
-            image: params.COREOS_ASSEMBLER_IMAGE) {
+            image: cosa_image) {
     try {
 
         basearch = shwrapCapture("cosa basearch")
@@ -341,7 +347,7 @@ lock(resource: "build-${params.STREAM}") {
                         booleanParam(name: 'FORCE', value: true),
                         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                         string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit),
-                        string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
+                        string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_image),
                         string(name: 'STREAM', value: params.STREAM),
                         string(name: 'VERSION', value: newBuildID),
                         string(name: 'ARCH', value: arch)
