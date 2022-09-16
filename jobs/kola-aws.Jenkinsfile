@@ -55,7 +55,7 @@ if (s3_stream_dir == "") {
 try { timeout(time: 90, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false,
-            secrets: ["aws-fcos-builds-bot-config", "aws-fcos-kola-bot-config"]) {
+            secrets: ["aws-build-upload-config", "aws-kola-tests-config"]) {
 
         stage('Fetch Metadata') {
             def commitopt = ''
@@ -63,7 +63,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                 commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
             }
             shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
+            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
             cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
             cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                 --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
@@ -75,7 +75,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                  extraArgs: params.KOLA_TESTS,
                  skipBasicScenarios: true,
                  platformArgs: """-p=aws \
-                    --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                    --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
                     --aws-region=us-east-1""")
 
         if (params.ARCH == "x86_64") {
@@ -92,7 +92,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                          skipBasicScenarios: true,
                          marker: "kola-m4",
                          platformArgs: """-p=aws \
-                            --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                            --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
                             --aws-region=us-east-1 --aws-type=m4.large""")
             }, m6i: {
                 // https://github.com/coreos/fedora-coreos-tracker/issues/1004
@@ -103,7 +103,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                          skipBasicScenarios: true,
                          marker: "kola-m6i",
                          platformArgs: """-p=aws \
-                            --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                            --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
                             --aws-region=us-east-1 --aws-type=m6i.large""")
             }
         } else if (params.ARCH == "aarch64") {
@@ -118,7 +118,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
                         skipBasicScenarios: true,
                         marker: "kola-c7g",
                         platformArgs: """-p=aws \
-                        --aws-credentials-file=\${AWS_FCOS_KOLA_BOT_CONFIG}/config \
+                        --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
                         --aws-region=us-east-1 --aws-type=c7g.xlarge""")
         }
 

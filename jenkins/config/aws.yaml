@@ -4,7 +4,7 @@ credentials:
       - credentials:
         - aws:
             scope: GLOBAL
-            id: aws-fcos-builds-bot
-            accessKey: ${aws-fcos-builds-bot-config/accessKey}
-            secretKey: ${aws-fcos-builds-bot-config/secretKey}
-            description: AWS fcos-builds-bot credentials
+            id: aws-build-upload-config
+            accessKey: ${aws-build-upload-config/accessKey}
+            secretKey: ${aws-build-upload-config/secretKey}
+            description: AWS build upload credentials

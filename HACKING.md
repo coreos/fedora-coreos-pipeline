@@ -98,7 +98,7 @@ accepts an AWS config file.
 Then create the secret in OpenShift:
 
 ```
-oc create secret generic aws-fcos-builds-bot-config --from-file=dir
+oc create secret generic aws-build-upload-config --from-file=dir
 ```
 
 We also have a second AWS config that can be used for running kola
@@ -114,7 +114,7 @@ aws_access_key_id=keyid
 aws_secret_access_key=key
 EOF
 
-oc create secret generic aws-fcos-kola-bot-config --from-file=config=/path/to/kola-secret
+oc create secret generic aws-kola-tests-config --from-file=config=/path/to/kola-secret
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden

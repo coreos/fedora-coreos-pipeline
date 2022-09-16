@@ -55,7 +55,7 @@ if (s3_stream_dir == "") {
 try { timeout(time: 30, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false,
-            secrets: ["aws-fcos-builds-bot-config", "gcp-kola-tests-config"]) {
+            secrets: ["aws-build-upload-config", "gcp-kola-tests-config"]) {
 
         def gcp_project
         stage('Fetch Metadata') {
@@ -64,7 +64,7 @@ try { timeout(time: 30, unit: 'MINUTES') {
                 commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
             }
             shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
+            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
             cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
             cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                 --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds

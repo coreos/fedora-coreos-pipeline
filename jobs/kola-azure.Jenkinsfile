@@ -70,7 +70,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
     try { timeout(time: 75, unit: 'MINUTES') {
         cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
                 memory: "256Mi", kvm: false,
-                secrets: ["aws-fcos-builds-bot-config", "azure-kola-tests-config"]) {
+                secrets: ["aws-build-upload-config", "azure-kola-tests-config"]) {
 
             def azure_image_name, azure_image_filepath
             stage('Fetch Metadata/Image') {
@@ -80,7 +80,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
                 }
                 // Grab the metadata. Also grab the image so we can upload it.
                 shwrap("""
-                export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}/config
+                export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
                 cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
                 cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                     --url=s3://${s3_stream_dir}/builds --artifact=azure

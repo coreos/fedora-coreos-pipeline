@@ -20,10 +20,10 @@ spec:
      command: ['/usr/bin/dumb-init']
      args: ['sleep', 'infinity']
      env:
-       - name: AWS_FCOS_BUILDS_BOT_CONFIG
-         value: /.aws-fcos-builds-bot-config/config
-       - name: AWS_FCOS_KOLA_BOT_CONFIG
-         value: /.aws-fcos-kola-bot-config/config
+       - name: AWS_BUILD_UPLOAD_CONFIG
+         value: /.aws-build-upload-config/config
+       - name: AWS_KOLA_TESTS_CONFIG
+         value: /.aws-kola-tests-config/config
        # This one doesn't have a config subdirectory
        - name: AZURE_KOLA_TESTS_CONFIG
          value: /.azure-kola-tests-config
@@ -36,11 +36,11 @@ spec:
      volumeMounts:
      - name: srv
        mountPath: /srv/
-     - name: aws-fcos-builds-bot-config
-       mountPath: /.aws-fcos-builds-bot-config/
+     - name: aws-build-upload-config
+       mountPath: /.aws-build-upload-config/
        readOnly: true
-     - name: aws-fcos-kola-bot-config
-       mountPath: /.aws-fcos-kola-bot-config/
+     - name: aws-kola-tests-config
+       mountPath: /.aws-kola-tests-config/
        readOnly: true
      - name: azure-kola-tests-config
        mountPath: /.azure-kola-tests-config/
@@ -74,14 +74,14 @@ spec:
   - name: srv
     emptyDir: {}
   # This secret is used for uploading to AWS
-  - name: aws-fcos-builds-bot-config
+  - name: aws-build-upload-config
     secret:
-      secretName: aws-fcos-builds-bot-config
+      secretName: aws-build-upload-config
       optional: true
   # This secret is used for running aws kola tests
-  - name: aws-fcos-kola-bot-config
+  - name: aws-kola-tests-config
     secret:
-      secretName: aws-fcos-kola-bot-config
+      secretName: aws-kola-tests-config
       optional: true
   # This secret is used for running Azure kola tests
   - name: azure-kola-tests-config
