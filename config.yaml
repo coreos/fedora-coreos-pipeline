@@ -36,7 +36,7 @@ source_config:
   url: https://github.com/openshift/os
 
 # remove to disable S3 uploads
-s3_bucket: rhcos-ci
+# s3_bucket: rhcos-ci
 # path: releases/4.11-devel
 
 registry_repos:
