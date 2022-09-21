@@ -37,8 +37,9 @@ properties([
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
+      // Never use minimal for now
       booleanParam(name: 'MINIMAL',
-                   defaultValue: (official ? false : true),
+                   defaultValue: false,
                    description: 'Whether to only build the OSTree and qemu images'),
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
@@ -393,9 +394,6 @@ lock(resource: "build-${params.STREAM}") {
                   s3_stream_dir)
             }
         }
-
-        // Never use minimal for now
-        params.MINIMAL = false
 
         stage('Fork Multi-Arch Builds') {
             if (uploading) {
