@@ -103,7 +103,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
             shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
             cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
             cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds
@@ -169,7 +169,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 // Replicate AMI to other regions.
                 stage("Replicate ${basearch} AWS AMI") {
                     shwrap("""
-                    export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                    export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
                     cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
                     """)
                 }
@@ -204,7 +204,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // to get the new info and upload it back to s3.
             def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
             shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
             cosa generate-release-meta --build-id ${params.VERSION} --workdir .
             cosa buildupload --build=${params.VERSION} --skip-builds-json \
                 ${arch_args} s3 --acl=public-read ${s3_stream_dir}/builds
@@ -214,7 +214,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // object ACLs, modifying AMI image attributes,
             // and creating/modifying the releases.json metadata index
             shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
             plume release --distro fcos \
                 --version ${params.VERSION} \
                 --stream ${params.STREAM} \

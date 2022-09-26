@@ -155,7 +155,7 @@ lock(resource: "build-${params.STREAM}") {
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
-        if (s3_bucket && utils.pathExists("\${AWS_FCOS_BUILDS_BOT_CONFIG}")) {
+        if (s3_bucket && utils.pathExists("\${AWS_BUILD_UPLOAD_CONFIG}")) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
         }
@@ -216,7 +216,7 @@ lock(resource: "build-${params.STREAM}") {
                 shwrap("""
                 cosa buildfetch --arch=${basearch} \
                     --url s3://${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_FCOS_BUILDS_BOT_CONFIG}
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
                 if (parent_version != "") {
                     // also fetch the parent version; this is used by cosa to do the diff
@@ -224,7 +224,7 @@ lock(resource: "build-${params.STREAM}") {
                     cosa buildfetch --arch=${basearch} \
                         --build ${parent_version} \
                         --url s3://${s3_stream_dir}/builds \
-                        --aws-config-file \${AWS_FCOS_BUILDS_BOT_CONFIG}
+                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
             } else if (utils.pathExists(local_builddir)) {
@@ -303,7 +303,7 @@ lock(resource: "build-${params.STREAM}") {
                 shwrap("""
                 cosa sign --build=${newBuildID} --arch=${basearch} \
                     robosignatory --s3 ${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_FCOS_BUILDS_BOT_CONFIG} \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --ostree --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
@@ -419,7 +419,7 @@ lock(resource: "build-${params.STREAM}") {
               // run with --force here in case the previous run of the
               // pipeline died in between buildupload and bump_builds_json()
               shwrap("""
-              export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+              export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
               cosa buildupload --force --skip-builds-json --artifact=ostree \
                   s3 --acl=public-read ${s3_stream_dir}/builds
               """)
@@ -548,7 +548,7 @@ lock(resource: "build-${params.STREAM}") {
                         --build=${newBuildID} \
                         --region=us-east-1 ${grant_user_args} \
                         --bucket s3://${s3_bucket}/ami-import \
-                        --credentials-file=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+                        --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
             }
@@ -597,7 +597,7 @@ lock(resource: "build-${params.STREAM}") {
               // https://github.com/coreos/fedora-coreos-tracker/issues/189
               shwrap("""
               cosa buildupload --skip-builds-json s3 \
-                  --aws-config-file \${AWS_FCOS_BUILDS_BOT_CONFIG} \
+                  --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                   --acl=public-read ${s3_stream_dir}/builds
               """)
             } else {
@@ -623,7 +623,7 @@ lock(resource: "build-${params.STREAM}") {
                 shwrap("""
                 cosa sign --build=${newBuildID} --arch=${basearch} \
                     robosignatory --s3 ${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_FCOS_BUILDS_BOT_CONFIG} \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --images --gpgkeypath /etc/pki/rpm-gpg \
                     --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
@@ -649,7 +649,7 @@ lock(resource: "build-${params.STREAM}") {
         parallelruns = [:]
 
         if (!params.MINIMAL && uploading &&
-                utils.pathExists("\${AWS_FCOS_KOLA_BOT_CONFIG}")) {
+                utils.pathExists("\${AWS_KOLA_TESTS_CONFIG}")) {
             parallelruns['Kola:AWS'] = {
                 // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
                 build job: 'kola-aws', wait: false, parameters: [
