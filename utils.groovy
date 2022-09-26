@@ -50,7 +50,7 @@ boolean checkKolaSuccess(file) {
 def aws_s3_cp_allow_noent(src, dest) {
     // see similar code in `cosa buildfetch`
     shwrap("""
-    export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+    export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
     python3 -c '
 import os, sys, tempfile, botocore, boto3
 src = sys.argv[1]
@@ -87,7 +87,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
         def remotejson = "s3://${s3_stream_dir}/builds/builds.json"
         aws_s3_cp_allow_noent(remotejson, './remote-builds.json')
         shwrap("""
-        export AWS_CONFIG_FILE=\${AWS_FCOS_BUILDS_BOT_CONFIG}
+        export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
         # If no remote json exists then this is the first run
         # and we'll just upload the local builds.json
         if [ -f ./remote-builds.json ]; then
