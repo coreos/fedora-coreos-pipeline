@@ -80,41 +80,45 @@ create a credentials config as a secret within OpenShift.
 First create files with your secret content:
 
 ```
-mkdir dir
-cat <<'EOF' > dir/config
+cat <<'EOF' > /path/to/aws-build-upload-config
 [default]
 aws_access_key_id=keyid
 aws_secret_access_key=key
 EOF
-echo keyid > dir/accessKey
-echo key > dir/secretKey
 ```
-
-We expose it in different ways (as an AWS config file and as direct
-fields) because those credentials are used both directly as Jenkins
-credentials (which use the direct fields) and by e.g. `cosa`, which
-accepts an AWS config file.
 
 Then create the secret in OpenShift:
 
 ```
-oc create secret generic aws-build-upload-config --from-file=dir
+oc create secret generic aws-build-upload-config \
+    --from-literal=filename=aws_config_file \
+    --from-file=data=/path/to/aws-build-upload-config
+oc label secret/aws-build-upload-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/aws-build-upload-config \
+    jenkins.io/credentials-description="AWS build upload credentials config"
 ```
 
 We also have a second AWS config that can be used for running kola
 tests. If you have a single account that has enough permissions for
 both then you can use the same account for both uploading builds and
-running kola tests (i.e. re-use `upload-secret` from above. If not then
+running kola tests (i.e. re-use secret from above). If not then
 you can use a second set of credentials for the kola tests.
 
 ```
-cat <<'EOF' > /path/to/kola-secret
+cat <<'EOF' > /path/to/aws-kola-tests-config
 [default]
 aws_access_key_id=keyid
 aws_secret_access_key=key
 EOF
 
-oc create secret generic aws-kola-tests-config --from-file=config=/path/to/kola-secret
+oc create secret generic aws-kola-tests-config \
+    --from-literal=filename=aws_config_file \
+    --from-file=data=/path/to/aws-kola-tests-config
+oc label secret/aws-kola-tests-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/aws-kola-tests-config \
+    jenkins.io/credentials-description="AWS kola tests credentials config"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden

@@ -13,7 +13,6 @@ configuration-as-code:1429.v09b_044a_c93de
 slack:608.v19e3b_44b_b_9ff
 job-dsl:1.79
 matrix-auth:3.1.2
-aws-credentials:191.vcb_f183ce58b_9
 basic-branch-build-strategies:1.3.2
 configuration-as-code-groovy:1.1
 timestamper:1.17

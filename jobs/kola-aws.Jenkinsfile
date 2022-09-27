@@ -53,73 +53,69 @@ if (s3_stream_dir == "") {
 }
 
 try { timeout(time: 90, unit: 'MINUTES') {
-    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "256Mi", kvm: false,
-            secrets: ["aws-build-upload-config", "aws-kola-tests-config"]) {
+    cosaPod(memory: "256Mi", kvm: false,
+            image: params.COREOS_ASSEMBLER_IMAGE) {
 
         stage('Fetch Metadata') {
             def commitopt = ''
             if (params.SRC_CONFIG_COMMIT != '') {
                 commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
             }
-            shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
-            cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
-            cosa buildfetch --artifact=ostree --build=${params.VERSION} \
-                --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
-            """)
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                  credentialsId: 'aws-build-upload-config')]) {
+                shwrap("""
+                cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                    --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
+                """)
+            }
         }
 
-        fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                 build: params.VERSION, arch: params.ARCH,
-                 extraArgs: params.KOLA_TESTS,
-                 skipBasicScenarios: true,
-                 platformArgs: """-p=aws \
-                    --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
-                    --aws-region=us-east-1""")
+        withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                              credentialsId: 'aws-kola-tests-config')]) {
+            fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+                     build: params.VERSION, arch: params.ARCH,
+                     extraArgs: params.KOLA_TESTS,
+                     skipBasicScenarios: true,
+                     platformArgs: '-p=aws --aws-region=us-east-1')
 
-        if (params.ARCH == "x86_64") {
-            def tests = params.KOLA_TESTS
-            if (tests == "") {
-                tests = "basic"
-            }
-            parallel Xen: {
-                // https://github.com/coreos/fedora-coreos-tracker/issues/997
+            if (params.ARCH == "x86_64") {
+                def tests = params.KOLA_TESTS
+                if (tests == "") {
+                    tests = "basic"
+                }
+                parallel Xen: {
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/997
+                    fcosKola(cosaDir: env.WORKSPACE,
+                             build: params.VERSION, arch: params.ARCH,
+                             extraArgs: tests,
+                             skipUpgrade: true,
+                             skipBasicScenarios: true,
+                             marker: "kola-m4",
+                             platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m4.large')
+                }, m6i: {
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1004
+                    fcosKola(cosaDir: env.WORKSPACE,
+                             build: params.VERSION, arch: params.ARCH,
+                             extraArgs: tests,
+                             skipUpgrade: true,
+                             skipBasicScenarios: true,
+                             marker: "kola-m6i",
+                             platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m6i.large')
+                }
+            } else if (params.ARCH == "aarch64") {
+                def tests = params.KOLA_TESTS
+                if (tests == "") {
+                    tests = "basic"
+                }
                 fcosKola(cosaDir: env.WORKSPACE,
-                         build: params.VERSION, arch: params.ARCH,
-                         extraArgs: tests,
-                         skipUpgrade: true,
-                         skipBasicScenarios: true,
-                         marker: "kola-m4",
-                         platformArgs: """-p=aws \
-                            --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
-                            --aws-region=us-east-1 --aws-type=m4.large""")
-            }, m6i: {
-                // https://github.com/coreos/fedora-coreos-tracker/issues/1004
-                fcosKola(cosaDir: env.WORKSPACE,
-                         build: params.VERSION, arch: params.ARCH,
-                         extraArgs: tests,
-                         skipUpgrade: true,
-                         skipBasicScenarios: true,
-                         marker: "kola-m6i",
-                         platformArgs: """-p=aws \
-                            --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
-                            --aws-region=us-east-1 --aws-type=m6i.large""")
+                            build: params.VERSION, arch: params.ARCH,
+                            extraArgs: tests,
+                            skipUpgrade: true,
+                            skipBasicScenarios: true,
+                            marker: "kola-c7g",
+                            platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=c7g.xlarge')
             }
-        } else if (params.ARCH == "aarch64") {
-            def tests = params.KOLA_TESTS
-            if (tests == "") {
-                tests = "basic"
-            }
-            fcosKola(cosaDir: env.WORKSPACE,
-                        build: params.VERSION, arch: params.ARCH,
-                        extraArgs: tests,
-                        skipUpgrade: true,
-                        skipBasicScenarios: true,
-                        marker: "kola-c7g",
-                        platformArgs: """-p=aws \
-                        --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
-                        --aws-region=us-east-1 --aws-type=c7g.xlarge""")
         }
 
         currentBuild.result = 'SUCCESS'

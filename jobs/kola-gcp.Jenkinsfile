@@ -55,7 +55,7 @@ if (s3_stream_dir == "") {
 try { timeout(time: 30, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false,
-            secrets: ["aws-build-upload-config", "gcp-kola-tests-config"]) {
+            secrets: ["gcp-kola-tests-config"]) {
 
         def gcp_project
         stage('Fetch Metadata') {
@@ -63,12 +63,14 @@ try { timeout(time: 30, unit: 'MINUTES') {
             if (params.SRC_CONFIG_COMMIT != '') {
                 commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
             }
-            shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
-            cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
-            cosa buildfetch --artifact=ostree --build=${params.VERSION} \
-                --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
-            """)
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                  credentialsId: 'aws-build-upload-config')]) {
+                shwrap("""
+                cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                    --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
+                """)
+            }
 
             // pick up the project to use from the config
             gcp_project = shwrapCapture("jq -r .project_id \${GCP_KOLA_TESTS_CONFIG}/config")

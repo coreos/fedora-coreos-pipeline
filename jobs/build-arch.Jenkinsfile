@@ -171,6 +171,12 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
 
         try { timeout(time: 240, unit: 'MINUTES') {
 
+        // Add in AWS Build Upload credentials here if they exist. In
+        // the future we might choose to be more granular about when
+        // we load this.
+        pipeutils.tryWithOrWithoutCredentials([file(variable: 'AWS_BUILD_UPLOAD_CONFIG',
+                                                    credentialsId: 'aws-build-upload-config')]) {
+
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
@@ -610,30 +616,33 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         parallelruns = [:]
 
         if (basearch == "aarch64") {
-            if (!params.MINIMAL && uploading &&
-                    utils.pathExists("\${AWS_KOLA_TESTS_CONFIG}")) {
-                parallelruns['Kola:AWS'] = {
-                    // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
-                    build job: 'kola-aws', wait: false, parameters: [
-                        string(name: 'STREAM', value: params.STREAM),
-                        string(name: 'VERSION', value: newBuildID),
-                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                        string(name: 'ARCH', value: basearch),
-                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
-                    ]
+            if (!params.MINIMAL && uploading) {
+                // Kick off the Kola AWS job if we have credentials for running those tests.
+                pipeutils.tryWithCredentials([file(variable: 'AWS_KOLA_TESTS_CONFIG',
+                                                   credentialsId: 'aws-kola-tests-config')]) {
+                    parallelruns['Kola:AWS'] = {
+                        // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
+                        build job: 'kola-aws', wait: false, parameters: [
+                            string(name: 'STREAM', value: params.STREAM),
+                            string(name: 'VERSION', value: newBuildID),
+                            string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                            string(name: 'ARCH', value: basearch),
+                            string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
+                        ]
+                    }
                 }
-            }
-            if (!params.MINIMAL && uploading &&
-                    utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}")) {
-                parallelruns['Kola:OpenStack'] = {
-                    // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
-                    build job: 'kola-openstack', wait: false, parameters: [
-                        string(name: 'STREAM', value: params.STREAM),
-                        string(name: 'VERSION', value: newBuildID),
-                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                        string(name: 'ARCH', value: basearch),
-                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
-                    ]
+                // Kick off the Kola OpenStack job if we have credentials for running those tests.
+                if (utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}")) {
+                    parallelruns['Kola:OpenStack'] = {
+                        // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
+                        build job: 'kola-openstack', wait: false, parameters: [
+                            string(name: 'STREAM', value: params.STREAM),
+                            string(name: 'VERSION', value: newBuildID),
+                            string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                            string(name: 'ARCH', value: basearch),
+                            string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
+                        ]
+                    }
                 }
             }
         }
@@ -644,8 +653,8 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
 
         currentBuild.result = 'SUCCESS'
 
-        // main timeout and try {} finish here
-        }} catch (e) {
+        // main timeout and try {} and tryWithOrWithoutCredentials finish here
+        }}} catch (e) {
             currentBuild.result = 'FAILURE'
             throw e
         } finally {

@@ -49,33 +49,35 @@ if (s3_stream_dir == "") {
 }
 
 try { timeout(time: 60, unit: 'MINUTES') {
-    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "256Mi", kvm: false,
-            secrets: ["aws-build-upload-config", "aws-kola-tests-config"]) {
+    cosaPod(memory: "256Mi", kvm: false,
+            image: params.COREOS_ASSEMBLER_IMAGE) {
 
         stage('Fetch Metadata') {
             def commitopt = ''
             if (params.SRC_CONFIG_COMMIT != '') {
                 commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
             }
-            shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
-            cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
-            cosa buildfetch --build=${params.VERSION} \
-                --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
-            """)
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                  credentialsId: 'aws-build-upload-config')]) {
+                shwrap("""
+                cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                cosa buildfetch --build=${params.VERSION} \
+                    --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
+                """)
+            }
         }
 
         // We use AWS here to offload the cluster and because it's more
         // realistic than QEMU and it also supports aarch64.
-        fcosKola(cosaDir: env.WORKSPACE,
-                 build: params.VERSION, arch: params.ARCH,
-                 extraArgs: "--tag k8s",
-                 skipUpgrade: true,
-                 skipBasicScenarios: true,
-                 platformArgs: """-p=aws \
-                    --aws-credentials-file=\${AWS_KOLA_TESTS_CONFIG}/config \
-                    --aws-region=us-east-1""")
+        withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                              credentialsId: 'aws-kola-tests-config')]) {
+            fcosKola(cosaDir: env.WORKSPACE,
+                     build: params.VERSION, arch: params.ARCH,
+                     extraArgs: "--tag k8s",
+                     skipUpgrade: true,
+                     skipBasicScenarios: true,
+                     platformArgs: '-p=aws --aws-region=us-east-1')
+        }
 
         currentBuild.result = 'SUCCESS'
     }

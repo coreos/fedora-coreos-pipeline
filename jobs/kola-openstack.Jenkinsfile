@@ -64,7 +64,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
     try { timeout(time: 90, unit: 'MINUTES') {
         cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
                 memory: "256Mi", kvm: false,
-                secrets: ["aws-build-upload-config", "openstack-kola-tests-config"]) {
+                secrets: ["openstack-kola-tests-config"]) {
 
             def openstack_image_name, openstack_image_filepath
             stage('Fetch Metadata/Image') {
@@ -73,16 +73,18 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                     commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
                 // Grab the metadata. Also grab the image so we can upload it.
-                shwrap("""
-                export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
-                cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
-                cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
-                    --url=s3://${s3_stream_dir}/builds --artifact=openstack
-                cosa decompress --build=${params.VERSION} --artifact=openstack
-                """)
-                openstack_image_filepath = shwrapCapture("""
-                cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path openstack
-                """)
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                      credentialsId: 'aws-build-upload-config')]) {
+                    shwrap("""
+                    cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                    cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
+                        --url=s3://${s3_stream_dir}/builds --artifact=openstack
+                    cosa decompress --build=${params.VERSION} --artifact=openstack
+                    """)
+                    openstack_image_filepath = shwrapCapture("""
+                    cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path openstack
+                    """)
+                }
 
                 // Use a consistent image name for this stream in case it gets left behind
                 openstack_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}"
