@@ -21,7 +21,7 @@ properties([
 
 cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos-key"]) {
     git(url: 'https://github.com/coreos/fedora-coreos-streams', branch: 'main', credentialsId: 'github-coreosbot-token')
-    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-build-upload-config']]) {
+    withCredentials([file(credentialsId: 'aws-build-upload-config', variable: 'AWS_CONFIG_FILE')]) {
         def production_streams = pipeutils.streams_of_type(pipecfg, 'production')
 
         // NB: we don't use `aws s3 sync` here because it's timestamp-based and

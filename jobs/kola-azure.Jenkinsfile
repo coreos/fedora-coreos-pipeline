@@ -70,7 +70,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
     try { timeout(time: 75, unit: 'MINUTES') {
         cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
                 memory: "256Mi", kvm: false,
-                secrets: ["aws-build-upload-config", "azure-kola-tests-config"]) {
+                secrets: ["azure-kola-tests-config"]) {
 
             def azure_image_name, azure_image_filepath
             stage('Fetch Metadata/Image') {
@@ -79,16 +79,18 @@ lock(resource: "kola-azure-${params.ARCH}") {
                     commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
                 // Grab the metadata. Also grab the image so we can upload it.
-                shwrap("""
-                export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}/config
-                cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
-                cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
-                    --url=s3://${s3_stream_dir}/builds --artifact=azure
-                cosa decompress --build=${params.VERSION} --artifact=azure
-                """)
-                azure_image_filepath = shwrapCapture("""
-                cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path azure
-                """)
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                      credentialsId: 'aws-build-upload-config')]) {
+                    shwrap("""
+                    cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                    cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
+                        --url=s3://${s3_stream_dir}/builds --artifact=azure
+                    cosa decompress --build=${params.VERSION} --artifact=azure
+                    """)
+                    azure_image_filepath = shwrapCapture("""
+                    cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path azure
+                    """)
+                }
 
                 // Use a consistent image name for this stream in case it gets left behind
                 azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"

@@ -49,8 +49,9 @@ boolean checkKolaSuccess(file) {
 
 def aws_s3_cp_allow_noent(src, dest) {
     // see similar code in `cosa buildfetch`
+    withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                          credentialsId: 'aws-build-upload-config')]) {
     shwrap("""
-    export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
     python3 -c '
 import os, sys, tempfile, botocore, boto3
 src = sys.argv[1]
@@ -68,7 +69,7 @@ except botocore.exceptions.ClientError as e:
     if e.response["Error"]["Code"] != "404":
         raise e
     print(f"{src} does not exist")
-    ' '${src}' '${dest}'""")
+    ' '${src}' '${dest}'""")}
 }
 
 def bump_builds_json(stream, buildid, arch, s3_stream_dir) {

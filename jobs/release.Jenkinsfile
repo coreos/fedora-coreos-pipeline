@@ -91,12 +91,14 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
-            cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
-            cosa buildfetch --artifact=ostree --build=${params.VERSION} \
-                --arch=all --url=s3://${s3_stream_dir}/builds
-            """)
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                  credentialsId: 'aws-build-upload-config')]) {
+                shwrap("""
+                cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
+                cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                    --arch=all --url=s3://${s3_stream_dir}/builds
+                """)
+            }
         }
 
         def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split() as Set
@@ -157,10 +159,12 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             if ((basearch in ['aarch64', 'x86_64']) && params.AWS_REPLICATION) {
                 // Replicate AMI to other regions.
                 stage("Replicate ${basearch} AWS AMI") {
-                    shwrap("""
-                    export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
-                    cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
-                    """)
+                    withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                          credentialsId: 'aws-build-upload-config')]) {
+                        shwrap("""
+                        cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
+                        """)
+                    }
                 }
             }
         }
@@ -196,27 +200,28 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         }
 
         stage('Publish') {
-            // Since some of the earlier operations (like AWS replication) only modify
-            // the individual meta.json files we need to re-generate the release metadata
-            // to get the new info and upload it back to s3.
-            def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
-            shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
-            cosa generate-release-meta --build-id ${params.VERSION} --workdir .
-            cosa buildupload --build=${params.VERSION} --skip-builds-json \
-                ${arch_args} s3 --acl=public-read ${s3_stream_dir}/builds
-            """)
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                  credentialsId: 'aws-build-upload-config')]) {
+                // Since some of the earlier operations (like AWS replication) only modify
+                // the individual meta.json files we need to re-generate the release metadata
+                // to get the new info and upload it back to s3.
+                def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
+                shwrap("""
+                cosa generate-release-meta --build-id ${params.VERSION} --workdir .
+                cosa buildupload --build=${params.VERSION} --skip-builds-json \
+                    ${arch_args} s3 --acl=public-read ${s3_stream_dir}/builds
+                """)
 
-            // Run plume to publish official builds; This will handle modifying
-            // object ACLs, modifying AMI image attributes,
-            // and creating/modifying the releases.json metadata index
-            shwrap("""
-            export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
-            plume release --distro fcos \
-                --version ${params.VERSION} \
-                --stream ${params.STREAM} \
-                --bucket ${s3_bucket}
-            """)
+                // Run plume to publish official builds; This will handle modifying
+                // object ACLs, modifying AMI image attributes,
+                // and creating/modifying the releases.json metadata index
+                shwrap("""
+                plume release --distro fcos \
+                    --version ${params.VERSION} \
+                    --stream ${params.STREAM} \
+                    --bucket ${s3_bucket}
+                """)
+            }
 
             if (utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
                 for (basearch in basearches) {
