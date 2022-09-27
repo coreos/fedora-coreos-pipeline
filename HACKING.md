@@ -317,23 +317,15 @@ oc create secret generic github-coreosbot-token --from-file=token
 ### [PROD, OPTIONAL] Create additional root CA certificate secret
 
 If an additional root CA certificate is needed, create it as
-a secret:
+a secret. This assumes `ca.crt` is a file in the working directory:
 
 ```
-apiVersion: v1
-kind: Secret
-metadata:
-  name: additional-root-ca-cert
-  labels:
-    jenkins.io/credentials-type: "secretFile"
-  annotations:
-    jenkins.io/credentials-description: "Root certificate for XXX"
-type: Opaque
-stringData:
-  filename: ca.crt
-data:
-  data: |
-    # output of $(base64 < ca.crt)
+oc create secret generic additional-root-ca-cert \
+    --from-literal=filename=ca.crt --from-file=data=ca.crt
+oc label secret/oscontainer-push-registry-secret \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/oscontainer-push-registry-secret \
+    jenkins.io/credentials-description="Root certificate for XXX"
 ```
 
 The description can be customized. All other fields must be
