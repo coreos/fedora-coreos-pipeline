@@ -171,7 +171,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
         stage("Push OSContainer Manifest") {
             // Ship a manifest list containing all requested architectures.
-            withCredentials([file(credentialsId: 'fedora-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
                 def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
                 shwrap("""
                 cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
