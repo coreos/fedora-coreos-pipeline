@@ -273,17 +273,38 @@ follows:
 
 ### [PROD] Create quay.io Fedora image push secret
 
-This secret is used to push the oscontainer and others to Quay.io
+This secret is used to push the oscontainer and others to Quay.io.
+The secret can be obtained from the `fedora-push-registry-secret` in BitWarden.
 
-1. Obtain the file `fedora-push-registry-secret` from BitWarden.
-2. Run: `$ oc create secret generic fedora-push-registry-secret --from-file=dockercfg=fedora-push-registry-secret`.
+After obtaining the secret data you can create the Kubernetes secret via:
+
+```
+oc create secret generic fedora-push-registry-secret \
+    --from-literal=filename=dockercfg \
+    --from-file=data=fedora-push-registry-secret
+oc label secret/fedora-push-registry-secret \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/oscontainer-push-registry-secret \
+    jenkins.io/credentials-description="Registry push secret for CoreOS OSContainer"
+```
 
 ### [PROD] Create quay.io COSA image push secret
 
-This secret is used to push COSA container image builds to Quay.io
+This secret is used to push COSA container image builds and FCOS buildroot
+container image builds to Quay.io. The secret can be obtained from
+the `cosa-push-registry-secret` in BitWarden.
 
-1. Obtain the file `cosa-push-registry-secret` from BitWarden.
-2. Run: `$ oc create secret generic cosa-push-registry-secret --from-file=dockercfg=cosa-push-registry-secret`.
+After obtaining the secret data you can create the Kubernetes secret via:
+
+```
+oc create secret generic cosa-push-registry-secret \
+    --from-literal=filename=dockercfg \
+    --from-file=data=cosa-push-registry-secret
+oc label secret/cosa-push-registry-secret \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/cosa-push-registry-secret \
+    jenkins.io/credentials-description="Registry push secret for COSA and FCOS buildroot containers"
+```
 
 ### [PROD] Create fedora-messaging configuration
 
