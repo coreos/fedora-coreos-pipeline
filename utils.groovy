@@ -154,6 +154,17 @@ def tryWithCredentials(creds, Closure body) {
     }
 }
 
+// Runs closure if credentials exist or not.
+def tryWithOrWithoutCredentials(creds, Closure body) {
+    try {
+        withCredentials(creds) {
+            body()
+        }
+    } catch (CredentialNotFoundException e) {
+        body()
+    }
+}
+
 // Injects the root CA cert into the cosa pod if available.
 def addOptionalRootCA() {
     tryWithCredentials([file(credentialsId: 'additional-root-ca-cert', variable: 'ROOT_CA')]) {
