@@ -1,4 +1,4 @@
-def pipeutils, pipecfg, s3_bucket, official
+def pipeutils, pipecfg, s3_bucket, official, src_config_url
 def azure_testing_resource_group
 def azure_testing_storage_account
 def azure_testing_storage_container
@@ -7,6 +7,7 @@ node {
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     s3_bucket = pipecfg.s3_bucket
+    src_config_url = pipecfg.source_config.url
     def jenkinscfg = pipeutils.load_jenkins_config()
     azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
     azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
@@ -81,7 +82,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
                 withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                       credentialsId: 'aws-build-upload-config')]) {
                     shwrap("""
-                    cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                    cosa init --branch ${params.STREAM} ${commitopt} ${src_config_url}
                     cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                         --url=s3://${s3_stream_dir}/builds --artifact=azure
                     cosa decompress --build=${params.VERSION} --artifact=azure

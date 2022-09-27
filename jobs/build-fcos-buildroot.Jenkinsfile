@@ -1,10 +1,12 @@
-def pipeutils, official
+def pipeutils, official, src_config_url
 def gitref, commit, shortcommit
 def containername = 'fcos-buildroot'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     official = pipeutils.isOfficial()
+    pipecfg = pipeutils.load_pipecfg()
+    src_config_url = pipecfg.source_config.url
 }
 
 properties([
@@ -45,11 +47,11 @@ properties([
              defaultValue: "x86_64",
              trim: true),
       string(name: 'CONFIG_GIT_URL',
-             description: 'Override the fedora-coreos-config git repo to use',
-             defaultValue: "https://github.com/coreos/fedora-coreos-config.git",
+             description: 'Override the src/config git repo to use',
+             defaultValue: src_config_url,
              trim: true),
       string(name: 'CONFIG_GIT_REF',
-             description: 'Override the fedora-coreos-config git ref to use',
+             description: 'Override the src/config git ref to use',
              defaultValue: "testing-devel",
              trim: true),
       string(name: 'CONTAINER_REGISTRY_REPO',

@@ -15,9 +15,7 @@ node {
 
     change = checkout(
         [$class: 'GitSCM',
-         userRemoteConfigs: [
-            [url: 'https://github.com/coreos/fedora-coreos-config']
-         ],
+         userRemoteConfigs: [[url: pipecfg.source_config.url]],
          branches: pipeutils.streams_as_branches(development_streams)
         ]
     )
