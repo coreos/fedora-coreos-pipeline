@@ -30,6 +30,10 @@ source_config:
 # remove to disable S3 uploads
 s3_bucket: fcos-builds
 
+registry_repos:
+  oscontainer: quay.io/fedora/fedora-coreos
+  oscontainer_old: quay.io/coreos-assembler/fcos
+
 default_artifacts:
   aarch64:
     - openstack
@@ -65,6 +69,7 @@ default_artifacts:
     - virtualbox
     - vmware
     - vultr
+
 clouds:
   aws:
     # Accounts to share newly created AMIs with
