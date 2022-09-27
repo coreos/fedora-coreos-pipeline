@@ -1,9 +1,10 @@
-def pipeutils, pipecfg, s3_bucket, official
+def pipeutils, pipecfg, s3_bucket, official, src_config_url
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     s3_bucket = pipecfg.s3_bucket
+    src_config_url = pipecfg.source_config.url
     official = pipeutils.isOfficial()
 }
 
@@ -64,7 +65,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
                 shwrap("""
-                cosa init --branch ${params.STREAM} ${commitopt} https://github.com/coreos/fedora-coreos-config
+                cosa init --branch ${params.STREAM} ${commitopt} ${src_config_url}
                 cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
                 """)

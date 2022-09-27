@@ -1,4 +1,5 @@
-def pipeutils, pipecfg, official, s3_bucket, jenkins_agent_image_tag
+def pipeutils, pipecfg, s3_bucket, official, src_config_url
+def jenkins_agent_image_tag
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -6,6 +7,7 @@ node {
     pod = readFile(file: "manifests/pod.yaml")
     def jenkinscfg = pipeutils.load_jenkins_config()
     s3_bucket = pipecfg.s3_bucket
+    src_config_url = pipecfg.source_config.url
     jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
     official = pipeutils.isOfficial()
 }
@@ -94,7 +96,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
                 shwrap("""
-                cosa init --branch ${params.STREAM} https://github.com/coreos/fedora-coreos-config
+                cosa init --branch ${params.STREAM} ${src_config_url}
                 cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=all --url=s3://${s3_stream_dir}/builds
                 """)
