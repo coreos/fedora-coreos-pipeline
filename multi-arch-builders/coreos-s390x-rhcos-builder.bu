@@ -1,0 +1,15 @@
+# This butane config will do the following:
+#
+# - Merge in the coreos-s390x-builder.ign Ignition file
+# - Enable the Secure Execution Host
+#
+variant: fcos
+version: 1.4.0
+ignition:
+  config:
+    merge:
+      - local: coreos-s390x-builder.ign
+kernel_arguments:
+  should_exist:
+    # enables Secure Execution Host
+    - prot_virt=1
