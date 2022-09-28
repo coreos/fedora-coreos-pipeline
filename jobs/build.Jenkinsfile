@@ -547,29 +547,32 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             // If there is a config for GCP then we'll upload our image to GCP
-            if (uploading && utils.pathExists("\${GCP_IMAGE_UPLOAD_CONFIG}")) {
-                parallelruns['Upload GCP'] = {
-                    shwrap("""
-                    # pick up the project to use from the config
-                    gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
-                    # collect today's date for the description
-                    today=\$(date +%Y-%m-%d)
-                    # NOTE: Add --deprecated to create image in deprecated state.
-                    #       We undeprecate in the release pipeline with promote-image.
-                    cosa buildextend-gcp \
-                        --log-level=INFO \
-                        --build=${newBuildID} \
-                        --upload \
-                        --create-image=true \
-                        --deprecated \
-                        --family fedora-coreos-${params.STREAM} \
-                        --license fedora-coreos-${params.STREAM} \
-                        --license "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx" \
-                        --project=\${gcp_project} \
-                        --bucket gs://${gcp_gs_bucket}/image-import \
-                        --json \${GCP_IMAGE_UPLOAD_CONFIG} \
-                        --description=\"Fedora, Fedora CoreOS ${params.STREAM}, ${newBuildID}, ${basearch} published on \$today\"
-                    """)
+            if (uploading) {
+                pipeutils.tryWithCredentials([file(variable: 'GCP_IMAGE_UPLOAD_CONFIG',
+                                                   credentialsId: 'gcp-image-upload-config')]) {
+                    parallelruns['Upload GCP'] = {
+                        shwrap("""
+                        # pick up the project to use from the config
+                        gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
+                        # collect today's date for the description
+                        today=\$(date +%Y-%m-%d)
+                        # NOTE: Add --deprecated to create image in deprecated state.
+                        #       We undeprecate in the release pipeline with promote-image.
+                        cosa buildextend-gcp \
+                            --log-level=INFO \
+                            --build=${newBuildID} \
+                            --upload \
+                            --create-image=true \
+                            --deprecated \
+                            --family fedora-coreos-${params.STREAM} \
+                            --license fedora-coreos-${params.STREAM} \
+                            --license "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx" \
+                            --project=\${gcp_project} \
+                            --bucket gs://${gcp_gs_bucket}/image-import \
+                            --json \${GCP_IMAGE_UPLOAD_CONFIG} \
+                            --description=\"Fedora, Fedora CoreOS ${params.STREAM}, ${newBuildID}, ${basearch} published on \$today\"
+                        """)
+                    }
                 }
             }
 
@@ -679,7 +682,8 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
             // Kick off the Kola GCP job if we have credentials for running those tests.
-            if (utils.pathExists("\${GCP_KOLA_TESTS_CONFIG}")) {
+            pipeutils.tryWithCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG',
+                                               credentialsId: 'gcp-kola-tests-config')]) {
                 parallelruns['Kola:GCP'] = {
                     // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                     build job: 'kola-gcp', wait: false, parameters: [
