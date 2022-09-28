@@ -93,13 +93,6 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         def gcp_image = ""
         def ostree_prod_refs = [:]
 
-        // Clone the automation repo, which contains helper scripts. In the
-        // future, we'll probably want this either part of the cosa image, or
-        // in a derivative of cosa for pipeline needs.
-        shwrap("""
-        git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
-        """)
-
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
             shwrap("""
@@ -135,7 +128,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             if ((stream_info.type == 'production') && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
                 stage("OSTree Import ${basearch}: Prod Repo") {
                     shwrap("""
-                    /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
+                    /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
                         --build=${params.VERSION} --arch=${basearch} \
                         --s3=${s3_stream_dir} --repo=prod \
                         --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
@@ -224,7 +217,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             if (utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
                 for (basearch in basearches) {
                     shwrap("""
-                    /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                         stream.release --build ${params.VERSION} --basearch ${basearch} --stream ${params.STREAM}
                     """)
                 }

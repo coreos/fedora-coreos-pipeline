@@ -22,9 +22,6 @@ properties([
 cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos-key"]) {
     git(url: 'https://github.com/coreos/fedora-coreos-streams', branch: 'main', credentialsId: 'github-coreosbot-token')
     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-build-upload-config']]) {
-        // XXX: eventually we want this as part of the pod or built into the image we use
-        shwrap("git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng")
-
         def production_streams = pipeutils.streams_of_type(pipecfg, 'production')
 
         // NB: we don't use `aws s3 sync` here because it's timestamp-based and
@@ -45,7 +42,7 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
                     """)
                 }
                 shwrap("""
-                /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
+                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
                     stream.metadata.update --stream ${stream}
                 """)
             }
