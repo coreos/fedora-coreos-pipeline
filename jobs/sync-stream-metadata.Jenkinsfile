@@ -19,7 +19,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos-key"]) {
+cosaPod() {
     git(url: 'https://github.com/coreos/fedora-coreos-streams', branch: 'main', credentialsId: 'github-coreosbot-token')
     withCredentials([file(credentialsId: 'aws-build-upload-config', variable: 'AWS_CONFIG_FILE')]) {
         def production_streams = pipeutils.streams_of_type(pipecfg, 'production')
@@ -41,10 +41,12 @@ cosaPod(configMaps: ["fedora-messaging-cfg"], secrets: ["fedora-messaging-coreos
                             ${subdir}/${stream}.json s3://${s3_bucket}/${subdir}/${stream}.json
                     """)
                 }
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CFG}/fedmsg.toml \
-                    stream.metadata.update --stream ${stream}
-                """)
+                pipeutils.tryWithMessagingCredentials() {
+                    shwrap("""
+                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                        stream.metadata.update --stream ${stream}
+                    """)
+                }
             }
             // Currently, we always re-upload release notes. We don't want to
             // falsely emit a stream.metadata.update message when only release
