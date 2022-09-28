@@ -62,9 +62,8 @@ lock(resource: "kola-openstack-${params.ARCH}") {
     }
 
     try { timeout(time: 90, unit: 'MINUTES') {
-        cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-                memory: "256Mi", kvm: false,
-                secrets: ["openstack-kola-tests-config"]) {
+        cosaPod(memory: "256Mi", kvm: false,
+                image: params.COREOS_ASSEMBLER_IMAGE) {
 
             def openstack_image_name, openstack_image_filepath
             stage('Fetch Metadata/Image') {
@@ -91,50 +90,54 @@ lock(resource: "kola-openstack-${params.ARCH}") {
 
             }
 
-            stage('Upload/Create Image') {
-                // Create the image in OpenStack
-                shwrap("""
-                # First delete it if it currently exists, then create it.
-                ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
-                    --region=${region} \
-                    delete-image --id=${openstack_image_name} || true
-                ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
-                    --region=${region} \
-                    create-image --file=${openstack_image_filepath} \
-                    --name=${openstack_image_name} --arch=${params.ARCH}
-                """)
-            }
-            
-            // In VexxHost we'll use the network called "private" for the
-            // instance NIC, attach a floating IP from the "public" network and
-            // use the v3-starter-4 instance (ram=8GiB, CPUs=4).
-            // The clouds.yaml config should be located at ${OPENSTACK_KOLA_TESTS_CONFIG}/config.
-            //
-            // Since we don't have permanent images uploaded to VexxHost we'll
-            // skip the upgrade test.
-            try {
-                fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                        build: params.VERSION, arch: params.ARCH,
-                        extraArgs: params.KOLA_TESTS,
-                        skipBasicScenarios: true,
-                        skipUpgrade: true,
-                        platformArgs: """-p=openstack                               \
-                            --allow-rerun-success                                   \
-                            --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
-                            --openstack-flavor=v3-starter-4                          \
-                            --openstack-network=private                              \
-                            --openstack-region=${region}                             \
-                            --openstack-floating-ip-network=public                   \
-                            --openstack-image=${openstack_image_name}""")
-            } finally {
-                stage('Delete Image') {
-                    // Delete the image in OpenStack
+            withCredentials([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                  credentialsId: 'openstack-kola-tests-config')]) {
+
+                stage('Upload/Create Image') {
+                    // Create the image in OpenStack
                     shwrap("""
-                    ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG}/config \
+                    # First delete it if it currently exists, then create it.
+                    ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
                         --region=${region} \
-                        delete-image --id=${openstack_image_name}
+                        delete-image --id=${openstack_image_name} || true
+                    ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
+                        --region=${region} \
+                        create-image --file=${openstack_image_filepath} \
+                        --name=${openstack_image_name} --arch=${params.ARCH}
                     """)
                 }
+            
+                // In VexxHost we'll use the network called "private" for the
+                // instance NIC, attach a floating IP from the "public" network and
+                // use the v3-starter-4 instance (ram=8GiB, CPUs=4).
+                // The clouds.yaml config should be located at $OPENSTACK_KOLA_TESTS_CONFIG.
+                //
+                // Since we don't have permanent images uploaded to VexxHost we'll
+                // skip the upgrade test.
+                try {
+                    fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+                            build: params.VERSION, arch: params.ARCH,
+                            extraArgs: params.KOLA_TESTS,
+                            skipBasicScenarios: true,
+                            skipUpgrade: true,
+                            platformArgs: """-p=openstack                               \
+                                --allow-rerun-success                                   \
+                                --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
+                                --openstack-flavor=v3-starter-4                         \
+                                --openstack-network=private                             \
+                                --openstack-region=${region}                            \
+                                --openstack-floating-ip-network=public                  \
+                                --openstack-image=${openstack_image_name}""")
+                } finally {
+                    stage('Delete Image') {
+                        // Delete the image in OpenStack
+                        shwrap("""
+                        ore openstack --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
+                            --region=${region} delete-image --id=${openstack_image_name}
+                        """)
+                    }
+                }
+
             }
 
             currentBuild.result = 'SUCCESS'

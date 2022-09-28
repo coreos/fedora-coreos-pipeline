@@ -632,7 +632,8 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                     }
                 }
                 // Kick off the Kola OpenStack job if we have credentials for running those tests.
-                if (utils.pathExists("\${OPENSTACK_KOLA_TESTS_CONFIG}")) {
+                pipeutils.tryWithCredentials([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                              credentialsId: 'openstack-kola-tests-config')]) {
                     parallelruns['Kola:OpenStack'] = {
                         // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
                         build job: 'kola-openstack', wait: false, parameters: [
