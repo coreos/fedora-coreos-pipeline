@@ -53,7 +53,7 @@ properties([
 ])
 
 // Locking so we don't run multiple times on the same region. We are speeding up our testing by dividing
-// the load to different regions depending on the architecture. This allows us not to exceed our quota in 
+// the load to different regions depending on the architecture. This allows us not to exceed our quota in
 // a single region while still being able to execute two test runs in parallel.
 lock(resource: "kola-azure-${params.ARCH}") {
 
@@ -68,9 +68,8 @@ lock(resource: "kola-azure-${params.ARCH}") {
     }
 
     try { timeout(time: 75, unit: 'MINUTES') {
-        cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-                memory: "256Mi", kvm: false,
-                secrets: ["azure-kola-tests-config"]) {
+        cosaPod(memory: "256Mi", kvm: false,
+                image: params.COREOS_ASSEMBLER_IMAGE) {
 
             def azure_image_name, azure_image_filepath
             stage('Fetch Metadata/Image') {
@@ -96,85 +95,93 @@ lock(resource: "kola-azure-${params.ARCH}") {
                 azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"
             }
 
-            stage('Upload/Create Image') {
-                // Create the image in Azure
-                shwrap("""
-                # First delete the blob/image since we re-use it.
-                ore azure delete-image --log-level=INFO                           \
-                    --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                    --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                    --azure-location $region                                      \
-                    --resource-group ${azure_testing_resource_group}              \
-                    --image-name ${azure_image_name}
-                ore azure delete-blob --log-level=INFO                            \
-                    --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                    --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                    --azure-location $region                                      \
-                    --resource-group $azure_testing_resource_group                \
-                    --storage-account $azure_testing_storage_account              \
-                    --container $azure_testing_storage_container                  \
-                    --blob-name $azure_image_name
-                # Then create them fresh
-                ore azure upload-blob --log-level=INFO                            \
-                    --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                    --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                    --azure-location $region                                      \
-                    --resource-group $azure_testing_resource_group                \
-                    --storage-account $azure_testing_storage_account              \
-                    --container $azure_testing_storage_container                  \
-                    --blob-name $azure_image_name                                 \
-                    --file ${azure_image_filepath}
-                ore azure create-image --log-level=INFO                           \
-                    --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                    --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                    --resource-group $azure_testing_resource_group                \
-                    --azure-location $region                                      \
-                    --image-name $azure_image_name                                \
-                    --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_image_name}"
-                """)
-            }
-            
-            // Since we don't have permanent images uploaded to Azure we'll
-            // skip the upgrade test.
-            try {
-                def azure_subscription = shwrapCapture("jq -r .subscriptionId \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json")
-                fcosKola(cosaDir: env.WORKSPACE, parallel: 10,
-                        build: params.VERSION, arch: params.ARCH,
-                        extraArgs: params.KOLA_TESTS,
-                        skipBasicScenarios: true,
-                        skipUpgrade: true,
-                        platformArgs: """-p=azure                                         \
-                            --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                            --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                            --azure-location $region                                      \
-                            --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
-            } finally {
-                parallel "Delete Image": {
-                    // Delete the image in Azure
+            withCredentials([file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
+                                  credentialsId: 'azure-kola-tests-config-profile'),
+                             file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
+                                  credentialsId: 'azure-kola-tests-config-auth')]) {
+
+
+                stage('Upload/Create Image') {
+                    // Create the image in Azure
                     shwrap("""
-                    ore azure delete-image --log-level=INFO                           \
-                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                        --azure-location $region                                      \
-                        --resource-group $azure_testing_resource_group                \
-                        --image-name $azure_image_name
-                    ore azure delete-blob --log-level=INFO                            \
-                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                        --azure-location $region                                      \
-                        --resource-group $azure_testing_resource_group                \
-                        --storage-account $azure_testing_storage_account              \
-                        --container $azure_testing_storage_container                  \
+                    # First delete the blob/image since we re-use it.
+                    ore azure delete-image --log-level=INFO                 \
+                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                        --azure-location $region                            \
+                        --resource-group ${azure_testing_resource_group}    \
+                        --image-name ${azure_image_name}
+                    ore azure delete-blob --log-level=INFO                  \
+                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                        --azure-location $region                            \
+                        --resource-group $azure_testing_resource_group      \
+                        --storage-account $azure_testing_storage_account    \
+                        --container $azure_testing_storage_container        \
                         --blob-name $azure_image_name
-                    """)
-                }, "Garbage Collection": {
-                    shwrap("""
-                    ore azure gc --log-level=INFO                                     \
-                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG}/azureAuth.json       \
-                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG}/azureProfile.json \
-                        --azure-location $region
+                    # Then create them fresh
+                    ore azure upload-blob --log-level=INFO                  \
+                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                        --azure-location $region                            \
+                        --resource-group $azure_testing_resource_group      \
+                        --storage-account $azure_testing_storage_account    \
+                        --container $azure_testing_storage_container        \
+                        --blob-name $azure_image_name                       \
+                        --file ${azure_image_filepath}
+                    ore azure create-image --log-level=INFO                 \
+                        --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                        --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                        --resource-group $azure_testing_resource_group      \
+                        --azure-location $region                            \
+                        --image-name $azure_image_name                      \
+                        --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_image_name}"
                     """)
                 }
+
+                // Since we don't have permanent images uploaded to Azure we'll
+                // skip the upgrade test.
+                try {
+                    def azure_subscription = shwrapCapture("jq -r .subscriptionId \${AZURE_KOLA_TESTS_CONFIG_AUTH}")
+                    fcosKola(cosaDir: env.WORKSPACE, parallel: 10,
+                            build: params.VERSION, arch: params.ARCH,
+                            extraArgs: params.KOLA_TESTS,
+                            skipBasicScenarios: true,
+                            skipUpgrade: true,
+                            platformArgs: """-p=azure                               \
+                                --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                                --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                                --azure-location $region                            \
+                                --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
+                } finally {
+                    parallel "Delete Image": {
+                        // Delete the image in Azure
+                        shwrap("""
+                        ore azure delete-image --log-level=INFO                 \
+                            --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                            --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                            --azure-location $region                            \
+                            --resource-group $azure_testing_resource_group      \
+                            --image-name $azure_image_name
+                        ore azure delete-blob --log-level=INFO                  \
+                            --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                            --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                            --azure-location $region                            \
+                            --resource-group $azure_testing_resource_group      \
+                            --storage-account $azure_testing_storage_account    \
+                            --container $azure_testing_storage_container        \
+                            --blob-name $azure_image_name
+                        """)
+                    }, "Garbage Collection": {
+                        shwrap("""
+                        ore azure gc --log-level=INFO                           \
+                            --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                            --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                            --azure-location $region
+                        """)
+                    }
+                }
+
             }
 
             currentBuild.result = 'SUCCESS'

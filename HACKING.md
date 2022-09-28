@@ -169,13 +169,24 @@ azure auth file. See the
 for more information on those files.
 
 Once you have the azureAuth.json and azureProfile.json for connecting to Azure,
-create the secret in OpenShift:
+create the secrets in OpenShift:
 
 ```
-mkdir dir
-cp azureAuth.json dir/
-cp azureProfile.json dir/
-oc create secret generic azure-kola-tests-config --from-file=dir
+oc create secret generic azure-kola-tests-config-profile \
+    --from-literal=filename=azureProfile.json \
+    --from-file=data=/path/to/azureProfile.json
+oc label secret/azure-kola-tests-config-profile \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/azure-kola-tests-config-profile \
+    jenkins.io/credentials-description="Azure kola tests azureProfile.json"
+
+oc create secret generic azure-kola-tests-config-auth \
+    --from-literal=filename=azureAuth.json \
+    --from-file=data=/path/to/azureAuth.json
+oc label secret/azure-kola-tests-config-auth \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/azure-kola-tests-config-auth \
+    jenkins.io/credentials-description="Azure kola tests azureAuth.json"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden

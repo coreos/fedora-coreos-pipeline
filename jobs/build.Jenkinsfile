@@ -670,7 +670,10 @@ lock(resource: "build-${params.STREAM}") {
               //}
             }
             // Kick off the Kola Azure job if we have credentials for running those tests.
-            if (utils.pathExists("\${AZURE_KOLA_TESTS_CONFIG}")) {
+            pipeutils.tryWithCredentials([file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
+                                                credentialsId: 'azure-kola-tests-config-profile'),
+                                           file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
+                                                credentialsId: 'azure-kola-tests-config-auth')]) {
                 parallelruns['Kola:Azure'] = {
                     // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
                     build job: 'kola-azure', wait: false, parameters: [

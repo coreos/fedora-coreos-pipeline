@@ -19,16 +19,9 @@ spec:
      imagePullPolicy: Always
      command: ['/usr/bin/dumb-init']
      args: ['sleep', 'infinity']
-     env:
-       # This one doesn't have a config subdirectory
-       - name: AZURE_KOLA_TESTS_CONFIG
-         value: /.azure-kola-tests-config
      volumeMounts:
      - name: srv
        mountPath: /srv/
-     - name: azure-kola-tests-config
-       mountPath: /.azure-kola-tests-config/
-       readOnly: true
      - name: fedora-messaging-cfg
        mountPath: /etc/fedora-messaging-cfg
        readOnly: true
@@ -48,11 +41,6 @@ spec:
   volumes:
   - name: srv
     emptyDir: {}
-  # This secret is used for running Azure kola tests
-  - name: azure-kola-tests-config
-    secret:
-      secretName: azure-kola-tests-config
-      optional: true
   # These two here are used for signing with RoboSignatory
   - name: fedora-messaging-cfg
     configMap:
