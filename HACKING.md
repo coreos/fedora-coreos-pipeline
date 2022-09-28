@@ -191,7 +191,13 @@ Once you have the yaml file that represents the credentials for connecting
 to your OpenStack instance, create the secret in OpenShift:
 
 ```
-oc create secret generic openstack-kola-tests-config --from-file=config=/path/to/clouds.yaml
+oc create secret generic openstack-kola-tests-config \
+    --from-literal=filename=openstack_config_file \
+    --from-file=data=/path/to/clouds.yaml
+oc label secret/openstack-kola-tests-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/openstack-kola-tests-config \
+    jenkins.io/credentials-description="OpenStack kola tests credentials config"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden
