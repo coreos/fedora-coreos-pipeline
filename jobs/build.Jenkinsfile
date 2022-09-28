@@ -145,13 +145,6 @@ lock(resource: "build-${params.STREAM}") {
 
         try { timeout(time: 240, unit: 'MINUTES') {
 
-        // Clone the automation repo, which contains helper scripts. In the
-        // future, we'll probably want this either part of the cosa image, or
-        // in a derivative of cosa for pipeline needs.
-        shwrap("""
-        git clone --depth=1 https://github.com/coreos/fedora-coreos-releng-automation /var/tmp/fcos-releng
-        """)
-
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
@@ -246,7 +239,7 @@ lock(resource: "build-${params.STREAM}") {
         } else if (official) {
             // only use versioning that matches prod if we are running in the
             // official pipeline.
-            new_version = shwrapCapture("/var/tmp/fcos-releng/scripts/versionary.py")
+            new_version = shwrapCapture("/usr/lib/coreos-assembler/fcos-versionary")
         }
 
         // fetch from repos for the current build
@@ -291,7 +284,7 @@ lock(resource: "build-${params.STREAM}") {
 
         if (official) {
             shwrap("""
-            /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                 build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
                 --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
                 --state STARTED
@@ -632,7 +625,7 @@ lock(resource: "build-${params.STREAM}") {
             parallelruns['OSTree Import: Compose Repo'] = {
                 shwrap("""
                 cosa shell -- \
-                /var/tmp/fcos-releng/coreos-ostree-importer/send-ostree-import-request.py \
+                /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
                     --build=${newBuildID} --arch=${basearch} \
                     --s3=${s3_stream_dir} --repo=compose \
                     --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
@@ -766,7 +759,7 @@ lock(resource: "build-${params.STREAM}") {
             }
             if (official) {
                 shwrap("""
-                /var/tmp/fcos-releng/scripts/broadcast-fedmsg.py --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
                     build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
                     --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
                     --state FINISHED --result ${currentBuild.result}
