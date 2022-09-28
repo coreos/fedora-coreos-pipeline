@@ -199,4 +199,16 @@ def get_push_trigger() {
     ]
 }
 
+// Gets desired artifacts to build from pipeline config
+def get_artifacts_to_build(pipecfg, stream, basearch) {
+    def artifacts
+    if  (pipecfg.streams[stream].artifacts?."${basearch}" != null) {
+        artifacts = pipecfg.streams[stream]['artifacts'][basearch]
+    } else { // Merge default with additional artifacts
+        def default_artifacts =  pipecfg['default_artifacts'][basearch]
+        def additional_atifacts = pipecfg.streams[stream].additional_artifacts?."${basearch}"
+        artifacts = default_artifacts + additional_atifacts
+    }
+    return artifacts.unique()
+}
 return this
