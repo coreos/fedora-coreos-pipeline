@@ -53,11 +53,9 @@ if (s3_stream_dir == "") {
 }
 
 try { timeout(time: 30, unit: 'MINUTES') {
-    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "256Mi", kvm: false,
-            secrets: ["gcp-kola-tests-config"]) {
+    cosaPod(memory: "256Mi", kvm: false,
+            image: params.COREOS_ASSEMBLER_IMAGE) {
 
-        def gcp_project
         stage('Fetch Metadata') {
             def commitopt = ''
             if (params.SRC_CONFIG_COMMIT != '') {
@@ -71,18 +69,20 @@ try { timeout(time: 30, unit: 'MINUTES') {
                     --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
                 """)
             }
-
-            // pick up the project to use from the config
-            gcp_project = shwrapCapture("jq -r .project_id \${GCP_KOLA_TESTS_CONFIG}/config")
         }
 
-        fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                 build: params.VERSION, arch: params.ARCH,
-                 extraArgs: params.KOLA_TESTS,
-                 skipBasicScenarios: true,
-                 platformArgs: """-p=gce \
-                    --gce-json-key=\${GCP_KOLA_TESTS_CONFIG}/config \
-                    --gce-project=${gcp_project}""")
+        withCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG',
+                              credentialsId: 'gcp-kola-tests-config')]) {
+            // pick up the project to use from the config
+            def gcp_project = shwrapCapture("jq -r .project_id \${GCP_KOLA_TESTS_CONFIG}")
+            fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+                     build: params.VERSION, arch: params.ARCH,
+                     extraArgs: params.KOLA_TESTS,
+                     skipBasicScenarios: true,
+                     platformArgs: """-p=gce \
+                        --gce-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                        --gce-project=${gcp_project}""")
+        }
 
         currentBuild.result = 'SUCCESS'
     }

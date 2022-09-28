@@ -135,7 +135,13 @@ Once you have the json file that represents the credentials for your service acc
 from GCP, create the secret in OpenShift:
 
 ```
-oc create secret generic gcp-image-upload-config --from-file=config=/path/to/upload-secret
+oc create secret generic gcp-image-upload-config \
+    --from-literal=filename=gcp_config_file \
+    --from-file=data=/path/to/upload-secret
+oc label secret/gcp-image-upload-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/gcp-image-upload-config \
+    jenkins.io/credentials-description="GCP Image upload credentials config"
 ```
 
 We also have a second GCP config that can be used for running kola tests. If you have a
@@ -143,7 +149,13 @@ single account that you'd like to use for both image uploading and tests you can
 assuming they have enough permissions.
 
 ```
-oc create secret generic gcp-kola-tests-config --from-file=config=/path/to/kola-secret
+oc create secret generic gcp-kola-tests-config \
+    --from-literal=filename=gcp_config_file \
+    --from-file=data=/path/to/kola-secret
+oc label secret/gcp-kola-tests-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/gcp-kola-tests-config \
+    jenkins.io/credentials-description="GCP kola tests credentials config"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden

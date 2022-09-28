@@ -23,10 +23,6 @@ spec:
        # This one doesn't have a config subdirectory
        - name: AZURE_KOLA_TESTS_CONFIG
          value: /.azure-kola-tests-config
-       - name: GCP_IMAGE_UPLOAD_CONFIG
-         value: /.gcp-image-upload-config/config
-       - name: GCP_KOLA_TESTS_CONFIG
-         value: /.gcp-kola-tests-config/config
        - name: OPENSTACK_KOLA_TESTS_CONFIG
          value: /.openstack-kola-tests-config/config
      volumeMounts:
@@ -34,12 +30,6 @@ spec:
        mountPath: /srv/
      - name: azure-kola-tests-config
        mountPath: /.azure-kola-tests-config/
-       readOnly: true
-     - name: gcp-image-upload-config
-       mountPath: /.gcp-image-upload-config/
-       readOnly: true
-     - name: gcp-kola-tests-config
-       mountPath: /.gcp-kola-tests-config/
        readOnly: true
      - name: openstack-kola-tests-config
        mountPath: /.openstack-kola-tests-config/
@@ -67,16 +57,6 @@ spec:
   - name: azure-kola-tests-config
     secret:
       secretName: azure-kola-tests-config
-      optional: true
-  # This secret is used for uploading to GCP
-  - name: gcp-image-upload-config
-    secret:
-      secretName: gcp-image-upload-config
-      optional: true
-  # This secret is used for running GCP kola tests
-  - name: gcp-kola-tests-config
-    secret:
-      secretName: gcp-kola-tests-config
       optional: true
   # This secret is used for running OpenStack kola tests
   - name: openstack-kola-tests-config
