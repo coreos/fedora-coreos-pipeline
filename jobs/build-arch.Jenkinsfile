@@ -594,7 +594,6 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             }
             parallelruns['OSTree Import: Compose Repo'] = {
                 shwrap("""
-                cosa shell -- \
                 /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
                     --build=${newBuildID} --arch=${basearch} \
                     --s3=${s3_stream_dir} --repo=compose \
