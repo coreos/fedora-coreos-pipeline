@@ -255,17 +255,39 @@ SSH for this. To create a secret for one of these you can first
 create files with your secret content:
 
 ```
-mkdir dir
-echo '18.233.54.49' > dir/host
-echo 'builder'      > dir/user
-echo '1001'         > dir/uid
-cat /path/to/sshkey > dir/sshkey
+dir=$(mktemp -d)
+echo -n '18.233.54.49' > "${dir}/host"
+echo -n 'builder'      > "${dir}/user"
+echo -n '1001'         > "${dir}/uid"
+cat /path/to/sshkey > "${dir}/sshkey"
 ```
 
-Then create the secret in OpenShift:
+Then create the secrets in OpenShift:
 
 ```
-oc create secret generic coreos-aarch64-builder --from-file=dir
+ARCH='aarch64'
+
+oc create secret generic "coreos-${ARCH}-builder-host" \
+    --from-file=text="${dir}/host"
+oc label "secret/coreos-${ARCH}-builder-host" \
+    jenkins.io/credentials-type=secretText
+oc annotate "secret/coreos-${ARCH}-builder-host" \
+    jenkins.io/credentials-description="Hostname or IP for the $ARCH builder"
+
+oc create secret generic "coreos-${ARCH}-builder-uid" \
+    --from-file=text="${dir}/uid"
+oc label "secret/coreos-${ARCH}-builder-uid" \
+    jenkins.io/credentials-type=secretText
+oc annotate "secret/coreos-${ARCH}-builder-uid" \
+    jenkins.io/credentials-description="UID for the user for $ARCH builder"
+
+oc create secret generic "coreos-${ARCH}-builder-sshkey" \
+    --from-file=username="${dir}/user" \
+    --from-file=privateKey="${dir}/sshkey"
+oc label "secret/coreos-${ARCH}-builder-sshkey" \
+    jenkins.io/credentials-type=basicSSHUserPrivateKey
+oc annotate "secret/coreos-${ARCH}-builder-sshkey" \
+    jenkins.io/credentials-description="Username and Private SSH Key for $ARCH builder"
 ```
 
 In the prod pipeline we create secrets for aarch64, ppc64le,
