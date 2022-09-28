@@ -341,17 +341,28 @@ oc annotate secret/cosa-push-registry-secret \
 
 ### [PROD] Create fedora-messaging configuration
 
-First create the configmap:
+First create the Fedora Messaging configuration secret:
 
 ```
-oc create configmap fedora-messaging-cfg --from-file=configs/fedmsg.toml
+oc create secret generic fedora-messaging-config \
+    --from-literal=filename=fedmsg.toml \
+    --from-file=data=configs/fedmsg.toml
+oc label secret/fedora-messaging-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/fedora-messaging-config \
+    jenkins.io/credentials-description="Fedora messaging fedmsg.toml"
 ```
 
 Then add the client secrets:
 
 ```
-oc create secret generic fedora-messaging-coreos-key \
-  --from-file=coreos.crt --from-file=coreos.key
+oc create secret generic fedora-messaging-coreos-x509-cert \
+    --from-file=clientCertificate=coreos.crt \
+    --from-file=clientKeySecret=coreos.key
+oc label secret/fedora-messaging-coreos-x509-cert \
+    jenkins.io/credentials-type=x509ClientCert
+oc annotate secret/fedora-messaging-coreos-x509-cert \
+    jenkins.io/credentials-description="Fedora messaging CoreOS x509 client cert"
 ```
 
 You can obtain `coreos.crt` and `coreos.key` from BitWarden.

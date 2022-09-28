@@ -289,24 +289,28 @@ lock(resource: "build-${params.STREAM}") {
 
 
         if (official) {
-            shwrap("""
-            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
-                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                --state STARTED
-            """)
+            pipeutils.tryWithMessagingCredentials() {
+                shwrap("""
+                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                    build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                    --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                    --state STARTED
+                """)
+            }
         }
 
-        if (official && uploading && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-            stage('Sign OSTree') {
-                shwrap("""
-                cosa sign --build=${newBuildID} --arch=${basearch} \
-                    robosignatory --s3 ${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                    --extra-fedmsg-keys stream=${params.STREAM} \
-                    --ostree --gpgkeypath /etc/pki/rpm-gpg \
-                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
-                """)
+        if (official && uploading) {
+            pipeutils.tryWithMessagingCredentials() {
+                stage('Sign OSTree') {
+                    shwrap("""
+                    cosa sign --build=${newBuildID} --arch=${basearch} \
+                        robosignatory --s3 ${s3_stream_dir}/builds \
+                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                        --extra-fedmsg-keys stream=${params.STREAM} \
+                        --ostree --gpgkeypath /etc/pki/rpm-gpg \
+                        --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
+                    """)
+                }
             }
         }
 
@@ -613,28 +617,30 @@ lock(resource: "build-${params.STREAM}") {
         // must be run after the archive stage because the artifacts
         // are pulled from their S3 locations. They can be run in
         // parallel.
-        if (official && uploading && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-            parallelruns = [:]
-            parallelruns['Sign Images'] = {
-                shwrap("""
-                cosa sign --build=${newBuildID} --arch=${basearch} \
-                    robosignatory --s3 ${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                    --extra-fedmsg-keys stream=${params.STREAM} \
-                    --images --gpgkeypath /etc/pki/rpm-gpg \
-                    --fedmsg-conf /etc/fedora-messaging-cfg/fedmsg.toml
-                """)
+        if (official && uploading) {
+            pipeutils.tryWithMessagingCredentials() {
+                parallelruns = [:]
+                parallelruns['Sign Images'] = {
+                    shwrap("""
+                    cosa sign --build=${newBuildID} --arch=${basearch} \
+                        robosignatory --s3 ${s3_stream_dir}/builds \
+                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                        --extra-fedmsg-keys stream=${params.STREAM} \
+                        --images --gpgkeypath /etc/pki/rpm-gpg \
+                        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
+                    """)
+                }
+                parallelruns['OSTree Import: Compose Repo'] = {
+                    shwrap("""
+                    /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
+                        --build=${newBuildID} --arch=${basearch} \
+                        --s3=${s3_stream_dir} --repo=compose \
+                        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
+                    """)
+                }
+                // process this batch
+                parallel parallelruns
             }
-            parallelruns['OSTree Import: Compose Repo'] = {
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                    --build=${newBuildID} --arch=${basearch} \
-                    --s3=${s3_stream_dir} --repo=compose \
-                    --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
-                """)
-            }
-            // process this batch
-            parallel parallelruns
         }
 
         // Now that the metadata is uploaded go ahead and kick off some tests
@@ -768,12 +774,14 @@ lock(resource: "build-${params.STREAM}") {
                 slackSend(color: color, message: message)
             }
             if (official) {
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
-                    build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                    --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                    --state FINISHED --result ${currentBuild.result}
-                """)
+                pipeutils.tryWithMessagingCredentials() {
+                    shwrap("""
+                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                        build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                        --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                        --state FINISHED --result ${currentBuild.result}
+                    """)
+                }
             }
         }
     }}

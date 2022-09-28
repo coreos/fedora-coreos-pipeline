@@ -125,17 +125,19 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
 
             // For production streams, import the OSTree into the prod
             // OSTree repo.
-            if ((stream_info.type == 'production') && utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
-                stage("OSTree Import ${basearch}: Prod Repo") {
-                    shwrap("""
-                    /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                        --build=${params.VERSION} --arch=${basearch} \
-                        --s3=${s3_stream_dir} --repo=prod \
-                        --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml
-                    """)
-                }
+            if (stream_info.type == 'production') {
+                pipeutils.tryWithMessagingCredentials() {
+                    stage("OSTree Import ${basearch}: Prod Repo") {
+                        shwrap("""
+                        /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
+                            --build=${params.VERSION} --arch=${basearch} \
+                            --s3=${s3_stream_dir} --repo=prod \
+                            --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
+                        """)
+                    }
 
-                ostree_prod_refs[meta.ref] = meta["ostree-commit"]
+                    ostree_prod_refs[meta.ref] = meta["ostree-commit"]
+                }
             }
 
             // For production streams, promote the GCP image so that it
@@ -225,10 +227,10 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 """)
             }
 
-            if (utils.pathExists("/etc/fedora-messaging-cfg/fedmsg.toml")) {
+            pipeutils.tryWithMessagingCredentials() {
                 for (basearch in basearches) {
                     shwrap("""
-                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=/etc/fedora-messaging-cfg/fedmsg.toml \
+                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
                         stream.release --build ${params.VERSION} --basearch ${basearch} --stream ${params.STREAM}
                     """)
                 }
