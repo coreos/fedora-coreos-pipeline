@@ -143,18 +143,6 @@ objects:
           - name: github-coreosbot-token
             mountPath: /var/run/secrets/github-coreosbot-token
             readOnly: true
-          - name: coreos-aarch64-builder
-            mountPath: /var/run/secrets/coreos-aarch64-builder
-            readOnly: true
-          - name: coreos-ppc64le-builder
-            mountPath: /var/run/secrets/coreos-ppc64le-builder
-            readOnly: true
-          - name: coreos-s390x-builder
-            mountPath: /var/run/secrets/coreos-s390x-builder
-            readOnly: true
-          - name: coreos-x86-64-builder
-            mountPath: /var/run/secrets/coreos-x86-64-builder
-            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -180,22 +168,6 @@ objects:
         - name: github-coreosbot-token
           secret:
             secretName: github-coreosbot-token
-            optional: true
-        - name: coreos-aarch64-builder
-          secret:
-            secretName: coreos-aarch64-builder
-            optional: true
-        - name: coreos-ppc64le-builder
-          secret:
-            secretName: coreos-ppc64le-builder
-            optional: true
-        - name: coreos-s390x-builder
-          secret:
-            secretName: coreos-s390x-builder
-            optional: true
-        - name: coreos-x86-64-builder
-          secret:
-            secretName: coreos-x86-64-builder
             optional: true
     triggers:
     - imageChangeParams:
