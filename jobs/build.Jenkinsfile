@@ -452,7 +452,9 @@ lock(resource: "build-${params.STREAM}") {
                         shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
                     }
                     parallelruns['metal4k'] = {
-                        shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
+                        // just run the iso-install scenario to sanity-check the metal4k media
+                        // and also use it to test multipath
+                        shwrap("kola testiso -S --qemu-native-4k --qemu-multipath --scenarios iso-install --output-dir tmp/kola-metal4k")
                     }
                     parallelruns['uefi'] = {
                         shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
