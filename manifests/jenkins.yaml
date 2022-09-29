@@ -131,10 +131,6 @@ objects:
           - name: ${JENKINS_SERVICE_NAME}-casc-cfg
             mountPath: /var/lib/jenkins/configuration-as-code
             readOnly: true
-          # DELTA: mount GitHub coreosbot token
-          - name: github-coreosbot-token
-            mountPath: /var/run/secrets/github-coreosbot-token
-            readOnly: true
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -146,11 +142,6 @@ objects:
         - name: ${JENKINS_SERVICE_NAME}-casc-cfg
           configMap:
             name: jenkins-casc-cfg
-        # DELTA: add the GitHub coreosbot token
-        - name: github-coreosbot-token
-          secret:
-            secretName: github-coreosbot-token
-            optional: true
     triggers:
     - imageChangeParams:
         automatic: true

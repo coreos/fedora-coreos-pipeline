@@ -8,7 +8,7 @@ node {
 }
 
 repo = "coreos/fedora-coreos-config"
-botCreds = "github-coreosbot-token"
+botCreds = "github-coreosbot-token-username-password"
 
 // Base URL through which to download artifacts
 BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
