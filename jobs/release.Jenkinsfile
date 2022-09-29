@@ -274,7 +274,8 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         throw e
     } finally {
         if (official && currentBuild.result != 'SUCCESS') {
-            slackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
+            def message = ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})"
+            pipeutils.trySlackSend(color: 'danger', message: message)
         }
     }}}
 }}
