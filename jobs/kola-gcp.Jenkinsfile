@@ -92,6 +92,7 @@ try { timeout(time: 30, unit: 'MINUTES') {
     throw e
 } finally {
     if (official && currentBuild.result != 'SUCCESS') {
-        slackSend(color: 'danger', message: ":fcos: :gcp: :trashfire: kola-gcp <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+        def message = ":fcos: :gcp: :trashfire: kola-gcp <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})"
+        pipeutils.trySlackSend(color: 'danger', message: message)
     }
 }

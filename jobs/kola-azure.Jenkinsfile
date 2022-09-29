@@ -192,7 +192,8 @@ lock(resource: "kola-azure-${params.ARCH}") {
         throw e
     } finally {
         if (official && currentBuild.result != 'SUCCESS') {
-            slackSend(color: 'danger', message: ":fcos: :azure: :trashfire: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            def message = ":fcos: :azure: :trashfire: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})"
+            pipeutils.trySlackSend(color: 'danger', message: message)
         }
     }
 }

@@ -194,6 +194,18 @@ def tryWithMessagingCredentials(Closure body) {
     }
 }
 
+// Send slack message if the credential exists. Do nothing if not.
+def trySlackSend(color, message) {
+    // Run through tryWithCredentials here, which basically means we
+    // won't attempt to send a slack message if the credential doesn't
+    // exist. We don't actually use the credential here. The Slack
+    // plugin knows how to do that.
+    tryWithCredentials([string(variable: 'SLACK_API_TOKEN',
+                               credentialsId: 'slack-api-token')]) {
+        slackSend(color: color, message: message)
+    }
+}
+
 // Injects the root CA cert into the cosa pod if available.
 def addOptionalRootCA() {
     tryWithCredentials([file(credentialsId: 'additional-root-ca-cert', variable: 'ROOT_CA')]) {

@@ -148,7 +148,8 @@ lock(resource: "kola-openstack-${params.ARCH}") {
         throw e
     } finally {
         if (official && currentBuild.result != 'SUCCESS') {
-            slackSend(color: 'danger', message: ":fcos: :openstack: :trashfire: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            def message = ":fcos: :openstack: :trashfire: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})"
+            pipeutils.trySlackSend(color: 'danger', message: message)
         }
     }
 }

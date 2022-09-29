@@ -376,6 +376,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         color = 'warning'
     }
     if (official && currentBuild.result != 'SUCCESS') {
-        slackSend(color: color, message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
+        def message = ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>"
+        pipeutils.trySlackSend(color: color, message: message)
     }
 }
