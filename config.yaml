@@ -30,6 +30,41 @@ source_config:
 # remove to disable S3 uploads
 s3_bucket: fcos-builds
 
+default_artifacts:
+  aarch_64:
+    - openstack
+    - live
+    - metal
+    - metal4k
+  ppc64le:
+    - openstack
+    - powervs
+    - live
+    - metal
+    - metal4k
+  s390x:
+    - ibmcloud
+    - openstack
+    - live
+    - metal
+    - metal4k
+  x86_64:
+    - aliyun
+    - aws
+    - azure
+    - azurestack
+    - digitalocean
+    - exoscale
+    - gcp
+    - ibmcloud
+    - live
+    - nutanix
+    - metal
+    - metal4k
+    - openstack
+    - virtualbox
+    - vmware
+    - vultr
 clouds:
   aws:
     # Accounts to share newly created AMIs with

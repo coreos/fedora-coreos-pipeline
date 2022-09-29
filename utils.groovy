@@ -199,4 +199,32 @@ def get_push_trigger() {
     ]
 }
 
+// For all architectures we need to build the metal/metal4k artifacts and the Live ISO. Since the
+// ISO depends on the Metal/Metal4k images we'll make sure to put the Metal* ones in the first run
+// and the Live ISO in the second run.
+def change_metal_artifacts_list_order(artifacts) {
+    if (artifacts.contains('live')) {
+        artifacts.remove("metal")
+        artifacts.remove("metal4k")
+        artifacts.remove("live")
+
+        artifacts.add(0, "metal")
+        artifacts.add(1, "metal4k")
+        artifacts.add("live")
+    }
+    return artifacts
+}
+
+// Gets desired artifacts to build from pipeline config
+def get_artifacts_to_build(pipecfg, stream, basearch) {
+    def artifacts
+    if  (pipecfg.streams[stream].artifacts?."${basearch}" != null) {
+        artifacts = pipecfg.streams[stream]['artifacts'][basearch]
+    } else { // Merge default with additional artifacts
+        def default_artifacts =  pipecfg['default_artifacts'][basearch]
+        def additional_atifacts = pipecfg.streams[stream].additional_artifacts?."${basearch}"
+        artifacts = default_artifacts + additional_atifacts
+    }
+    return artifacts.unique()
+}
 return this
