@@ -20,7 +20,8 @@ properties([
 ])
 
 cosaPod() {
-    git(url: 'https://github.com/coreos/fedora-coreos-streams', branch: 'main', credentialsId: 'github-coreosbot-token')
+    git(url: 'https://github.com/coreos/fedora-coreos-streams',
+        branch: 'main', credentialsId: 'github-coreosbot-token-username-password')
     withCredentials([file(credentialsId: 'aws-build-upload-config', variable: 'AWS_CONFIG_FILE')]) {
         def production_streams = pipeutils.streams_of_type(pipecfg, 'production')
 
