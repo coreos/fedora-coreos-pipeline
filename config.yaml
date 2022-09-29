@@ -28,6 +28,23 @@ source_config:
 s3_bucket: fcos-builds
 
 default_artifacts:
+  aarch_64:
+    - openstack
+    - live
+    - metal
+    - metal4k
+  ppc64le:
+    - openstack
+    - powervs
+    - live
+    - metal
+    - metal4k
+  s390x:
+    - ibmcloud
+    - openstack
+    - live
+    - metal
+    - metal4k
   x86_64:
     - aliyun
     - aws
