@@ -397,16 +397,31 @@ oc annotate secret/fedora-messaging-coreos-x509-cert \
 
 You can obtain `coreos.crt` and `coreos.key` from BitWarden.
 
-### [PROD] Create coreosbot GitHub token secret
+### [PROD] Create coreosbot GitHub token secrets
 
-Create the CoreOS Bot (coreosbot) GitHub token secret (this
-correspond to the "Fedora CoreOS pipeline" token of
+Create the CoreOS Bot (coreosbot) GitHub token secrets (this
+corresponds to the "Fedora CoreOS pipeline" token of
 coreosbot, with just `public_repo` and `admin:repo_hook`;
-these creds are available in BitWarden):
+these creds are available in BitWarden).
+
+We create two secrets here. One Username/Password (used by bump-lockfile and
+sync-stream-metadata) and one SecretText (used by GitHub Plugin):
 
 ```
-echo $coreosbot_token > token
-oc create secret generic github-coreosbot-token --from-file=token
+TOKEN=<TOKEN>
+oc create secret generic github-coreosbot-token-text --from-literal=text=${TOKEN}
+oc label secret/github-coreosbot-token-text \
+    jenkins.io/credentials-type=secretText
+oc annotate secret/github-coreosbot-token-text \
+    jenkins.io/credentials-description="GitHub coreosbot token as text/string"
+
+oc create secret generic github-coreosbot-token-username-password \
+    --from-literal=username=coreosbot \
+    --from-literal=password=${TOKEN}
+oc label secret/github-coreosbot-token-text \
+    jenkins.io/credentials-type=usernamePassword
+oc annotate secret/github-coreosbot-token-text \
+    jenkins.io/credentials-description="GitHub coreosbot token as username/password"
 ```
 
 ### [PROD, OPTIONAL] Create additional root CA certificate secret
