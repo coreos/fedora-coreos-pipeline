@@ -131,10 +131,6 @@ objects:
           - name: ${JENKINS_SERVICE_NAME}-casc-cfg
             mountPath: /var/lib/jenkins/configuration-as-code
             readOnly: true
-          # DELTA: mount Slack token; see below
-          - name: slack-token
-            mountPath: /var/run/secrets/slack-api-token
-            readOnly: true
           # DELTA: mount GitHub webhook shared secret
           - name: github-webhook-shared-secret
             mountPath: /var/run/secrets/github-webhook-shared-secret
@@ -154,11 +150,6 @@ objects:
         - name: ${JENKINS_SERVICE_NAME}-casc-cfg
           configMap:
             name: jenkins-casc-cfg
-        # DELTA: add the Slack token (needed to report pipeline failures)
-        - name: slack-token
-          secret:
-            secretName: slack-api-token
-            optional: true
         # DELTA: add the GitHub webhook shared secret
         - name: github-webhook-shared-secret
           secret:

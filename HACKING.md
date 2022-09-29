@@ -238,8 +238,12 @@ If you want to be able to have build status messages appear in Slack,
 create a `slack-api-token` secret:
 
 ```
-$ echo -n "$TOKEN" > slack-token
-$ oc create secret generic slack-api-token --from-file=token=slack-token
+TOKEN=<token>
+oc create secret generic slack-api-token --from-literal=text="${TOKEN}"
+oc label secret/slack-api-token \
+    jenkins.io/credentials-type=secretText
+oc annotate secret/slack-api-token \
+    jenkins.io/credentials-description="Slack API token"
 ```
 
 You can obtain a token when creating a new instance of the Jenkins CI
