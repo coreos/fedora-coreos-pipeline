@@ -131,10 +131,6 @@ objects:
           - name: ${JENKINS_SERVICE_NAME}-casc-cfg
             mountPath: /var/lib/jenkins/configuration-as-code
             readOnly: true
-          # DELTA: mount GitHub webhook shared secret
-          - name: github-webhook-shared-secret
-            mountPath: /var/run/secrets/github-webhook-shared-secret
-            readOnly: true
           # DELTA: mount GitHub coreosbot token
           - name: github-coreosbot-token
             mountPath: /var/run/secrets/github-coreosbot-token
@@ -150,11 +146,6 @@ objects:
         - name: ${JENKINS_SERVICE_NAME}-casc-cfg
           configMap:
             name: jenkins-casc-cfg
-        # DELTA: add the GitHub webhook shared secret
-        - name: github-webhook-shared-secret
-          secret:
-            secretName: github-webhook-shared-secret
-            optional: true
         # DELTA: add the GitHub coreosbot token
         - name: github-coreosbot-token
           secret:

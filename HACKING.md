@@ -308,7 +308,11 @@ Create a shared webhook secret using e.g. `uuidgen -r`:
 
 ```
 uuidgen -r > secret
-oc create secret generic github-webhook-shared-secret --from-file=secret
+oc create secret generic github-webhook-shared-secret --from-file=text=secret
+oc label secret/github-webhook-shared-secret \
+    jenkins.io/credentials-type=secretText
+oc annotate secret/github-webhook-shared-secret \
+    jenkins.io/credentials-description="GitHub Webhook Shared Secret"
 ```
 
 NOTE: the secret will be used again when setting up the generic webhooks in the next section.
