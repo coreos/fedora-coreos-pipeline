@@ -444,7 +444,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             // our pipeline environment.
             //
             // First, define a list of all the derivative artifacts for this architecture.
-            def artifacts = pipeutils.get_artifacts(pipecfg, params.STREAM, basearch)
+            def artifacts = pipeutils.get_artifacts_to_build(pipecfg, params.STREAM, basearch)
             // Sort the artifacts for two parallel runs
             artifacts = pipeutils.change_metal_artifacts_list_order(artifacts)
             // Run the two runs of parallel builds
