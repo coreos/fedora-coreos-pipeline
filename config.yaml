@@ -31,7 +31,7 @@ source_config:
 s3_bucket: fcos-builds
 
 default_artifacts:
-  aarch_64:
+  aarch64:
     - openstack
     - live
     - metal
