@@ -434,26 +434,14 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             // our pipeline environment.
             //
             // First, define a list of all the derivative artifacts for this architecture.
-            def artifacts
-            if (basearch == "aarch64") {
-                artifacts = ["OpenStack"]
-            } else if (basearch == "ppc64le") {
-                artifacts = ["OpenStack", "PowerVS"]
-            } else if (basearch == "s390x") {
-                artifacts = ["IBMCloud", "OpenStack"]
-            }
-            // For all architectures we need to build the metal/metal4k artifacts and the Live ISO. Since the
-            // ISO depends on the Metal/Metal4k images we'll make sure to put the Metal* ones in the first run
-            // and the Live ISO in the second run.
-            artifacts.add(0, "Metal")
-            artifacts.add(1, "Metal4k")
-            artifacts.add("Live")
+            def artifacts = pipeutils.get_artifacts(pipecfg, params.STREAM, basearch)
+            // Sort the artifacts for two parallel runs
+            artifacts = pipeutils.change_metal_artifacts_list_order(artifacts)
             // Run the two runs of parallel builds
             parallelruns = artifacts.collectEntries {
                 [it, {
-                    def cmd = it.toLowerCase()
                     shwrap("""
-                    cosa buildextend-${cmd}
+                    cosa buildextend-${it}
                     """)
                 }]
             }
