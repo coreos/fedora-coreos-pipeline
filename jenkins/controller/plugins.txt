@@ -9,7 +9,6 @@
 #
 # Inspired by https://stackoverflow.com/a/52836951
 basic-branch-build-strategies:1.3.2
-build-token-root:1.9
 configuration-as-code-groovy:1.1
 configuration-as-code:1429.v09b_044a_c93de
 generic-webhook-trigger:1.84
