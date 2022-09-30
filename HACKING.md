@@ -387,12 +387,20 @@ Then add the client secrets:
 
 ```
 oc create secret generic fedora-messaging-coreos-x509-cert \
-    --from-file=clientCertificate=coreos.crt \
-    --from-file=clientKeySecret=coreos.key
+    --from-literal=filename=coreos.crt \
+    --from-file=coreos.crt
 oc label secret/fedora-messaging-coreos-x509-cert \
-    jenkins.io/credentials-type=x509ClientCert
+    jenkins.io/credentials-type=secretFile
 oc annotate secret/fedora-messaging-coreos-x509-cert \
     jenkins.io/credentials-description="Fedora messaging CoreOS x509 client cert"
+
+oc create secret generic fedora-messaging-coreos-x509-key \
+    --from-literal=filename=coreos.key \
+    --from-file=coreos.key
+oc label secret/fedora-messaging-coreos-x509-key \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/fedora-messaging-coreos-x509-key \
+    jenkins.io/credentials-description="Fedora messaging CoreOS x509 client key"
 ```
 
 You can obtain `coreos.crt` and `coreos.key` from BitWarden.
