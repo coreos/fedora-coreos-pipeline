@@ -186,8 +186,11 @@ def tryWithMessagingCredentials(Closure body) {
                 $(dirname ${FEDORA_MESSAGING_CONF})
             cosa remote-session sync {,:}/${FEDORA_MESSAGING_CONF}
             cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
-                $(dirname ${FEDORA_MESSAGING_X509_CERT_PATH})
-            cosa remote-session sync {,:}/${FEDORA_MESSAGING_X509_CERT_PATH}
+                $(dirname ${FEDORA_MESSAGING_X509_CERT})
+            cosa remote-session sync {,:}/${FEDORA_MESSAGING_X509_CERT}
+            cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
+                $(dirname ${FEDORA_MESSAGING_X509_KEY})
+            cosa remote-session sync {,:}/${FEDORA_MESSAGING_X509_KEY}
         fi
         ''')
         body()
