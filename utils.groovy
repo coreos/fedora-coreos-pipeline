@@ -181,7 +181,7 @@ def tryWithMessagingCredentials(Closure body) {
         ''')
         // Also sync it over to the remote if we're operating in a remote session
         shwrap('''
-        if [ -n "${COREOS_ASSEMBLER_REMOTE_SESSION}" ]; then
+        if [ -n "${COREOS_ASSEMBLER_REMOTE_SESSION:-}" ]; then
             cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
                 $(dirname ${FEDORA_MESSAGING_CONF})
             cosa remote-session sync {,:}/${FEDORA_MESSAGING_CONF}
