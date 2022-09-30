@@ -168,16 +168,16 @@ def tryWithOrWithoutCredentials(creds, Closure body) {
 
 // Runs closure if the fedmsg credentials exist, otherwise gracefully return.
 def tryWithMessagingCredentials(Closure body) {
-    // Here we need to use `dockerCert`, which was renamed to
-    // `x509ClientCert` but the binding credentials plugin hasn't
-    // been updated to support the new name. https://stackoverflow.com/a/72293992
     tryWithCredentials([file(variable: 'FEDORA_MESSAGING_CONF',
                              credentialsId: 'fedora-messaging-config'),
-                        dockerCert(variable: 'FEDORA_MESSAGING_X509_CERT_PATH',
-                                   credentialsId: 'fedora-messaging-coreos-x509-cert')]) {
+                        file(variable: 'FEDORA_MESSAGING_X509_CERT',
+                             credentialsId: 'fedora-messaging-coreos-x509-cert'),
+                        file(variable: 'FEDORA_MESSAGING_X509_KEY',
+                             credentialsId: 'fedora-messaging-coreos-x509-key')]) {
         // Substitute in the full path to the cert/key into the config
         shwrap('''
-        sed -i s,FEDORA_MESSAGING_X509_CERT_PATH,${FEDORA_MESSAGING_X509_CERT_PATH}, ${FEDORA_MESSAGING_CONF}
+        sed -i s,FEDORA_MESSAGING_X509_CERT,${FEDORA_MESSAGING_X509_CERT}, ${FEDORA_MESSAGING_CONF}
+        sed -i s,FEDORA_MESSAGING_X509_KEY,${FEDORA_MESSAGING_X509_KEY}, ${FEDORA_MESSAGING_CONF}
         ''')
         // Also sync it over to the remote if we're operating in a remote session
         shwrap('''
