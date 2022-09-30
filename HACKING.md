@@ -418,9 +418,9 @@ oc annotate secret/github-coreosbot-token-text \
 oc create secret generic github-coreosbot-token-username-password \
     --from-literal=username=coreosbot \
     --from-literal=password=${TOKEN}
-oc label secret/github-coreosbot-token-text \
+oc label secret/github-coreosbot-token-username-password \
     jenkins.io/credentials-type=usernamePassword
-oc annotate secret/github-coreosbot-token-text \
+oc annotate secret/github-coreosbot-token-username-password  \
     jenkins.io/credentials-description="GitHub coreosbot token as username/password"
 ```
 
