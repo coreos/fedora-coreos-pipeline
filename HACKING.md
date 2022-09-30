@@ -388,7 +388,7 @@ Then add the client secrets:
 ```
 oc create secret generic fedora-messaging-coreos-x509-cert \
     --from-literal=filename=coreos.crt \
-    --from-file=coreos.crt
+    --from-file=data=coreos.crt
 oc label secret/fedora-messaging-coreos-x509-cert \
     jenkins.io/credentials-type=secretFile
 oc annotate secret/fedora-messaging-coreos-x509-cert \
@@ -396,7 +396,7 @@ oc annotate secret/fedora-messaging-coreos-x509-cert \
 
 oc create secret generic fedora-messaging-coreos-x509-key \
     --from-literal=filename=coreos.key \
-    --from-file=coreos.key
+    --from-file=data=coreos.key
 oc label secret/fedora-messaging-coreos-x509-key \
     jenkins.io/credentials-type=secretFile
 oc annotate secret/fedora-messaging-coreos-x509-key \
