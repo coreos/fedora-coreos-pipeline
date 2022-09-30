@@ -8,18 +8,23 @@
 #   | jq -r '.plugins[] | "\(.shortName):\(.version)"' | sort > plugins.txt
 #
 # Inspired by https://stackoverflow.com/a/52836951
-basic-branch-build-strategies:1.3.2
-configuration-as-code-groovy:1.1
-configuration-as-code:1429.v09b_044a_c93de
-generic-webhook-trigger:1.84
-github-oauth:0.38
-github:1.34.3
-job-dsl:1.79
-kubernetes-credentials-provider:0.20
-matrix-auth:3.1.2
-pipeline-github:2.8-138.d766e30bb08b
-pipeline-utility-steps:2.12.1
-slack:608.v19e3b_44b_b_9ff
-ssh-credentials:277.v95c2fec1c047
-timestamper:1.17
-workflow-api:1153.vb_912c0e47fb_a_
+
+
+# The plugins we list here are in addition to the ones that are
+# delivered with the jenkins image delivered by OpenShift, which
+# are defined here [1] in bundle-plugins.txt. That list is a depsovled
+# version of the base-plugins.txt [2]. The relationship between these
+# two files is described here [3]. Note that the plugins/versions that
+# get pulled in OpenShift is from an OpenShift release and might not
+# be up to date with what is in the master branch. You'll have to
+# look at the release branch for the release of OpenShift you are on.
+# [1] https://github.com/openshift/jenkins/blob/master/2/contrib/openshift/bundle-plugins.txt
+# [2] https://github.com/openshift/jenkins/blob/master/2/contrib/openshift/base-plugins.txt
+# [3] https://github.com/openshift/jenkins#plugin-installation-for-centos7-v410
+basic-branch-build-strategies
+generic-webhook-trigger
+github-oauth
+kubernetes-credentials-provider
+pipeline-github
+slack
+timestamper
