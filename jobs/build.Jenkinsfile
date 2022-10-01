@@ -525,14 +525,11 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
 
-            // reset for the next batch of independent tasks
-            parallelruns = [:]
-
             // Key off of uploading: i.e. if we're configured to upload artifacts
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
             if (uploading) {
-                parallelruns['Upload AWS'] = {
+                stage('Upload AWS'] = {
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
                     // also publish vmdks, we could make this more efficient by
@@ -550,11 +547,10 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
 
-            // If there is a config for GCP then we'll upload our image to GCP
             if (uploading) {
                 pipeutils.tryWithCredentials([file(variable: 'GCP_IMAGE_UPLOAD_CONFIG',
                                                    credentialsId: 'gcp-image-upload-config')]) {
-                    parallelruns['Upload GCP'] = {
+                    stage('Upload GCP') {
                         shwrap("""
                         # pick up the project to use from the config
                         gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
@@ -579,9 +575,6 @@ lock(resource: "build-${params.STREAM}") {
                     }
                 }
             }
-
-            // process this batch
-            parallel parallelruns
         }
 
         stage('Archive') {
