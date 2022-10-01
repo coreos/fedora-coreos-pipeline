@@ -529,7 +529,7 @@ lock(resource: "build-${params.STREAM}") {
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
             if (uploading) {
-                stage('Upload AWS'] = {
+                stage('Upload AWS') {
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
                     // also publish vmdks, we could make this more efficient by
