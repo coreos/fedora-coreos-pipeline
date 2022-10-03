@@ -8,32 +8,118 @@ streams:
       type: production
       branch: release-4.11
       cosa_image: "coreos-assembler:rhcos-4.11"
+      skip_artifacts:
+        s390x:
+          - ibmcloud
     "4.10":
       type: production
       branch: release-4.10
       cosa_image: "coreos-assembler:rhcos-4.10"
+      skip_artifacts:
+        aarch64:
+          - azure
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
     "4.9":
       type: production
       branch: release-4.9
       cosa_image: "coreos-assembler:rhcos-4.9"
+      skip_artifacts:
+        aarch64:
+          - azure
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - nutanix
     "4.8":
       type: production
       branch: release-4.8
       cosa_image: "coreos-assembler:rhcos-4.8"
+      skip_artifacts:
+        aarch64:
+          - azure
+          - openstack
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - azurestack
+          - nutanix
     "4.7":
       type: production
       branch: release-4.7
       cosa_image: "coreos-assembler:rhcos-4.7"
+      skip_artifacts:
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - azurestack
+          - nutanix
     "4.6":
       type: production
       branch: release-4.6
       cosa_image: "coreos-assembler:rhcos-4.6"
-
+      skip_artifacts:
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - azurestack
+          - ibmcloud
+          - nutanix
 # additional_arches: [aarch64, ppc64le, s390x]
 additional_arches: [ppc64le]
 
 source_config:
   url: https://github.com/openshift/os
+
+
+default_artifacts:
+  aarch64:
+    - aws
+    - azure
+    - live
+    - metal
+    - metal4k
+    - openstack
+  ppc64le:
+    - live
+    - metal
+    - metal4k
+    - openstack
+    - powervs
+  s390x:
+    - dasd
+    - ibmcloud
+    - live
+    - metal
+    - metal4k
+    - openstack
+  x86_64:
+    - aliyun
+    - aws
+    - azure
+    - azurestack
+    - gcp
+    - ibmcloud
+    - live
+    - nutanix
+    - metal
+    - metal4k
+    - openstack
+    - vmware
 
 # remove to disable S3 uploads
 # s3_bucket: rhcos-ci
