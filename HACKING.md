@@ -307,7 +307,8 @@ NOTE: For the prod pipeline these secrets can be found in BitWarden
 Create a shared webhook secret using e.g. `uuidgen -r`:
 
 ```
-uuidgen -r > secret
+# use `echo -n` to make sure no newline is in the secret
+echo -n "$(uuidgen -r)" > secret
 oc create secret generic github-webhook-shared-secret --from-file=text=secret
 oc label secret/github-webhook-shared-secret \
     jenkins.io/credentials-type=secretText
