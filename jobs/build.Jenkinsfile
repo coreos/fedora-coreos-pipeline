@@ -1,8 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, pipecfg, official, uploading
-def src_config_url, s3_bucket, aws_test_accounts
-def gcp_gs_bucket
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -10,12 +8,6 @@ node {
     pod = readFile(file: "manifests/pod.yaml")
 
     def jenkinscfg = pipeutils.load_jenkins_config()
-    src_config_url = pipecfg.source_config.url
-    s3_bucket = pipecfg.s3_bucket
-    gcp_gs_bucket = pipecfg.clouds?.gcp?.bucket
-
-    // Extra AWS testing accounts to share images with
-    aws_test_accounts = pipecfg.clouds?.aws?.test_accounts
 
     official = pipeutils.isOfficial()
     if (official) {
@@ -149,9 +141,9 @@ lock(resource: "build-${params.STREAM}") {
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
-        if (s3_bucket && utils.pathExists("\${AWS_BUILD_UPLOAD_CONFIG}")) {
+        if (pipecfg.s3_bucket && utils.pathExists("\${AWS_BUILD_UPLOAD_CONFIG}")) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
-            s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+            s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         }
 
         // Now, determine if we should do any uploads to remote s3 buckets or clouds
@@ -167,7 +159,7 @@ lock(resource: "build-${params.STREAM}") {
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = params.STREAM
-        def src_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
+        def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
             // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
@@ -175,7 +167,7 @@ lock(resource: "build-${params.STREAM}") {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
 
             shwrap("""
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${src_config_url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)
@@ -529,18 +521,19 @@ lock(resource: "build-${params.STREAM}") {
             // split this into two separate developer knobs in the future.
             if (uploading) {
                 stage('Upload AWS') {
+                    // Extra AWS testing accounts to share images with
+                    def grant_user_args = pipecfg.clouds?.aws?.test_accounts.collect{"--grant-user ${it}"}.join(" ")
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
                     // also publish vmdks, we could make this more efficient by
                     // uploading first, and then pointing ore at our uploaded vmdk
-                    def grant_user_args = aws_test_accounts.collect{"--grant-user ${it}"}.join(" ")
                     shwrap("""
                     cosa buildextend-aws \
                         --upload \
                         --arch=${basearch} \
                         --build=${newBuildID} \
                         --region=us-east-1 ${grant_user_args} \
-                        --bucket s3://${s3_bucket}/ami-import \
+                        --bucket s3://${pipecfg.s3_bucket}/ami-import \
                         --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
@@ -567,7 +560,7 @@ lock(resource: "build-${params.STREAM}") {
                             --license fedora-coreos-${params.STREAM} \
                             --license "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx" \
                             --project=\${gcp_project} \
-                            --bucket gs://${gcp_gs_bucket}/image-import \
+                            --bucket gs://${pipecfg.clouds.gcp.bucket}/image-import \
                             --json \${GCP_IMAGE_UPLOAD_CONFIG} \
                             --description=\"Fedora, Fedora CoreOS ${params.STREAM}, ${newBuildID}, ${basearch} published on \$today\"
                         """)
