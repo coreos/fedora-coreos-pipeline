@@ -215,6 +215,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
         stage('Init') {
+            def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
 
             shwrap("""
             # sync over AWS secret if it exists
@@ -224,7 +225,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                 cosa remote-session sync \${dir}/ :\${dir}/
             fi
 
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${src_config_url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${src_config_url}
             """)
 
         }
