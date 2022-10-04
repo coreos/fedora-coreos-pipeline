@@ -204,6 +204,13 @@ def addOptionalRootCA() {
             cp $ROOT_CA /etc/pki/ca-trust/source/anchors/
             /usr/lib/coreos-assembler/update-ca-trust-unpriv
         ''')
+        // Also sync it over to the remote if we're operating in a remote session
+        shwrap('''
+        if [ -n "${COREOS_ASSEMBLER_REMOTE_SESSION:-}" ]; then
+            cosa remote-session sync {,:}/etc/pki/ca-trust/anchors/
+            cosa shell -- /usr/lib/coreos-assembler/update-ca-trust-unpriv
+        fi
+        ''')
     }
 }
 
