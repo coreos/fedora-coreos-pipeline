@@ -193,15 +193,6 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             uploading = false
         }
 
-        def local_builddir = "/srv/devel/streams/${params.STREAM}"
-        def ref = params.STREAM
-        def src_config_commit
-        if (params.SRC_CONFIG_COMMIT) {
-            src_config_commit = params.SRC_CONFIG_COMMIT
-        } else {
-            src_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
-        }
-
 
         // Wrap a bunch of commands now inside the context of a remote
         // session. All `cosa` commands, other than `cosa remote-session`
@@ -213,6 +204,15 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
+
+        def local_builddir = "/srv/devel/streams/${params.STREAM}"
+        def ref = params.STREAM
+        def src_config_commit
+        if (params.SRC_CONFIG_COMMIT) {
+            src_config_commit = params.SRC_CONFIG_COMMIT
+        } else {
+            src_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
+        }
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
