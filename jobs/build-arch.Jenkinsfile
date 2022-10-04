@@ -205,6 +205,9 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         def session = shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
+        // add any additional root CA cert before we do anything that fetches
+        pipeutils.addOptionalRootCA()
+
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = params.STREAM
         def src_config_commit
