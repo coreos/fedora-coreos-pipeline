@@ -72,34 +72,40 @@ try { timeout(time: 90, unit: 'MINUTES') {
 
         withCredentials([file(variable: 'AWS_CONFIG_FILE',
                               credentialsId: 'aws-kola-tests-config')]) {
-            fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                     build: params.VERSION, arch: params.ARCH,
-                     extraArgs: params.KOLA_TESTS,
-                     skipBasicScenarios: true,
-                     platformArgs: '-p=aws --aws-region=us-east-1')
+            // A few independent tasks that can be run in parallel
+            def parallelruns = [:]
+
+            parallelruns['Kola:Full'] = {
+                fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
+                         build: params.VERSION, arch: params.ARCH,
+                         extraArgs: params.KOLA_TESTS,
+                         skipBasicScenarios: true,
+                         platformArgs: '-p=aws --aws-region=us-east-1')
+            }
 
             if (params.ARCH == "x86_64") {
                 def tests = params.KOLA_TESTS
                 if (tests == "") {
                     tests = "basic"
                 }
-                parallel Xen: {
+                parallelruns['Kola:Xen'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/997
                     fcosKola(cosaDir: env.WORKSPACE,
                              build: params.VERSION, arch: params.ARCH,
                              extraArgs: tests,
                              skipUpgrade: true,
                              skipBasicScenarios: true,
-                             marker: "kola-m4",
+                             marker: "kola-xen",
                              platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m4.large')
-                }, m6i: {
+                }
+                parallelruns['Kola:Intel-Ice-Lake'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1004
                     fcosKola(cosaDir: env.WORKSPACE,
                              build: params.VERSION, arch: params.ARCH,
                              extraArgs: tests,
                              skipUpgrade: true,
                              skipBasicScenarios: true,
-                             marker: "kola-m6i",
+                             marker: "kola-intel-ice-lake",
                              platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m6i.large')
                 }
             } else if (params.ARCH == "aarch64") {
@@ -107,14 +113,20 @@ try { timeout(time: 90, unit: 'MINUTES') {
                 if (tests == "") {
                     tests = "basic"
                 }
-                fcosKola(cosaDir: env.WORKSPACE,
-                            build: params.VERSION, arch: params.ARCH,
-                            extraArgs: tests,
-                            skipUpgrade: true,
-                            skipBasicScenarios: true,
-                            marker: "kola-c7g",
-                            platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=c7g.xlarge')
+                parallelruns['Kola:Graviton3'] = {
+                    // https://aws.amazon.com/ec2/instance-types/c7g/
+                    fcosKola(cosaDir: env.WORKSPACE,
+                                build: params.VERSION, arch: params.ARCH,
+                                extraArgs: tests,
+                                skipUpgrade: true,
+                                skipBasicScenarios: true,
+                                marker: "kola-graviton3",
+                                platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=c7g.xlarge')
+                }
             }
+
+            // process this batch
+            parallel parallelruns
         }
 
         currentBuild.result = 'SUCCESS'
