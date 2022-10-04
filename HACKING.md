@@ -388,6 +388,7 @@ Then add the client secrets:
 
 ```
 oc create secret generic fedora-messaging-coreos-x509-cert \
+    --from-literal=serverCaCertificate='unused' \
     --from-file=clientCertificate=coreos.crt \
     --from-file=clientKeySecret=coreos.key
 oc label secret/fedora-messaging-coreos-x509-cert \
