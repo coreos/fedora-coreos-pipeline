@@ -92,13 +92,22 @@ try { timeout(time: 90, unit: 'MINUTES') {
                 }
                 parallelruns['Kola:Xen'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/997
+                    // Run this test on i3.large so we can also run ext.config.platforms.aws.nvme
+                    // to verify access to instance storage nvme disks works
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1306
+                    // Also add in the ext.config.platforms.aws.assert-xen test just
+                    // to sanity check we are on a Xen instance.
+                    def xen_tests = tests
+                    if (xen_tests == "basic") {
+                        xen_tests = "basic ext.config.platforms.aws.nvme ext.config.platforms.aws.assert-xen"
+                    }
                     fcosKola(cosaDir: env.WORKSPACE,
                              build: params.VERSION, arch: params.ARCH,
-                             extraArgs: tests,
+                             extraArgs: xen_tests,
                              skipUpgrade: true,
                              skipBasicScenarios: true,
                              marker: "kola-xen",
-                             platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m4.large')
+                             platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=i3.large')
                 }
                 parallelruns['Kola:Intel-Ice-Lake'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1004
