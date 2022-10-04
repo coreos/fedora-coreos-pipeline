@@ -27,9 +27,6 @@ parameters:
   - description: Git branch/tag reference for pipeline configuration
     name: PIPECFG_REF
     value: main
-  - description: Jenkins agent image to use
-    name: JENKINS_AGENT_IMAGE_TAG
-    value: base
   - description: Image of coreos-assembler to use
     name: COREOS_ASSEMBLER_IMAGE
     value: quay.io/coreos-assembler/coreos-assembler:main
@@ -72,6 +69,5 @@ objects:
     data:
       jenkins-jobs-url: ${JENKINS_JOBS_URL}
       jenkins-jobs-ref: ${JENKINS_JOBS_REF}
-      jenkins-agent-image-tag: ${JENKINS_AGENT_IMAGE_TAG}
       pipecfg-url: ${PIPECFG_URL}
       pipecfg-ref: ${PIPECFG_REF}

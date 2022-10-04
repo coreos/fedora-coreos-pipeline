@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, official, uploading, jenkins_agent_image_tag
+def pipeutils, pipecfg, official, uploading
 def src_config_url, s3_bucket, aws_test_accounts
 node {
     checkout scm
@@ -12,7 +12,6 @@ node {
     def jenkinscfg = pipeutils.load_jenkins_config()
     src_config_url = pipecfg.source_config.url
     s3_bucket = pipecfg.s3_bucket
-    jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
 
     // Extra AWS testing accounts to share images with
     aws_test_accounts = pipecfg.clouds?.aws?.test_accounts
@@ -110,7 +109,6 @@ if (cosa_pod_image =~ '^coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
 // substitute the right COSA image and mem request into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", cosa_pod_image)
-pod = pod.replace("JENKINS_AGENT_IMAGE_TAG", jenkins_agent_image_tag)
 
 def podYaml = readYaml(text: pod);
 
