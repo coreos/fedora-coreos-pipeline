@@ -489,22 +489,15 @@ circumstances. Below are some of the options. To see more run
 
 - `--pipeline <URL>[@REF]`
     - Git source URL and optional git ref for pipeline Jenkinsfile.
-- `--config <URL>[@REF]`
-    - Git source URL and optional git ref for FCOS config.
 - `--cosa-img <FQIN>`
     - Image of coreos-assembler to use.
-- `--bucket BUCKET`
-    - AWS S3 bucket in which to store builds (or blank for none).
 
-For example, to target a specific combination of pipeline, FCOS config,
-cosa image, and bucket:
+For example, to target a specific combination of pipeline, and cosa image:
 
 ```
 ./deploy \
     --pipeline https://github.com/jlebon/fedora-coreos-pipeline     \
-    --config https://github.com/jlebon/fedora-coreos-config@feature \
     --cosa-img quay.io/jlebon/coreos-assembler:random-tag           \
-    --bucket jlebon-fcos
 ```
 
 See `./deploy --help` for more information.
