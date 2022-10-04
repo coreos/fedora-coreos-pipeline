@@ -441,9 +441,9 @@ a secret. This assumes `ca.crt` is a file in the working directory:
 ```
 oc create secret generic additional-root-ca-cert \
     --from-literal=filename=ca.crt --from-file=data=ca.crt
-oc label secret/oscontainer-push-registry-secret \
+oc label secret/additional-root-ca-cert \
     jenkins.io/credentials-type=secretFile
-oc annotate secret/oscontainer-push-registry-secret \
+oc annotate secret/additional-root-ca-cert \
     jenkins.io/credentials-description="Root certificate for XXX"
 ```
 
