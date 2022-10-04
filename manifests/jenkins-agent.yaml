@@ -31,7 +31,7 @@ objects:
       output:
         to:
           kind: ImageStreamTag
-          name: jenkins-agent:derived
+          name: jenkins-agent:latest
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
       triggers:

@@ -1,5 +1,4 @@
 def pipeutils, pipecfg, s3_bucket, official, src_config_url
-def jenkins_agent_image_tag
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -8,7 +7,6 @@ node {
     def jenkinscfg = pipeutils.load_jenkins_config()
     s3_bucket = pipecfg.s3_bucket
     src_config_url = pipecfg.source_config.url
-    jenkins_agent_image_tag = jenkinscfg['jenkins-agent-image-tag']
     official = pipeutils.isOfficial()
 }
 
@@ -54,7 +52,6 @@ currentBuild.description = "[${params.STREAM}][${params.ARCHES}] - ${params.VERS
 
 // substitute the right COSA image into the pod definition before spawning it
 pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
-pod = pod.replace("JENKINS_AGENT_IMAGE_TAG", jenkins_agent_image_tag)
 
 // shouldn't need more than 256Mi for this job
 pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")

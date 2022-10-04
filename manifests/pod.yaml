@@ -11,9 +11,6 @@ spec:
   # run as `jenkins` so we can do `oc start-build`
   serviceAccountName: jenkins
   containers:
-   - name: jnlp
-     image: jenkins-agent:JENKINS_AGENT_IMAGE_TAG
-     args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
    - name: coreos-assembler
      image: COREOS_ASSEMBLER_IMAGE
      imagePullPolicy: Always

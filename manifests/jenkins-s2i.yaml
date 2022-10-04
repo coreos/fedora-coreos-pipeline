@@ -9,6 +9,9 @@ parameters:
   - description: Git branch/tag reference for Jenkins S2I
     name: JENKINS_S2I_REF
     value: main
+  - name: JENKINS_AGENT_BASE_TAG
+    description: Tag name of base OpenShift Jenkins agent image
+    value: latest
 
 objects:
 
@@ -58,7 +61,7 @@ objects:
         # this allows e.g. the pipeline to directly reference the imagestream
         local: true
       tags:
-        - name: base
+        - name: ${JENKINS_AGENT_BASE_TAG}
           from:
             kind: ImageStreamTag
             name: jenkins-agent-base:latest
