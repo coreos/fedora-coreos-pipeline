@@ -145,17 +145,20 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             // all others. `ore gcloud promote-image` does this for us.
             if ((basearch == 'x86_64') && (meta.gcp?.image) &&
                     (stream_info.type == 'production')) {
-                stage("GCP ${basearch}: Image Promotion") {
-                    shwrap("""
-                    # pick up the project to use from the config
-                    gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
-                    ore gcloud promote-image \
-                        --log-level=INFO \
-                        --project=\${gcp_project} \
-                        --json-key \${GCP_IMAGE_UPLOAD_CONFIG} \
-                        --family fedora-coreos-${params.STREAM} \
-                        --image "${meta.gcp.image}"
-                    """)
+                pipeutils.tryWithCredentials([file(variable: 'GCP_IMAGE_UPLOAD_CONFIG',
+                                                   credentialsId: 'gcp-image-upload-config')]) {
+                    stage("GCP ${basearch}: Image Promotion") {
+                        shwrap("""
+                        # pick up the project to use from the config
+                        gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
+                        ore gcloud promote-image \
+                            --log-level=INFO \
+                            --project=\${gcp_project} \
+                            --json-key \${GCP_IMAGE_UPLOAD_CONFIG} \
+                            --family fedora-coreos-${params.STREAM} \
+                            --image "${meta.gcp.image}"
+                        """)
+                    }
                 }
             }
 
