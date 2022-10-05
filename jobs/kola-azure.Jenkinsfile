@@ -1,17 +1,8 @@
-def pipeutils, pipecfg, s3_bucket, official, src_config_url
-def azure_testing_resource_group
-def azure_testing_storage_account
-def azure_testing_storage_container
+def pipeutils, pipecfg, official
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    s3_bucket = pipecfg.s3_bucket
-    src_config_url = pipecfg.source_config.url
-    def jenkinscfg = pipeutils.load_jenkins_config()
-    azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
-    azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
-    azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
     official = pipeutils.isOfficial()
 }
 
@@ -65,7 +56,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
 
     def s3_stream_dir = params.S3_STREAM_DIR
     if (s3_stream_dir == "") {
-        s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+        s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
     }
 
     try { timeout(time: 75, unit: 'MINUTES') {
@@ -82,7 +73,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
                 withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                       credentialsId: 'aws-build-upload-config')]) {
                     shwrap("""
-                    cosa init --branch ${params.STREAM} ${commitopt} ${src_config_url}
+                    cosa init --branch ${params.STREAM} ${commitopt} ${pipecfg.source_config.url}
                     cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                         --url=s3://${s3_stream_dir}/builds --artifact=azure
                     cosa decompress --build=${params.VERSION} --artifact=azure
@@ -101,6 +92,9 @@ lock(resource: "kola-azure-${params.ARCH}") {
                              file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
                                   credentialsId: 'azure-kola-tests-config-auth')]) {
 
+                def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
+                def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
+                def azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
 
                 stage('Upload/Create Image') {
                     // Create the image in Azure

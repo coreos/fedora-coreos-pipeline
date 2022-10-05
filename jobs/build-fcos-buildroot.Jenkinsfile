@@ -1,4 +1,4 @@
-def pipeutils, official, src_config_url
+def pipeutils, official
 def gitref, commit, shortcommit
 def containername = 'fcos-buildroot'
 node {
@@ -6,7 +6,6 @@ node {
     pipeutils = load("utils.groovy")
     official = pipeutils.isOfficial()
     pipecfg = pipeutils.load_pipecfg()
-    src_config_url = pipecfg.source_config.url
 }
 
 properties([
@@ -48,7 +47,7 @@ properties([
              trim: true),
       string(name: 'CONFIG_GIT_URL',
              description: 'Override the src/config git repo to use',
-             defaultValue: src_config_url,
+             defaultValue: pipecfg.source_config.url,
              trim: true),
       string(name: 'CONFIG_GIT_REF',
              description: 'Override the src/config git ref to use',

@@ -1,10 +1,8 @@
-def pipeutils, pipecfg, s3_bucket, official, src_config_url
+def pipeutils, pipecfg, official
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    s3_bucket = pipecfg.s3_bucket
-    src_config_url = pipecfg.source_config.url
     official = pipeutils.isOfficial()
 }
 
@@ -46,7 +44,7 @@ currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSIO
 
 def s3_stream_dir = params.S3_STREAM_DIR
 if (s3_stream_dir == "") {
-    s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+    s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
 }
 
 try { timeout(time: 60, unit: 'MINUTES') {
@@ -61,7 +59,7 @@ try { timeout(time: 60, unit: 'MINUTES') {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
                 shwrap("""
-                cosa init --branch ${params.STREAM} ${commitopt} ${src_config_url}
+                cosa init --branch ${params.STREAM} ${commitopt} ${pipecfg.source_config.url}
                 cosa buildfetch --build=${params.VERSION} \
                     --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
                 """)

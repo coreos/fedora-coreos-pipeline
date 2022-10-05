@@ -1,12 +1,10 @@
-def pipeutils, pipecfg, s3_bucket, official, src_config_url
+def pipeutils, pipecfg, official
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     pod = readFile(file: "manifests/pod.yaml")
     def jenkinscfg = pipeutils.load_jenkins_config()
-    s3_bucket = pipecfg.s3_bucket
-    src_config_url = pipecfg.source_config.url
     official = pipeutils.isOfficial()
 }
 
@@ -84,7 +82,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
         cat /cosa/coreos-assembler-git.json
         """)
 
-        def s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+        def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
         def ostree_prod_refs = [:]
 
@@ -93,7 +91,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
                 shwrap("""
-                cosa init --branch ${params.STREAM} ${src_config_url}
+                cosa init --branch ${params.STREAM} ${pipecfg.source_config.url}
                 cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=all --url=s3://${s3_stream_dir}/builds
                 """)
@@ -223,7 +221,7 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
                 plume release --distro fcos \
                     --version ${params.VERSION} \
                     --stream ${params.STREAM} \
-                    --bucket ${s3_bucket}
+                    --bucket ${pipecfg.s3_bucket}
                 """)
             }
 

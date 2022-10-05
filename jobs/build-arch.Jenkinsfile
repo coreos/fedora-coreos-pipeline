@@ -1,20 +1,13 @@
 import org.yaml.snakeyaml.Yaml;
 
 def pipeutils, pipecfg, official, uploading
-def src_config_url, s3_bucket, aws_test_accounts
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     pod = readFile(file: "manifests/pod.yaml")
 
-
     def jenkinscfg = pipeutils.load_jenkins_config()
-    src_config_url = pipecfg.source_config.url
-    s3_bucket = pipecfg.s3_bucket
-
-    // Extra AWS testing accounts to share images with
-    aws_test_accounts = pipecfg.clouds?.aws?.test_accounts
 
     official = pipeutils.isOfficial()
     if (official) {
@@ -176,9 +169,9 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
-        if (s3_bucket && utils.pathExists("\${AWS_BUILD_UPLOAD_CONFIG}")) {
+        if (pipecfg.s3_bucket && utils.pathExists("\${AWS_BUILD_UPLOAD_CONFIG}")) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
-            s3_stream_dir = "${s3_bucket}/prod/streams/${params.STREAM}"
+            s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         }
 
         // Now, determine if we should do any uploads to remote s3 buckets or clouds
@@ -210,7 +203,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
         if (params.SRC_CONFIG_COMMIT) {
             src_config_commit = params.SRC_CONFIG_COMMIT
         } else {
-            src_config_commit = shwrapCapture("git ls-remote ${src_config_url} ${ref} | cut -d \$'\t' -f 1")
+            src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
         }
 
         stage('Init') {
@@ -224,7 +217,7 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
                 cosa remote-session sync \${dir}/ :\${dir}/
             fi
 
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${src_config_url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
             """)
 
         }
@@ -516,18 +509,19 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             // split this into two separate developer knobs in the future.
             if (basearch =="aarch64" && uploading) {
                 parallelruns['Upload AWS'] = {
+                    // Extra AWS testing accounts to share images with
+                    def grant_user_args = pipecfg.clouds?.aws?.test_accounts.collect{"--grant-user ${it}"}.join(" ")
                     // XXX: hardcode us-east-1 for now
                     // XXX: use the temporary 'ami-import' subpath for now; once we
                     // also publish vmdks, we could make this more efficient by
                     // uploading first, and then pointing ore at our uploaded vmdk
-                    def grant_user_args = aws_test_accounts.collect{"--grant-user ${it}"}.join(" ")
                     shwrap("""
                     cosa buildextend-aws \
                         --upload \
                         --arch=${basearch} \
                         --build=${newBuildID} \
                         --region=us-east-1 ${grant_user_args} \
-                        --bucket s3://${s3_bucket}/ami-import \
+                        --bucket s3://${pipecfg.s3_bucket}/ami-import \
                         --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
