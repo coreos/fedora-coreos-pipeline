@@ -199,6 +199,12 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = params.STREAM
+        if (stream_info.source_config_ref) {
+          ref = stream_info.source_config_ref
+        } else if (pipecfg.source_config.ref) {
+          // XXX: move to generic templating function
+          ref = pipecfg.source_config.ref.replace('${STREAM}', params.STREAM)
+        }
         def src_config_commit
         if (params.SRC_CONFIG_COMMIT) {
             src_config_commit = params.SRC_CONFIG_COMMIT
