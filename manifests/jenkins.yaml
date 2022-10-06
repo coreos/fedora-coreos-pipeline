@@ -5,13 +5,13 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 labels:
-  app: fedora-coreos
-  template: fedora-coreos-jenkins-template
+  app: coreos-pipeline
+  template: coreos-pipeline-jenkins-template
 message: A Jenkins service has been created in your project.  Log into Jenkins with
   your OpenShift account.  The tutorial at https://github.com/openshift/origin/blob/master/examples/jenkins/README.md
   contains more information about using this template.
 metadata:
-  name: fedora-coreos-jenkins
+  name: coreos-pipeline-jenkins
 objects:
 - apiVersion: v1
   kind: Route

@@ -552,7 +552,7 @@ One can leverage Kubernetes labels to delete all objects
 related to the pipeline:
 
 ```
-oc delete all -l app=fedora-coreos
+oc delete all -l app=coreos-pipeline
 ```
 
 This won't delete a few resources. Notably the PVC and the
@@ -562,7 +562,7 @@ require cluster admin access to reallocate it in the future
 other objects:
 
 ```
-oc delete serviceaccounts -l app=fedora-coreos
-oc delete rolebindings -l app=fedora-coreos
-oc delete configmaps -l app=fedora-coreos
+oc delete serviceaccounts -l app=coreos-pipeline
+oc delete rolebindings -l app=coreos-pipeline
+oc delete configmaps -l app=coreos-pipeline
 ```
