@@ -2,6 +2,9 @@ apiVersion: v1
 kind: Template
 metadata:
   name: jenkins-s2i
+labels:
+  app: coreos-pipeline
+  template: coreos-pipeline-jenkins-s2i-template
 parameters:
   - description: Git source URI for Jenkins S2I
     name: JENKINS_S2I_URL
