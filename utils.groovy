@@ -204,8 +204,12 @@ def addOptionalRootCA() {
         // Also sync it over to the remote if we're operating in a remote session
         shwrap('''
         if [ -n "${COREOS_ASSEMBLER_REMOTE_SESSION:-}" ]; then
-            cosa remote-session sync {,:}/etc/pki/ca-trust/source/anchors/
-            cosa shell -- /usr/lib/coreos-assembler/update-ca-trust-unpriv
+            # Can't use `cosa remote-session sync` here because we are
+            # running on the remote as the unprivileged builder user
+            # and not in the root group. But.. we can use `sudo`.
+            cat $ROOT_CA | cosa shell -- sudo tee \
+                /etc/pki/ca-trust/source/anchors/$(basename $ROOT_CA)
+            cosa shell -- sudo /usr/lib/coreos-assembler/update-ca-trust-unpriv
         fi
         ''')
     }
