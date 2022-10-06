@@ -5,7 +5,6 @@ node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    pod = readFile(file: "manifests/pod.yaml")
 
     def jenkinscfg = pipeutils.load_jenkins_config()
 
@@ -81,8 +80,7 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 
 // the build-arch pod is mostly triggering the work on a remote node, so we
 // can be conservative with our request
-pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "1")
-pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "1")
+def ncpus = 1
 
 // We recently did some golang migration [1] and happened to add the
 // `cosa remote-session` pieces [2] after that migration. This makes
@@ -99,55 +97,30 @@ if (cosa_pod_image =~ '^coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
     cosa_pod_image = "coreos-assembler:main"
 }
 
-// substitute the right COSA image and mem request into the pod definition before spawning it
-pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", cosa_pod_image)
-
-def podYaml = readYaml(text: pod);
-
-// And re-serialize; I couldn't figure out how to dump to a string
-// in a way allowed by the Groovy sandbox.  Tempting to just tell people
-// to disable that.
-node {
-    def tmpPath = "${WORKSPACE}/pod.yaml";
-    sh("rm -vf ${tmpPath}")
-    writeYaml(file: tmpPath, data: podYaml);
-    pod = readFile(file: tmpPath);
-    sh("rm -vf ${tmpPath}")
-}
-
-echo "Final podspec: ${pod}"
-
-// use a unique label to force Kubernetes to provision a separate pod per run
-def pod_label = "cosa-${UUID.randomUUID().toString()}"
-
-
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] Waiting"
 
-// release lock: we want to block the release job until we're done.
-// ideally we'd lock this from the main pipeline and have lock ownership
-// transferred to us when we're triggered. in practice, it's very unlikely the
-// release job would win this race.
-lock(resource: "release-${params.VERSION}-${params.ARCH}") {
-// build lock: we don't want multiple concurrent builds for the same stream and
-// arch (though this should work fine in theory)
-lock(resource: "build-${params.STREAM}-${params.ARCH}") {
+// declare these early so we can use them in `finally` block
+assert params.VERSION != ""
+def newBuildID = params.VERSION
+def basearch = params.ARCH
 
-    currentBuild.description = "[${params.STREAM}][${params.ARCH}] Running"
+try { 
+    // release lock: we want to block the release job until we're done.
+    // ideally we'd lock this from the main pipeline and have lock ownership
+    // transferred to us when we're triggered. in practice, it's very unlikely the
+    // release job would win this race.
+    lock(resource: "release-${params.VERSION}-${basearch}") {
+    // build lock: we don't want multiple concurrent builds for the same stream and
+    // arch (though this should work fine in theory)
+    lock(resource: "build-${params.STREAM}-${basearch}") {
+    timeout(time: 240, unit: 'MINUTES') {
+    cosaPod(cpu: "${ncpus}",
+            memory: "${cosa_memory_request_mb}Mi",
+            image: cosa_pod_image) {
 
-    podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
-    node(pod_label) { container('coreos-assembler') {
+        currentBuild.description = "[${params.STREAM}][${basearch}] Running"
 
-        // print out details of the cosa image to help debugging
-        shwrap("""
-        cat /cosa/coreos-assembler-git.json
-        """)
-
-        // declare these early so we can use them in `finally` block
-        assert params.VERSION != ""
-        def newBuildID = params.VERSION
-        def basearch = params.ARCH
 
         // If we are using the image stream (the default) then just translate
         // that into a quay registry equivalent (the multi-arch builders can't
@@ -157,8 +130,6 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
             image = image.replaceAll("coreos-assembler:",
                                      "quay.io/coreos-assembler/coreos-assembler:")
         }
-
-        try { timeout(time: 240, unit: 'MINUTES') {
 
         // Add in AWS Build Upload credentials here if they exist. In
         // the future we might choose to be more granular about when
@@ -651,47 +622,45 @@ lock(resource: "build-${params.STREAM}-${params.ARCH}") {
 
         currentBuild.result = 'SUCCESS'
 
-        // main timeout and try {} and tryWithOrWithoutCredentials finish here
-        }}} catch (e) {
-            currentBuild.result = 'FAILURE'
-            throw e
-        } finally {
-            def color
-            def message = "[${params.STREAM}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
+// tryWithOrWithoutCredentials, cosaPod, timeout, locks and main try finish here
+}}}}}} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    def color
+    def message = "[${params.STREAM}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
 
-            if (currentBuild.result == 'SUCCESS') {
-                if (!newBuildID) {
-                    // SUCCESS, but no new builds? Must've been a no-op
-                    return
-                }
-                message = ":fcos: :sparkles: ${message} - SUCCESS"
-                color = 'good';
-            } else if (currentBuild.result == 'UNSTABLE') {
-                message = ":fcos: :warning: ${message} - WARNING"
-                color = 'warning';
-            } else {
-                message = ":fcos: :trashfire: ${message} - FAILURE"
-                color = 'danger';
-            }
-
-            if (newBuildID) {
-                message = "${message} (${newBuildID})"
-            }
-
-            echo message
-            if (official) {
-                slackSend(color: color, message: message)
-            }
-            if (official) {
-                pipeutils.tryWithMessagingCredentials() {
-                    shwrap("""
-                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                        build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                        --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                        --state FINISHED --result ${currentBuild.result}
-                    """)
-                }
-            }
+    if (currentBuild.result == 'SUCCESS') {
+        if (!newBuildID) {
+            // SUCCESS, but no new builds? Must've been a no-op
+            return
         }
-    }}
-}}}
+        message = ":fcos: :sparkles: ${message} - SUCCESS"
+        color = 'good';
+    } else if (currentBuild.result == 'UNSTABLE') {
+        message = ":fcos: :warning: ${message} - WARNING"
+        color = 'warning';
+    } else {
+        message = ":fcos: :trashfire: ${message} - FAILURE"
+        color = 'danger';
+    }
+
+    if (newBuildID) {
+        message = "${message} (${newBuildID})"
+    }
+
+    echo message
+    if (official) {
+        slackSend(color: color, message: message)
+    }
+    if (official) {
+        pipeutils.tryWithMessagingCredentials() {
+            shwrap("""
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                --state FINISHED --result ${currentBuild.result}
+            """)
+        }
+    }
+}

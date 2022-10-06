@@ -5,7 +5,6 @@ node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    pod = readFile(file: "manifests/pod.yaml")
 
     def jenkinscfg = pipeutils.load_jenkins_config()
 
@@ -84,53 +83,22 @@ def cosa_memory_request_mb = 6.5 * 1024 as Integer
 // them separately).
 def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
 
-// the build pod runs most frequently and does the majority of the computation
-// so give it some healthy CPU shares
-pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "${ncpus}")
-pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "${ncpus}")
-
-// substitute the right COSA image and mem request into the pod definition before spawning it
-pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "${cosa_memory_request_mb}Mi")
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
-
-def podYaml = readYaml(text: pod);
-
-// And re-serialize; I couldn't figure out how to dump to a string
-// in a way allowed by the Groovy sandbox.  Tempting to just tell people
-// to disable that.
-node {
-    def tmpPath = "${WORKSPACE}/pod.yaml";
-    sh("rm -vf ${tmpPath}")
-    writeYaml(file: tmpPath, data: podYaml);
-    pod = readFile(file: tmpPath);
-    sh("rm -vf ${tmpPath}")
-}
-
-echo "Final podspec: ${pod}"
-
-// use a unique label to force Kubernetes to provision a separate pod per run
-def pod_label = "cosa-${UUID.randomUUID().toString()}"
-
-
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
-lock(resource: "build-${params.STREAM}") {
-    currentBuild.description = "[${params.STREAM}] Running"
+// declare these early so we can use them in `finally` block
+def newBuildID, basearch
 
-    podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
-    node(pod_label) { container('coreos-assembler') {
+try { 
+    lock(resource: "build-${params.STREAM}") {
+    timeout(time: 240, unit: 'MINUTES') {
+    cosaPod(cpu: "${ncpus}",
+            memory: "${cosa_memory_request_mb}Mi",
+            image: params.COREOS_ASSEMBLER_IMAGE) {
 
-        // print out details of the cosa image to help debugging
-        shwrap("""
-        cat /cosa/coreos-assembler-git.json
-        """)
+        basearch = shwrapCapture("cosa basearch")
+        currentBuild.description = "[${params.STREAM}][${basearch}] Running"
 
-        // declare these early so we can use them in `finally` block
-        def newBuildID
-        def basearch = shwrapCapture("cosa basearch")
-
-        try { timeout(time: 240, unit: 'MINUTES') {
 
         // Add in AWS Build Upload credentials here if they exist. In
         // the future we might choose to be more granular about when
@@ -734,47 +702,45 @@ lock(resource: "build-${params.STREAM}") {
 
         currentBuild.result = 'SUCCESS'
 
-        // main timeout and try {} and tryWithOrWithoutCredentials finish here
-        }}} catch (e) {
-            currentBuild.result = 'FAILURE'
-            throw e
-        } finally {
-            def color
-            def message = "[${params.STREAM}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
+// tryWithOrWithoutCredentials, cosaPod, timeout, lock and main try finish here
+}}}}} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    def color
+    def message = "[${params.STREAM}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
 
-            if (currentBuild.result == 'SUCCESS') {
-                if (!newBuildID) {
-                    // SUCCESS, but no new builds? Must've been a no-op
-                    return
-                }
-                message = ":fcos: :sparkles: ${message} - SUCCESS"
-                color = 'good';
-            } else if (currentBuild.result == 'UNSTABLE') {
-                message = ":fcos: :warning: ${message} - WARNING"
-                color = 'warning';
-            } else {
-                message = ":fcos: :trashfire: ${message} - FAILURE"
-                color = 'danger';
-            }
-
-            if (newBuildID) {
-                message = "${message} (${newBuildID})"
-            }
-
-            echo message
-            if (official) {
-                slackSend(color: color, message: message)
-            }
-            if (official) {
-                pipeutils.tryWithMessagingCredentials() {
-                    shwrap("""
-                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                        build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                        --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                        --state FINISHED --result ${currentBuild.result}
-                    """)
-                }
-            }
+    if (currentBuild.result == 'SUCCESS') {
+        if (!newBuildID) {
+            // SUCCESS, but no new builds? Must've been a no-op
+            return
         }
-    }}
-}}
+        message = ":fcos: :sparkles: ${message} - SUCCESS"
+        color = 'good';
+    } else if (currentBuild.result == 'UNSTABLE') {
+        message = ":fcos: :warning: ${message} - WARNING"
+        color = 'warning';
+    } else {
+        message = ":fcos: :trashfire: ${message} - FAILURE"
+        color = 'danger';
+    }
+
+    if (newBuildID) {
+        message = "${message} (${newBuildID})"
+    }
+
+    echo message
+    if (official) {
+        slackSend(color: color, message: message)
+    }
+    if (official) {
+        pipeutils.tryWithMessagingCredentials() {
+            shwrap("""
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                --state FINISHED --result ${currentBuild.result}
+            """)
+        }
+    }
+}

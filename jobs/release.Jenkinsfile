@@ -3,7 +3,6 @@ node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    pod = readFile(file: "manifests/pod.yaml")
     def jenkinscfg = pipeutils.load_jenkins_config()
     official = pipeutils.isOfficial()
 }
@@ -48,21 +47,6 @@ if (params.VERSION == "") {
 
 currentBuild.description = "[${params.STREAM}][${params.ARCHES}] - ${params.VERSION}"
 
-// substitute the right COSA image into the pod definition before spawning it
-pod = pod.replace("COREOS_ASSEMBLER_IMAGE", params.COREOS_ASSEMBLER_IMAGE)
-
-// shouldn't need more than 256Mi for this job
-pod = pod.replace("COREOS_ASSEMBLER_MEMORY_REQUEST", "256Mi")
-
-// single CPU should be enough for this job
-pod = pod.replace("COREOS_ASSEMBLER_CPU_REQUEST", "1")
-pod = pod.replace("COREOS_ASSEMBLER_CPU_LIMIT", "1")
-
-echo "Final podspec: ${pod}"
-
-// use a unique label to force Kubernetes to provision a separate pod per run
-def pod_label = "cosa-${UUID.randomUUID().toString()}"
-
 // Get the list of requested architectures to release
 def basearches = params.ARCHES.split() as Set
 
@@ -73,14 +57,10 @@ def stream_info = pipecfg.streams[params.STREAM]
 // *does*, this makes sure they're run serially.
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
-lock(resource: "release-${params.STREAM}", extra: locks) {
-podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
-    node(pod_label) { container('coreos-assembler') { try {
-
-        // print out details of the cosa image to help debugging
-        shwrap("""
-        cat /cosa/coreos-assembler-git.json
-        """)
+try {
+    lock(resource: "release-${params.STREAM}", extra: locks) {
+    cosaPod(cpu: "1", memory: "256Mi",
+            image: params.COREOS_ASSEMBLER_IMAGE) {
 
         def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
@@ -267,12 +247,13 @@ podTemplate(cloud: 'openshift', label: pod_label, yaml: pod) {
             }
         }
         currentBuild.result = 'SUCCESS'
-    } catch (e) {
-        currentBuild.result = 'FAILURE'
-        throw e
-    } finally {
-        if (official && currentBuild.result != 'SUCCESS') {
-            slackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
-        }
-    }}}
-}}
+
+// cosaPod, lock, and try finish here
+}}} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    if (official && currentBuild.result != 'SUCCESS') {
+        slackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
+    }
+}
