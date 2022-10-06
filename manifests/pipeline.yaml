@@ -3,17 +3,6 @@ kind: Template
 labels:
   app: fedora-coreos
   template: fedora-coreos-template
-metadata:
-  annotations:
-    description: |-
-      Jenkins pipeline for Fedora CoreOS.
-    iconClass: icon-jenkins
-    openshift.io/display-name: Fedora CoreOS Pipeline
-    openshift.io/documentation-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/support-url: https://github.com/coreos/fedora-coreos-pipeline
-    openshift.io/provider-display-name: Fedora CoreOS
-    tags: fcos,jenkins,fedora
-  name: fedora-coreos
 parameters:
   - description: Git source URI for Jenkins jobs
     name: JENKINS_JOBS_URL
