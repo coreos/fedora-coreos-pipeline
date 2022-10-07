@@ -89,12 +89,12 @@ currentBuild.description = "[${params.STREAM}] Waiting"
 // declare these early so we can use them in `finally` block
 def newBuildID, basearch
 
-try { 
-    lock(resource: "build-${params.STREAM}") {
+lock(resource: "build-${params.STREAM}") {
     timeout(time: 240, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: params.COREOS_ASSEMBLER_IMAGE) {
+    try {
 
         basearch = shwrapCapture("cosa basearch")
         currentBuild.description = "[${params.STREAM}][${basearch}] Running"
@@ -702,8 +702,8 @@ try {
 
         currentBuild.result = 'SUCCESS'
 
-// tryWithOrWithoutCredentials, cosaPod, timeout, lock and main try finish here
-}}}}} catch (e) {
+// tryWithOrWithoutCredentials and main try finish here
+}} catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
@@ -743,4 +743,4 @@ try {
             """)
         }
     }
-}
+}}}} // try-catch-finally, cosaPod, timeout, and locks finish here
