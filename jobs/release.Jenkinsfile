@@ -70,8 +70,9 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         stage('Fetch Metadata') {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
+                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
                 shwrap("""
-                cosa init --branch ${params.STREAM} ${pipecfg.source_config.url}
+                cosa init --branch ${ref} ${pipecfg.source_config.url}
                 cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=all --url=s3://${s3_stream_dir}/builds
                 """)
