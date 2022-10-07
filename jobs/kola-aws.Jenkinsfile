@@ -62,8 +62,9 @@ try { timeout(time: 90, unit: 'MINUTES') {
             }
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
+                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
                 shwrap("""
-                cosa init --branch ${params.STREAM} ${commitopt} ${pipecfg.source_config.url}
+                cosa init --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
                 cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
                 """)
