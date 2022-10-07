@@ -1,0 +1,80 @@
+# REQUIRED: knobs related to the source config
+source_config:
+  # REQUIRED: source config repo URL to build
+  url: https://github.com/jlebon/my-coreos
+  # OPTIONAL: source config ref to build
+  # Supports '${STREAM}' variable.
+  ref: release-${STREAM}
+  # OPTIONAL: git repo URL for yumrepos
+  yumrepos: https://gitlab.example.com/sooper/seekret
+
+# OPTIONAL: default artifacts to build per architecture
+default_artifacts:
+  aarch64:
+    - openstack
+    - metal
+  x86_64:
+    - aws
+    - vmware
+    - metal
+    - metal4k
+    - live
+
+# REQUIRED: streams to build
+streams:
+    testing-devel:
+      # REQUIRED: stream type
+      # Three kinds of streams are supported:
+      # - development: lockfiles, auto-bumping, auto-triggering
+      # - production: lockfiles, no auto-bumping, no auto-triggering
+      # - mechanical: no lockfiles, auto-triggering
+      type: development
+      # OPTIONAL: set a stream as the default one
+      # This will be the default stream for jobs that take a 'STREAMS' parameter
+      default: true
+      # OPTIONAL: override source config ref to use for this stream
+      source_config_ref: main
+    stable:
+      type: production
+      # OPTIONAL: override cosa image to use for this stream
+      cosa_image: "quay.io/jlebon/coreos-assembler:stable"
+      # OPTIONAL: additional artifacts to build for this stream
+      additional_artifacts:
+        aarch64:
+          - azure
+        ppc64le:
+          - powervs
+    rawhide:
+      type: mechanical
+
+# REQUIRED: other architectures supported other than x86_64
+additional_arches: [aarch64, ppc64le, s390x]
+
+# OPTIONAL: S3 bucket to which to upload build artifacts
+s3_bucket: fcos-builds
+
+# OPTIONAL: container registry-related keys
+registry_repos:
+  # OPTIONAL: repo to which to push oscontainer
+  oscontainer: quay.io/fedora/fedora-coreos
+  # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
+  oscontainer_old: quay.io/coreos-assembler/fcos
+
+# OPTIONAL/TEMPORARY: enable AWS aarch64 hack; see comment in `build-arch.Jenkinsfile`.
+aws_aarch64_serial_console_hack: true
+
+# OPTIONAL: cloud-related knobs
+clouds:
+  aws:
+    # OPTIONAL: accounts to share newly created AMIs with
+    test_accounts:
+      - "1234567890"
+  azure:
+    # REQUIRED (if test Azure credentials provided): resource group, storage
+    # account, and storage container to use for kola tests
+    test_resource_group: fedora-coreos-testing
+    test_storage_account: fedoracoreostesting
+    test_storage_container: fedora-coreos-testing-image-blobs
+  gcp:
+    # REQUIRED (if GCP image upload credentials provided): bucket to upload to
+    bucket: fedora-coreos-cloud-image-uploads
