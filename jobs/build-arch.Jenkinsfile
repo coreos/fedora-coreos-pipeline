@@ -105,22 +105,21 @@ assert params.VERSION != ""
 def newBuildID = params.VERSION
 def basearch = params.ARCH
 
-try { 
-    // release lock: we want to block the release job until we're done.
-    // ideally we'd lock this from the main pipeline and have lock ownership
-    // transferred to us when we're triggered. in practice, it's very unlikely the
-    // release job would win this race.
-    lock(resource: "release-${params.VERSION}-${basearch}") {
-    // build lock: we don't want multiple concurrent builds for the same stream and
-    // arch (though this should work fine in theory)
-    lock(resource: "build-${params.STREAM}-${basearch}") {
+// release lock: we want to block the release job until we're done.
+// ideally we'd lock this from the main pipeline and have lock ownership
+// transferred to us when we're triggered. in practice, it's very unlikely the
+// release job would win this race.
+lock(resource: "release-${params.VERSION}-${basearch}") {
+// build lock: we don't want multiple concurrent builds for the same stream and
+// arch (though this should work fine in theory)
+lock(resource: "build-${params.STREAM}-${basearch}") {
     timeout(time: 240, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_pod_image) {
+    try {
 
         currentBuild.description = "[${params.STREAM}][${basearch}] Running"
-
 
         // If we are using the image stream (the default) then just translate
         // that into a quay registry equivalent (the multi-arch builders can't
@@ -619,11 +618,10 @@ try {
         // process this batch
         parallel parallelruns
 
-
         currentBuild.result = 'SUCCESS'
 
-// tryWithOrWithoutCredentials, cosaPod, timeout, locks and main try finish here
-}}}}}} catch (e) {
+// tryWithOrWithoutCredentials and main try finish here
+}} catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
@@ -663,4 +661,4 @@ try {
             """)
         }
     }
-}
+}}}}} // try-catch-finally, cosaPod, timeout, and locks finish here

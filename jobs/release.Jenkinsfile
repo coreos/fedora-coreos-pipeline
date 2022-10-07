@@ -57,10 +57,10 @@ def stream_info = pipecfg.streams[params.STREAM]
 // *does*, this makes sure they're run serially.
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
-try {
-    lock(resource: "release-${params.STREAM}", extra: locks) {
+lock(resource: "release-${params.STREAM}", extra: locks) {
     cosaPod(cpu: "1", memory: "256Mi",
             image: params.COREOS_ASSEMBLER_IMAGE) {
+    try {
 
         def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
@@ -248,12 +248,12 @@ try {
         }
         currentBuild.result = 'SUCCESS'
 
-// cosaPod, lock, and try finish here
-}}} catch (e) {
+// main try finishes here
+} catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
     if (official && currentBuild.result != 'SUCCESS') {
         slackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
     }
-}
+}}} // try-catch-finally, cosaPod and lock finish here
