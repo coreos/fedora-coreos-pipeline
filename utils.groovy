@@ -30,12 +30,23 @@ def load_pipecfg() {
     return readYaml(file: "pipecfg/config.yaml")
 }
 
+def substitute_str(str, stream, buildid = "") {
+    def date = shwrapCapture("date +%Y-%m-%d")
+    def basearch = shwrapCapture("cosa basearch")
+    def bindings = ["STREAM": stream, "ARCH": arch, "DATE": date]
+    if (buildid) {
+        bindings['BUILDID'] = buildid
+    }
+    def engine = new groovy.text.SimpleTemplateEngine()
+    def tmpl = engine.createTemplate(str).make(binding)
+    return tmpl.toString()
+}
+
 def get_source_config_ref_for_stream(pipecfg, stream) {
     if (pipecfg.streams[stream].source_config_ref) {
         return pipecfg.streams[stream].source_config_ref
     } else if (pipecfg.source_config.ref) {
-        // XXX: move to generic templating function
-        return pipecfg.source_config.ref.replace('${STREAM}', stream)
+        return substitute_str(pipecfg.source_config.ref, stream)
     } else {
         return stream
     }
