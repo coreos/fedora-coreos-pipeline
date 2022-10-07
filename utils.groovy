@@ -30,6 +30,17 @@ def load_pipecfg() {
     return readYaml(file: "pipecfg/config.yaml")
 }
 
+def get_source_config_ref_for_stream(pipecfg, stream) {
+    if (pipecfg.streams[stream].source_config_ref) {
+        return pipecfg.streams[stream].source_config_ref
+    } else if (pipecfg.source_config.ref) {
+        // XXX: move to generic templating function
+        return pipecfg.source_config.ref.replace('${STREAM}', stream)
+    } else {
+        return stream
+    }
+}
+
 // Tells us if we're running if the official Jenkins for the FCOS pipeline
 boolean isOfficial() {
     return (env.JENKINS_URL in ['https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])

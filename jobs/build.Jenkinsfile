@@ -126,13 +126,7 @@ lock(resource: "build-${params.STREAM}") {
         pipeutils.addOptionalRootCA()
 
         def local_builddir = "/srv/devel/streams/${params.STREAM}"
-        def ref = params.STREAM
-        if (stream_info.source_config_ref) {
-          ref = stream_info.source_config_ref
-        } else if (pipecfg.source_config.ref) {
-          // XXX: move to generic templating function
-          ref = pipecfg.source_config.ref.replace('${STREAM}', params.STREAM)
-        }
+        def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
         def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
