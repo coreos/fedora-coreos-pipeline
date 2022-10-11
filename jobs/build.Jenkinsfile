@@ -75,7 +75,7 @@ def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 // here; we can look into making them configurable through the template if
 // developers really need to tweak them (note that in the default minimal devel
 // workflow, only the qemu image is built).
-def cosa_memory_request_mb = 6.5 * 1024 as Integer
+def cosa_memory_request_mb = 8.5 * 1024 as Integer
 
 // Now that we've established the memory constraint based on xz above, derive
 // kola parallelism from that. We leave 512M for overhead and VMs are 1G each
