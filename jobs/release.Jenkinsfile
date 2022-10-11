@@ -121,8 +121,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             // all others. `ore gcloud promote-image` does this for us.
             if ((basearch == 'x86_64') && (meta.gcp?.image) &&
                     (stream_info.type == 'production')) {
-                pipeutils.tryWithCredentials([file(variable: 'GCP_IMAGE_UPLOAD_CONFIG',
-                                                   credentialsId: 'gcp-image-upload-config')]) {
+                tryWithCredentials([file(variable: 'GCP_IMAGE_UPLOAD_CONFIG',
+                                         credentialsId: 'gcp-image-upload-config')]) {
                     stage("GCP ${basearch}: Image Promotion") {
                         shwrap("""
                         # pick up the project to use from the config
