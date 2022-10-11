@@ -52,7 +52,7 @@ if (s3_stream_dir == "") {
 }
 
 try { timeout(time: 30, unit: 'MINUTES') {
-    cosaPod(memory: "256Mi", kvm: false,
+    cosaPod(memory: "512Mi", kvm: false,
             image: params.COREOS_ASSEMBLER_IMAGE) {
 
         stage('Fetch Metadata') {

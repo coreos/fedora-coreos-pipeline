@@ -61,7 +61,8 @@ lock(resource: "kola-openstack-${params.ARCH}") {
     }
 
     try { timeout(time: 90, unit: 'MINUTES') {
-        cosaPod(memory: "256Mi", kvm: false,
+        // Go with 1Gi here because we download/decompress/upload the image
+        cosaPod(memory: "1Gi", kvm: false,
                 image: params.COREOS_ASSEMBLER_IMAGE) {
 
             def openstack_image_name, openstack_image_filepath
