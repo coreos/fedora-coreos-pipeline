@@ -1,10 +1,11 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, official, uploading
+def pipeutils, pipecfg, official, uploading, uploads
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
+    uploads = load("uploads.groovy")
 
     def jenkinscfg = pipeutils.load_jenkins_config()
 
@@ -478,23 +479,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             // to S3, we also take that to mean we should upload an AMI. We could
             // split this into two separate developer knobs in the future.
             if (basearch =="aarch64" && uploading) {
-                parallelruns['Upload AWS'] = {
-                    // Extra AWS testing accounts to share images with
-                    def grant_user_args = pipecfg.clouds?.aws?.test_accounts.collect{"--grant-user ${it}"}.join(" ")
-                    // XXX: hardcode us-east-1 for now
-                    // XXX: use the temporary 'ami-import' subpath for now; once we
-                    // also publish vmdks, we could make this more efficient by
-                    // uploading first, and then pointing ore at our uploaded vmdk
-                    shwrap("""
-                    cosa buildextend-aws \
-                        --upload \
-                        --arch=${basearch} \
-                        --build=${newBuildID} \
-                        --region=us-east-1 ${grant_user_args} \
-                        --bucket s3://${pipecfg.s3_bucket}/ami-import \
-                        --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
-                    """)
-                }
+                uploads.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
 
             // process this batch
