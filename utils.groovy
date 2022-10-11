@@ -282,14 +282,14 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
     def artifacts = []
     if  (pipecfg.streams[stream].artifacts?."${basearch}" != null) {
         artifacts = pipecfg.streams[stream]['artifacts'][basearch]
-    } else { // Merge default with additional artifacts
+    } else { // Get the list difference from default with skip artifacts
         def default_artifacts =  pipecfg['default_artifacts'][basearch]
-        def additional_atifacts = pipecfg.streams[stream].additional_artifacts?."${basearch}"
+        def skip_artifacts = pipecfg.streams[stream].skip_artifacts?."${basearch}"
         if (default_artifacts != null) {
-            artifacts += default_artifacts
+            artifacts = default_artifacts
         }
-        if (additional_atifacts != null) {
-            artifacts += additional_atifacts
+        if (skip_artifacts != null) {
+            artifacts -= skip_artifacts
         }
     }
     return artifacts.unique()
