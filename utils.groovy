@@ -155,17 +155,6 @@ def triggered_by_push() {
     return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
 }
 
-// Runs closure if credentials exist, otherwise gracefully return.
-def tryWithCredentials(creds, Closure body) {
-    try {
-        withCredentials(creds) {
-            body()
-        }
-    } catch (CredentialNotFoundException e) {
-        echo("${e.getMessage()}: skipping")
-    }
-}
-
 // Runs closure if credentials exist or not.
 def tryWithOrWithoutCredentials(creds, Closure body) {
     try {
