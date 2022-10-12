@@ -55,8 +55,8 @@ def getLockfileInfo(lockfile) {
 }
 
 // Keep in sync with build.Jenkinsfile
-def cosa_memory_request_mb = 6.5 * 1024 as Integer
-def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
+def cosa_memory_request_mb = 8.5 * 1024 as Integer
+def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { 
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
