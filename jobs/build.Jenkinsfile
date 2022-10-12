@@ -78,10 +78,12 @@ def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 def cosa_memory_request_mb = 8.5 * 1024 as Integer
 
 // Now that we've established the memory constraint based on xz above, derive
-// kola parallelism from that. We leave 512M for overhead and VMs are 1G each
-// (in general; root reprovisioning tests require 4G which is partly why we run
-// them separately).
-def ncpus = ((cosa_memory_request_mb - 512) / 1024) as Integer
+// kola parallelism from that. We leave 512M for overhead and VMs are at most
+// 1.5G each (in general; root reprovisioning tests require 4G which is partly
+// why we run them separately).
+// XXX: https://github.com/coreos/coreos-assembler/issues/3118 will make this
+// cleaner
+def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
