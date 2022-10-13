@@ -34,8 +34,7 @@ def get_source_config_ref_for_stream(pipecfg, stream) {
     if (pipecfg.streams[stream].source_config_ref) {
         return pipecfg.streams[stream].source_config_ref
     } else if (pipecfg.source_config.ref) {
-        // XXX: move to generic templating function
-        return pipecfg.source_config.ref.replace('${STREAM}', stream)
+        return utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
     } else {
         return stream
     }
