@@ -33,6 +33,7 @@ registry_repos:
 
 default_artifacts:
   aarch64:
+    - azure
     - openstack
     - live
     - metal
