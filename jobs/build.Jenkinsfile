@@ -306,74 +306,10 @@ lock(resource: "build-${params.STREAM}") {
             throw new Exception("unreachable")
         }
 
-        stage('Kola:QEMU basic') {
-            shwrap("""
-            cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
-            cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.tar.xz
-            cosa shell -- cat tmp/kola/reports/report.json > report.json
-            """)
-            archiveArtifacts "kola-run-basic.tar.xz"
-            if (!pipeutils.checkKolaSuccess("report.json")) {
-                error('Kola:QEMU basic')
-            }
-        }
-
-        // reset for the next batch of independent tasks
-        parallelruns = [:]
-
-        // Kola QEMU tests
-        parallelruns['Kola:QEMU'] = {
-            // remove 1 for upgrade test
-            def n = ncpus - 1
-            shwrap("""
-            cosa kola run --rerun --parallel ${n} --no-test-exit-error --denylist-test basic --tag '!reprovision'
-            cosa shell -- tar -c --xz tmp/kola/ > kola-run.tar.xz
-            cosa shell -- cat tmp/kola/reports/report.json > report.json
-            """)
-            archiveArtifacts "kola-run.tar.xz"
-            if (!pipeutils.checkKolaSuccess("report.json")) {
-                error('Kola:QEMU')
-            }
-            shwrap("""
-            cosa shell -- rm -rf tmp/kola
-            cosa kola run --rerun --no-test-exit-error --tag reprovision
-            cosa shell -- tar -c --xz tmp/kola/ > kola-run-reprovision.tar.xz
-            cosa shell -- cat tmp/kola/reports/report.json > report.json
-            """)
-            archiveArtifacts "kola-run-reprovision.tar.xz"
-            if (!pipeutils.checkKolaSuccess("report.json")) {
-                error('Kola:QEMU')
-            }
-        }
-
-        // Kola QEMU Upgrade tests
-        parallelruns['Kola:QEMU Upgrade'] = {
-            // If upgrades are broken `cosa kola --upgrades` might
-            // fail to even find the previous image so we wrap this
-            // in a try/catch so ALLOW_KOLA_UPGRADE_FAILURE can work.
-            try {
-                shwrap("""
-                cosa kola --rerun --upgrades --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.tar.xz
-                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report.json
-                """)
-                archiveArtifacts "kola-run-upgrade.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report.json")) {
-                    error('Kola:QEMU Upgrade')
-                }
-            } catch(e) {
-                if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
-                    warnError(message: 'Upgrade Failed') {
-                        error(e.getMessage())
-                    }
-                } else {
-                    throw e
-                }
-            }
-        }
-
-        // process this batch
-        parallel parallelruns
+        // Run Kola Tests
+        def n = ncpus - 1 // remove 1 for upgrade test
+        kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+             allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
 
         // If we are uploading results then let's do an early archive
         // of just the OSTree. This has the desired side effect of
@@ -442,50 +378,22 @@ lock(resource: "build-${params.STREAM}") {
             parallel parallelruns.subMap(artifacts[0..artifacts_split_idx])
             parallel parallelruns.subMap(artifacts[artifacts_split_idx+1..-1])
 
-            stage('Test Live ISO') {
-                // compress the metal and metal4k images now so we're testing
-                // installs with the image format we ship
-                // lower to make sure we don't go over and account for overhead
-                def xz_memlimit = cosa_memory_request_mb - 512
-                shwrap("""
-                export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
-                cosa compress --compressor xz --artifact metal --artifact metal4k
-                """)
-                try {
-                    parallelruns = [:]
-                    parallelruns['metal'] = {
-                        shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
-                    }
-                    parallelruns['metal4k+uefi'] = {
-                        shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
-                        shwrap("cosa shell -- mkdir -p tmp/kola-testiso-uefi")
-                        shwrap("cosa kola testiso -S --qemu-firmware=uefi --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/insecure")
-                        shwrap("cosa kola testiso -S --qemu-firmware=uefi-secure --scenarios iso-live-login,iso-as-disk --output-dir tmp/kola-testiso-uefi/secure")
-                    }
-                    // process this batch
-                    parallel parallelruns
-                } catch (Throwable e) {
-                    throw e
-                } finally {
-                    shwrap("""
-                    cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.tar.xz
-                    cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.tar.xz
-                    cosa shell -- tar -c --xz tmp/kola-testiso-uefi/ > kola-testiso-uefi.tar.xz
-                    """)
-                    archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
-
-                    // For now we want to notify ourselves when this workaround is observed. It won't
-                    // fail the build, just give us information.
-                    // https://github.com/coreos/fedora-coreos-tracker/issues/1233
-                    def grepRc = shwrapRc("""
-                         cosa shell -- grep 'tracker issue workaround engaged for .*issues/1233' \
-                            tmp/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
-                    """)
-                    if (grepRc == 0) {
-                        warnError(message: 'Detected used workaround for #1233') {
-                            error('Detected used workaround for #1233')
-                        }
-                    }
+            // Run Kola TestISO tests for metal artifacts
+            kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+            // For now we want to notify ourselves when a particular workaround is observed.
+            // It won't fail the build, just give us information.
+            // https://github.com/coreos/fedora-coreos-tracker/issues/1233
+            // XXX: This relies on implementation details in kolatestIso(),
+            //      but since this is a hack and probably short lived that's OK.
+            // First check to make sure the files exist, then grep for the workaround.
+            shwrap("cosa shell -- ls tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt")
+            def grepRc = shwrapRc("""
+                 cosa shell -- grep 'tracker issue workaround engaged for .*issues/1233' \
+                    tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
+            """)
+            if (grepRc == 0) {
+                warnError(message: 'Detected used workaround for #1233') {
+                    error('Detected used workaround for #1233')
                 }
             }
 

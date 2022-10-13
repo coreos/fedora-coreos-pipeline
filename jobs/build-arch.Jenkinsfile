@@ -333,76 +333,12 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             throw new Exception("unreachable")
         }
 
-        stage('Kola:QEMU basic') {
-            shwrap("""
-            cosa kola run --rerun --basic-qemu-scenarios --no-test-exit-error
-            cosa shell -- tar -c --xz tmp/kola/ > kola-run-basic.tar.xz
-            cosa shell -- cat tmp/kola/reports/report.json > report.json
-            """)
-            archiveArtifacts "kola-run-basic.tar.xz"
-            if (!pipeutils.checkKolaSuccess("report.json")) {
-                error('Kola:QEMU basic')
-            }
-        }
-
-        // reset for the next batch of independent tasks
-        parallelruns = [:]
-
-        // Kola QEMU tests
-        parallelruns['Kola:QEMU'] = {
-            shwrap("""
-            cosa kola run --rerun --parallel 5 --no-test-exit-error --denylist-test basic  --tag '!reprovision'
-            cosa shell -- tar -c --xz tmp/kola/ > kola-run.tar.xz
-            cosa shell -- cat tmp/kola/reports/report.json > report.json
-            """)
-            archiveArtifacts "kola-run.tar.xz"
-            if (!pipeutils.checkKolaSuccess("report.json")) {
-                error('Kola:QEMU')
-            }
-            shwrap("""
-            cosa shell -- rm -rf tmp/kola
-            cosa kola run --rerun --no-test-exit-error --tag reprovision
-            cosa shell -- tar -c --xz tmp/kola/ > kola-run-reprovision.tar.xz
-            cosa shell -- cat tmp/kola/reports/report.json > report.json
-            """)
-            archiveArtifacts "kola-run-reprovision.tar.xz"
-            if (!pipeutils.checkKolaSuccess("report.json")) {
-                error('Kola:QEMU')
-            }
-        }
-
-        // Kola QEMU Upgrade tests
-        parallelruns['Kola:QEMU Upgrade'] = {
-            // If upgrades are broken `cosa kola --upgrades` might
-            // fail to even find the previous image so we wrap this
-            // in a try/catch so ALLOW_KOLA_UPGRADE_FAILURE can work.
-            try {
-                shwrap("""
-                cosa kola --rerun --upgrades --no-test-exit-error
-                cosa shell -- tar -c --xz tmp/kola-upgrade/ > kola-run-upgrade.tar.xz
-                cosa shell -- cat tmp/kola-upgrade/reports/report.json > report.json
-                """)
-                archiveArtifacts "kola-run-upgrade.tar.xz"
-                if (!pipeutils.checkKolaSuccess("report.json")) {
-                    error('Kola:QEMU Upgrade')
-                }
-            } catch(e) {
-                if (params.ALLOW_KOLA_UPGRADE_FAILURE) {
-                    warnError(message: 'Upgrade Failed') {
-                        error(e.getMessage())
-                    }
-                } else {
-                    throw e
-                }
-            }
-        }
-
-        // process this batch
-        parallel parallelruns
-
+        // Run Kola Tests
+        def n = 4 // VMs are 2G each and arch builders have approx 32G
+        kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+             allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
 
         if (!params.MINIMAL) {
-
 
             // We will parallel build all the different artifacts for this architecture. We split this up
             // into two separate parallel runs to stay in the sweet spot and avoid hitting PID limits in
@@ -448,35 +384,8 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 }
             }
 
-            stage('Test Live ISO') {
-                // compress the metal and metal4k images now so we're testing
-                // installs with the image format we ship
-                shwrap("""
-                cosa compress --compressor xz --artifact metal --artifact metal4k
-                """)
-                try {
-                    parallelruns = [:]
-                    parallelruns['metal'] = {
-                        shwrap("cosa kola testiso -S --output-dir tmp/kola-testiso-metal")
-                    }
-                    // metal4k doesn't work on s390x right now: https://github.com/coreos/fedora-coreos-tracker/issues/1261
-                    if (basearch != "s390x") {
-                        parallelruns['metal4k'] = {
-                            shwrap("cosa kola testiso -SP --qemu-native-4k --qemu-multipath --output-dir tmp/kola-testiso-metal4k")
-                        }
-                    }
-                    // process this batch
-                    parallel parallelruns
-                } catch (Throwable e) {
-                    throw e
-                } finally {
-                    shwrap("""
-                    cosa shell -- tar -c --xz tmp/kola-testiso-metal/ > kola-testiso-metal.tar.xz
-                    cosa shell -- tar -c --xz tmp/kola-testiso-metal4k/ > kola-testiso-metal4k.tar.xz || :
-                    """)
-                    archiveArtifacts allowEmptyArchive: true, artifacts: 'kola-testiso*.tar.xz'
-                }
-            }
+            // Run Kola TestISO tests for metal artifacts
+            kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
 
             // reset for the next batch of independent tasks
             parallelruns = [:]
