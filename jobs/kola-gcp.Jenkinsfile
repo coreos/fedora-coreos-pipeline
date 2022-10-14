@@ -75,13 +75,12 @@ try { timeout(time: 30, unit: 'MINUTES') {
                               credentialsId: 'gcp-kola-tests-config')]) {
             // pick up the project to use from the config
             def gcp_project = shwrapCapture("jq -r .project_id \${GCP_KOLA_TESTS_CONFIG}")
-            fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                     build: params.VERSION, arch: params.ARCH,
-                     extraArgs: params.KOLA_TESTS,
-                     skipBasicScenarios: true,
-                     platformArgs: """-p=gce \
-                        --gce-json-key=\${GCP_KOLA_TESTS_CONFIG} \
-                        --gce-project=${gcp_project}""")
+            kola(cosaDir: env.WORKSPACE, parallel: 5,
+                 build: params.VERSION, arch: params.ARCH,
+                 extraArgs: params.KOLA_TESTS,
+                 platformArgs: """-p=gce \
+                    --gce-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                    --gce-project=${gcp_project}""")
         }
 
         currentBuild.result = 'SUCCESS'

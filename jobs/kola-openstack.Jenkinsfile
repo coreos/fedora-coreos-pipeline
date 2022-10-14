@@ -116,19 +116,18 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                 // Since we don't have permanent images uploaded to VexxHost we'll
                 // skip the upgrade test.
                 try {
-                    fcosKola(cosaDir: env.WORKSPACE, parallel: 5,
-                            build: params.VERSION, arch: params.ARCH,
-                            extraArgs: params.KOLA_TESTS,
-                            skipBasicScenarios: true,
-                            skipUpgrade: true,
-                            platformArgs: """-p=openstack                               \
-                                --allow-rerun-success                                   \
-                                --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
-                                --openstack-flavor=v3-starter-4                         \
-                                --openstack-network=private                             \
-                                --openstack-region=${region}                            \
-                                --openstack-floating-ip-network=public                  \
-                                --openstack-image=${openstack_image_name}""")
+                    kola(cosaDir: env.WORKSPACE, parallel: 5,
+                         build: params.VERSION, arch: params.ARCH,
+                         extraArgs: params.KOLA_TESTS,
+                         skipUpgrade: true,
+                         platformArgs: """-p=openstack                               \
+                             --allow-rerun-success                                   \
+                             --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
+                             --openstack-flavor=v3-starter-4                         \
+                             --openstack-network=private                             \
+                             --openstack-region=${region}                            \
+                             --openstack-floating-ip-network=public                  \
+                             --openstack-image=${openstack_image_name}""")
                 } finally {
                     stage('Delete Image') {
                         // Delete the image in OpenStack
