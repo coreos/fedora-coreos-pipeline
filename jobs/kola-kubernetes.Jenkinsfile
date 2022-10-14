@@ -71,12 +71,11 @@ try { timeout(time: 60, unit: 'MINUTES') {
         // realistic than QEMU and it also supports aarch64.
         withCredentials([file(variable: 'AWS_CONFIG_FILE',
                               credentialsId: 'aws-kola-tests-config')]) {
-            fcosKola(cosaDir: env.WORKSPACE,
-                     build: params.VERSION, arch: params.ARCH,
-                     extraArgs: "--tag k8s",
-                     skipUpgrade: true,
-                     skipBasicScenarios: true,
-                     platformArgs: '-p=aws --aws-region=us-east-1')
+            kola(cosaDir: env.WORKSPACE,
+                 build: params.VERSION, arch: params.ARCH,
+                 extraArgs: "--tag k8s",
+                 skipUpgrade: true,
+                 platformArgs: '-p=aws --aws-region=us-east-1')
         }
 
         currentBuild.result = 'SUCCESS'

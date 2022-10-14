@@ -140,16 +140,15 @@ lock(resource: "kola-azure-${params.ARCH}") {
                 // skip the upgrade test.
                 try {
                     def azure_subscription = shwrapCapture("jq -r .subscriptionId \${AZURE_KOLA_TESTS_CONFIG_AUTH}")
-                    fcosKola(cosaDir: env.WORKSPACE, parallel: 10,
-                            build: params.VERSION, arch: params.ARCH,
-                            extraArgs: params.KOLA_TESTS,
-                            skipBasicScenarios: true,
-                            skipUpgrade: true,
-                            platformArgs: """-p=azure                               \
-                                --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
-                                --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
-                                --azure-location $region                            \
-                                --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
+                    kola(cosaDir: env.WORKSPACE, parallel: 10,
+                         build: params.VERSION, arch: params.ARCH,
+                         extraArgs: params.KOLA_TESTS,
+                         skipUpgrade: true,
+                         platformArgs: """-p=azure                               \
+                             --azure-auth \${AZURE_KOLA_TESTS_CONFIG_AUTH}       \
+                             --azure-profile \${AZURE_KOLA_TESTS_CONFIG_PROFILE} \
+                             --azure-location $region                            \
+                             --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
                 } finally {
                     parallel "Delete Image": {
                         // Delete the image in Azure
