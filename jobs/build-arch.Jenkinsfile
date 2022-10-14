@@ -419,8 +419,13 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 }]
             }
             def artifacts_split_idx = artifacts.size().intdiv(2)
-            parallel parallelruns.subMap(artifacts[0..artifacts_split_idx-1])
-            parallel parallelruns.subMap(artifacts[artifacts_split_idx..-1])
+            // use [0..artifacts_split_idx] for the first run and
+            // [artifacts_split_idx+1..-1] for the second run so we
+            // can guarantee if we're only building metal/live artifacts
+            // that the two metal runs go in the first run.
+            // https://github.com/coreos/fedora-coreos-pipeline/pull/695
+            parallel parallelruns.subMap(artifacts[0..artifacts_split_idx])
+            parallel parallelruns.subMap(artifacts[artifacts_split_idx+1..-1])
 
             // Hack for serial console on aarch64 aws images
             // see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988
