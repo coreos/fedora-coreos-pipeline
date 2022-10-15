@@ -104,8 +104,9 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         parallel archinfo.keySet().collectEntries{arch -> [arch, {
             if (arch != "x86_64") {
                 pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                    archinfo[arch]['session'] = \
-                        shwrapCapture("cosa remote-session create --image ${image} --expiration 4h")
+                    archinfo[arch]['session'] = shwrapCapture("""
+                    cosa remote-session create --image ${image} --expiration 4h --workdir ${env.WORKSPACE}
+                    """)
                     withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                         shwrap("""
                         cosa init --branch ${branch} --commit=${src_config_commit} https://github.com/${repo}
