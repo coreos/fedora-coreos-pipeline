@@ -78,3 +78,15 @@ clouds:
   gcp:
     # REQUIRED (if GCP image upload credentials provided): bucket to upload to
     bucket: fedora-coreos-cloud-image-uploads
+  powervs:
+    # REQUIRED (if POWERVS image upload credentials provided): the object storage
+    # service instance to use.
+    cloud_object_storage_service_instance: fedora-coreos-cos-service-instance
+    # REQUIRED (if POWERVS image upload credentials provided): the object storage
+    # service instance to use.
+    primary_region: us-east
+    # REQUIRED (if POWERVS image upload credentials provided): the bucket to use.
+    # This bucket string is actually a prefix. The region will get added to it as
+    # a suffix. If replication occurs other buckets in other regions will get
+    # uploaded to. i.e. "fedora-coreos-image-uploads-us-east", "fedora-coreos-image-uploads-ca-tor"
+    bucket: fedora-coreos-image-uploads

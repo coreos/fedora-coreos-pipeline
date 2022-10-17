@@ -119,10 +119,14 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 tryWithCredentials([file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
                                    credentialsId: "powervs-image-upload-config")]) {
                     def c = pipecfg.clouds.powervs
+                    // for powervs in RHCOS the images are uploaded to a bucket in each
+                    // region that is uniquely named with the region as a suffix
+                    // i.e. `rhcos-powervs-images-us-east`
+                    def bucket = "${c.bucket}-${c.primary_region}"
                     shwrap("""cosa buildextend-powervs \
                         --upload \
-                        --cloud-object-storage ${c.cloud_object_storage} \
-                        --bucket ${c.bucket} \
+                        --cloud-object-storage ${c.cloud_object_storage_service_instance} \
+                        --bucket ${bucket} \
                         --region ${c.primary_region} \
                         --credentials-file \${"POWER_IMAGE_UPLOAD_CONFIG"} \
                         --build ${buildID} \
