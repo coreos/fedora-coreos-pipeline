@@ -11,21 +11,18 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
 
     artifacts.each {
 
-        def bucket = pipecfg.clouds."${it}".bucket
-        def path = pipecfg.clouds."${it}".path
-        def primary_region = pipecfg.clouds."${it}".primary_region
-
         if (it == 'aliyun') {
             uploaders["aliyun"] = {
                 tryWithCredentials([file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
                                    credentialsId: "aliyun-image-upload-config")]) {
+                    def c = pipecfg.clouds.aliyun
                     shwrap("""
                     cosa buildextend-aliyun \
                         --upload \
                         --arch=${basearch} \
                         --build=${buildID} \
-                        --region=${primary_region} \
-                        --bucket ${bucket} \
+                        --region=${c.primary_region} \
+                        --bucket=s3://${c.bucket}/${c.path} \
                         --credentials-file=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
                     """)
                 }
@@ -35,16 +32,15 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             uploaders["aws"] = {
                 tryWithCredentials([file(variable: "AWS_BUILD_UPLOAD_CONFIG",
                                    credentialsId: "aws-build-upload-config")]) {
-                    def grant_user_args = \
-                        pipecfg.clouds?.aws?.test_accounts.collect{"--grant-user ${it}"}.join(" ")
-                    bucket = "s3://${bucket}/$path"
+                    def c = pipecfg.clouds.aws
+                    def grant_user_args = c.test_accounts?.collect{"--grant-user ${it}"}.join(" ")
                     shwrap("""
                     cosa buildextend-aws \
                         --upload \
                         --arch=${basearch} \
                         --build=${buildID} \
-                        --region=${primary_region} ${grant_user_args} \
-                        --bucket ${bucket} \
+                        --region=${c.primary_region} ${grant_user_args} \
+                        --bucket=s3://${c.bucket}/${c.path} \
                         --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
@@ -57,17 +53,15 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             uploaders["azure"] = {
                 tryWithCredentials([file(variable: "AZURE_IMAGE_UPLOAD_CONFIG",
                                     credentialsId: "azure-image-upload-config")]) {
-                    def container = pipecfg.clouds.azure.container
-                    def resource_group = pipecfg.clouds.azure.resource_group
-                    def storage_account = pipecfg.clouds.azure.storage_account
+                    def c = pipecfg.clouds.azure
                     shwrap("""cosa buildextend-azure \
                         --upload \
                         --auth \${AZURE_IMAGE_UPLOAD_CONFIG}/azure.json \
                         --build=${buildID} \
-                        --container ${container} \
+                        --container=${c.container} \
                         --profile \${AZURE_IMAGE_UPLOAD_CONFIG}/azureProfile.json \
-                        --resource-group ${resource_group} \
-                        --storage-account ${storage_account} \
+                        --resource-group ${c.resource_group} \
+                        --storage-account ${c.storage_account} \
                         --force
                      """)
                 }
@@ -77,11 +71,12 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             uploaders["gcp"] = {
                 tryWithCredentials([file(variable: "GCP_IMAGE_UPLOAD_CONFIG",
                                    credentialsId: "gcp-image-upload-config")]) {
-                    def create_image =  (pipecfg.clouds.gcp.create_image ? "--create-image=true": "")
-                    def description =  (pipecfg.clouds.gcp.description ? ('--description=' + pipecfg.clouds.gcp.description): "")
-                    def family =  (pipecfg.clouds.gcp.family.image_family ? '--family ' + pipecfg.clouds.gcp.family.image_family + '--deprecated': "")
-                    def acl = (pipecfg.clouds.gcp.public ? "--public" : "")
-                    def gcp_licenses = pipecfg.clouds.gcp.licenses
+                    def c = pipecfg.clouds.gcp
+                    def create_image =  (c.create_image ? "--create-image=true": "")
+                    def description =  (c.description ? ('--description=' + c.description): "")
+                    def family =  (c.family.image_family ? '--family ' + c.family.image_family + '--deprecated': "")
+                    def acl = (c.public ? "--public" : "")
+                    def gcp_licenses = c.licenses
                     def licenses = gcp_licenses.collect{"--license " + it.replace('STREAM', stream)}.join(" ")
                     def today = shwrapCapture("date +%Y-%m-%d")
                     family = family.replace("STREAM", stream)
@@ -110,12 +105,11 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             uploaders["kubevirt"] = {
                 tryWithCredentials([file(variable: "KUBEVIRT_IMAGE_UPLOAD_CONFIG",
                                    credentialsId: "kubevirt-image-upload-config")]) {
-                    def name =  pipecfg.clouds.kubevirt.name
-                    def repository =  pipecfg.clouds.kubevirt.repository
+                    def c = pipecfg.clouds.kubevirt
                     shwrap("""coreos-assembler buildextend-kubevirt \
                                  --upload \
-                                 --name ${name} \
-                                 --repository ${repository}
+                                 --name ${c.name} \
+                                 --repository ${c.repository}
                     """);
                 }
             }
@@ -124,12 +118,12 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             uploaders["powervs"] = {
                 tryWithCredentials([file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
                                    credentialsId: "powervs-image-upload-config")]) {
-                    def cloud_object_storage = pipecfg.clouds.powervs.cloud_object_storage
+                    def c = pipecfg.clouds.powervs
                     shwrap("""cosa buildextend-powervs \
                         --upload \
-                        --cloud-object-storage ${cloud_object_storage} \
-                        --bucket ${bucket} \
-                        --region ${primary_region} \
+                        --cloud-object-storage ${c.cloud_object_storage} \
+                        --bucket ${c.bucket} \
+                        --region ${c.primary_region} \
                         --credentials-file \${"POWER_IMAGE_UPLOAD_CONFIG"} \
                         --build ${buildID} \
                         --force
