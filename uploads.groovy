@@ -15,6 +15,22 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def path = pipecfg.clouds."${it}".path
         def primary_region = pipecfg.clouds."${it}".primary_region
 
+        if (it == 'aliyun') {
+            uploaders["aliyun"] = {
+                tryWithCredentials([file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
+                                   credentialsId: "aliyun-image-upload-config")]) {
+                    shwrap("""
+                    cosa buildextend-aliyun \
+                        --upload \
+                        --arch=${basearch} \
+                        --build=${buildID} \
+                        --region=${primary_region} \
+                        --bucket ${bucket} \
+                        --credentials-file=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
+                    """)
+                }
+            }
+        }
         if (it == 'aws') {
             uploaders["aws"] = {
                 tryWithCredentials([file(variable: "AWS_BUILD_UPLOAD_CONFIG",
@@ -31,22 +47,6 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         --bucket ${bucket} \
                         --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
                     """)
-                }
-            }
-        }
-        if (it == 'aliyun') {
-             uploaders["aliyun"] = {
-                 tryWithCredentials([file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
-                                    credentialsId: "aliyun-image-upload-config")]) {
-                    shwrap("""
-                    cosa buildextend-aliyun \
-                           --upload \
-                           --arch=${basearch} \
-                           --build=${buildID} \
-                           --region=${primary_region} \
-                           --bucket ${bucket} \
-                           --credentials-file=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
-                       """)
                 }
             }
         }
@@ -106,6 +106,20 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 }
             }
         }
+        if (it == 'kubevirt') {
+            uploaders["kubevirt"] = {
+                tryWithCredentials([file(variable: "KUBEVIRT_IMAGE_UPLOAD_CONFIG",
+                                   credentialsId: "kubevirt-image-upload-config")]) {
+                    def name =  pipecfg.clouds.kubevirt.name
+                    def repository =  pipecfg.clouds.kubevirt.repository
+                    shwrap("""coreos-assembler buildextend-kubevirt \
+                                 --upload \
+                                 --name ${name} \
+                                 --repository ${repository}
+                    """);
+                }
+            }
+        }
         if (it == 'powervs') {
             uploaders["powervs"] = {
                 tryWithCredentials([file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
@@ -120,20 +134,6 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         --build ${buildID} \
                         --force
                      """);
-                }
-            }
-        }
-        if (it == 'kubevirt') {
-            uploaders["kubevirt"] = {
-                tryWithCredentials([file(variable: "KUBEVIRT_IMAGE_UPLOAD_CONFIG",
-                                   credentialsId: "kubevirt-image-upload-config")]) {
-                    def name =  pipecfg.clouds.kubevirt.name
-                    def repository =  pipecfg.clouds.kubevirt.repository
-                    shwrap("""coreos-assembler buildextend-kubevirt \
-                                 --upload \
-                                 --name ${name} \
-                                 --repository ${repository}
-                    """);
                 }
             }
         }
