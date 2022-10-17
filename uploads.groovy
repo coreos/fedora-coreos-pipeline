@@ -22,7 +22,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         --arch=${basearch} \
                         --build=${buildID} \
                         --region=${c.primary_region} \
-                        --bucket=s3://${c.bucket}/${c.path} \
+                        --bucket=s3://${c.bucket} \
                         --credentials-file=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
                     """)
                 }
@@ -40,7 +40,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         --arch=${basearch} \
                         --build=${buildID} \
                         --region=${c.primary_region} ${grant_user_args} \
-                        --bucket=s3://${c.bucket}/${c.path} \
+                        --bucket=s3://${c.bucket} \
                         --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
@@ -94,7 +94,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         --build=${buildID} \
                         --upload \
                         --project=\${gcp_project} \
-                        --bucket gs://${bucket}/${path} \
+                        --bucket gs://${c.bucket} \
                         --json \${GCP_IMAGE_UPLOAD_CONFIG} \
                         ${create_image} ${description} ${family} ${licenses} ${acl}
                     """)

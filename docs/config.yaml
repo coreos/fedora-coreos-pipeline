@@ -69,6 +69,19 @@ clouds:
     # OPTIONAL: accounts to share newly created AMIs with
     test_accounts:
       - "1234567890"
+    # REQUIRED (if AWS build upload credentials provided): the region to do
+    # initial image creation in.
+    primary_region: us-east-1
+    # REQUIRED (if AWS build upload credentials provided): the bucket+prefix
+    # where image files are uploaded to then initiate an image import.
+    bucket: fedora-coreos-image-uploads/ami-import
+  aliyun:
+    # REQUIRED (if Aliyun build upload credentials provided): the region to do
+    # initial image creation in.
+    primary_region: us-east-1
+    # REQUIRED (if Aliyun image upload credentials provided): the bucket+prefix
+    # where image files are uploaded to then initiate an image import.
+    bucket: fedora-coreos-image-uploads/ami-import
   azure:
     # REQUIRED (if test Azure credentials provided): resource group, storage
     # account, and storage container to use for kola tests
@@ -76,8 +89,9 @@ clouds:
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
   gcp:
-    # REQUIRED (if GCP image upload credentials provided): bucket to upload to
-    bucket: fedora-coreos-cloud-image-uploads
+    # REQUIRED (if GCP image upload credentials provided): the bucket+prefix
+    # where image files are uploaded to then initiate an image import.
+    bucket: fedora-coreos-cloud-image-uploads/image-import
   powervs:
     # REQUIRED (if POWERVS image upload credentials provided): the object storage
     # service instance to use.
