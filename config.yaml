@@ -76,16 +76,14 @@ clouds:
     # Accounts to share newly created AMIs with
     test_accounts:
       - "013116697141"
-    bucket: fcos-builds
-    path: ami-import
+    bucket: fcos-builds/ami-import
     primary_region: us-east-1
   azure:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
   gcp:
-    bucket: fedora-coreos-cloud-image-uploads
-    path: image-import
+    bucket: fedora-coreos-cloud-image-uploads/image-import
     create_image: true
     deprecated: true
     description: "Fedora, Fedora CoreOS STREAM, BUILDID, BASEARCH published on TODAY"
