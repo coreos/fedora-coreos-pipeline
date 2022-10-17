@@ -73,8 +73,6 @@ aws_aarch64_serial_console_hack: true
 
 clouds:
   aws:
-    upload_accounts:
-      - "013116697141"
     # Accounts to share newly created AMIs with
     test_accounts:
       - "013116697141"

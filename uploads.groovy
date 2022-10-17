@@ -19,9 +19,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             uploaders["aws"] = {
                 tryWithCredentials([file(variable: "AWS_BUILD_UPLOAD_CONFIG",
                                    credentialsId: "aws-build-upload-config")]) {
-                    def grant_user_args
-                    def aws_accounts = pipecfg.clouds."${it}".upload_accounts
-                    grant_user_args = aws_accounts.collect{"--grant-user ${it}"}.join(" ")
+                    def grant_user_args = \
+                        pipecfg.clouds?.aws?.test_accounts.collect{"--grant-user ${it}"}.join(" ")
                     bucket = "s3://${bucket}/$path"
                     shwrap("""
                     cosa buildextend-aws \
