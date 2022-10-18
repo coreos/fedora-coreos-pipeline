@@ -398,11 +398,11 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
 
-            // Key off of uploading: i.e. if we're configured to upload artifacts
-            // to S3, we also take that to mean we should upload an AMI. We could
-            // split this into two separate developer knobs in the future.
+            // Upload to relevant clouds
             if (uploading) {
-                uploads.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
+                stage('Cloud Upload') {
+                    uploads.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
+                }
             }
         }
 
