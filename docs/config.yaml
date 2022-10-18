@@ -97,6 +97,19 @@ clouds:
     # REQUIRED (if GCP image upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-cloud-image-uploads/image-import
+    # OPTIONAL: A description to add to the image. The given string can have ${STREAM},
+    # ${BUILDID}, ${BASEARCH}, and ${DATE} substituted for values at runtime.
+    description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
+    # OPTIONAL: boolean: whether or not to set the image as public
+    public: true
+    # OPTIONAL: create the image in the specified image family. It will be created in
+    # the deprecated state. It can then be undeprecated in the release job.
+    family: "fedora-coreos-${STREAM}"
+    # OPTIONAL: licenses to add to the image on creation. The given string can have ${STREAM}
+    # substituted with the actual stream at runtime.
+    licenses:
+      - "fedora-coreos-${STREAM}"
+      - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
   powervs:
     # REQUIRED (if POWERVS image upload credentials provided): the object storage
     # service instance to use.

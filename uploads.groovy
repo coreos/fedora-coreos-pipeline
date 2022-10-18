@@ -71,23 +71,36 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 tryWithCredentials([file(variable: "GCP_IMAGE_UPLOAD_CONFIG",
                                    credentialsId: "gcp-image-upload-config")]) {
                     def c = pipecfg.clouds.gcp
-                    def create_image =  (c.create_image ? "--create-image=true": "")
-                    def description =  (c.description ? ('--description=' + c.description): "")
-                    def family =  (c.family.image_family ? '--family ' + c.family.image_family + '--deprecated': "")
-                    def acl = (c.public ? "--public" : "")
-                    def gcp_licenses = c.licenses
-                    def licenses = gcp_licenses.collect{"--license " + it.replace('STREAM', stream)}.join(" ")
-                    def today = shwrapCapture("date +%Y-%m-%d")
-                    family = family.replace("STREAM", stream)
-                    description = description.replace("BUILDID", buildID)
-                    description = description.replace("STREAM", stream)
-                    description = description.replace("BASEARCH", basearch)
-                    description = description.replace("TODAY", today)
+                    def extraArgs = []
+                    if (c.family) {
+                        // If there is an image family then we set it on image creation
+                        // and also start the image in a deprecated state, which will be
+                        // un-deprecated in the release job.
+                        extraArgs += "--family=" + utils.substituteStr(c.family, [STREAM: stream])
+                        extraArgs += "--deprecated"
+                    }
+                    // Apply image description if provided
+                    if (c.description) {
+                        def description = utils.substituteStr(c.description, [
+                                                              BUILDID: buildID,
+                                                              STREAM: stream,
+                                                              BASEARCH: basearch,
+                                                              DATE: shwrapCapture("date +%Y-%m-%d")])
+                        extraArgs += "--description=\"${description}\""
+                    }
+                    // Apply specified licenses to the created image
+                    if (c.licenses) {
+                        for (license in c.licenses) {
+                            extraArgs += "--license=" + utils.substituteStr(license, [STREAM: stream])
+                        }
+                    }
+                    // Mark the image as public if requested
+                    if (c.public) {
+                        extraArgs += "--public"
+                    }
                     shwrap("""
                     # pick up the project to use from the config
                     gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
-                    # NOTE: Add --deprecated to create image in deprecated state.
-                    #       We undeprecate in the release pipeline with promote-image.
                     cosa buildextend-gcp \
                         --log-level=INFO \
                         --build=${buildID} \
@@ -95,7 +108,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         --project=\${gcp_project} \
                         --bucket gs://${c.bucket} \
                         --json \${GCP_IMAGE_UPLOAD_CONFIG} \
-                        ${create_image} ${description} ${family} ${licenses} ${acl}
+                        ${extraArgs.join(' ')}
                     """)
                 }
             }

@@ -84,11 +84,9 @@ clouds:
     test_storage_container: fedora-coreos-testing-image-blobs
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import
-    create_image: true
-    deprecated: true
-    description: "Fedora, Fedora CoreOS STREAM, BUILDID, BASEARCH published on TODAY"
-    family:
-      image_family: "fedora-coreos-STREAM"
+    description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
+    family: "fedora-coreos-${STREAM}"
+    public: true
     licenses:
-      - "fedora-coreos-STREAM"
+      - "fedora-coreos-${STREAM}"
       - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
