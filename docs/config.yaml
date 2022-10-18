@@ -83,7 +83,12 @@ clouds:
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-image-uploads/ami-import
   azure:
-    # REQUIRED (if test Azure credentials provided): resource group, storage
+    # REQUIRED (if Azure image upload credentials provided): resource group, storage
+    # account, and storage container to use for image file uploads
+    resource_group: fedora-coreos
+    storage_account: fedoracoreos
+    storage_container: fedora-coreos-image-blobs
+    # REQUIRED (if Azure kola test credentials provided): resource group, storage
     # account, and storage container to use for kola tests
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting

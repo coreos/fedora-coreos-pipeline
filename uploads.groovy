@@ -46,22 +46,21 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 }
             }
         }
-        // For azure we are using two files for RHCOS secret: azure.json and azureProfile.json
-        // We need to investigate if we can have a single secret (token) to upload it,
-        // making it similar to FCOS
         if (it == 'azure') {
             uploaders["azure"] = {
-                tryWithCredentials([file(variable: "AZURE_IMAGE_UPLOAD_CONFIG",
-                                    credentialsId: "azure-image-upload-config")]) {
+                tryWithCredentials([file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_PROFILE',
+                                        credentialsId: 'azure-image-upload-config-profile'),
+                                    file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_AUTH',
+                                        credentialsId: 'azure-image-upload-config-auth')]) {
                     def c = pipecfg.clouds.azure
                     shwrap("""cosa buildextend-azure \
                         --upload \
-                        --auth \${AZURE_IMAGE_UPLOAD_CONFIG}/azure.json \
+                        --auth \${AZURE_IMAGE_UPLOAD_CONFIG_AUTH} \
+                        --profile \${AZURE_IMAGE_UPLOAD_CONFIG_PROFILE} \
                         --build=${buildID} \
-                        --container=${c.container} \
-                        --profile \${AZURE_IMAGE_UPLOAD_CONFIG}/azureProfile.json \
                         --resource-group ${c.resource_group} \
                         --storage-account ${c.storage_account} \
+                        --container=${c.storage_container} \
                         --force
                      """)
                 }
