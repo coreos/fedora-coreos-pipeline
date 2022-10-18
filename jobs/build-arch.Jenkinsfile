@@ -388,11 +388,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             // Run Kola TestISO tests for metal artifacts
             kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
 
-            // Key off of uploading: i.e. if we're configured to upload artifacts
-            // to S3, we also take that to mean we should upload an AMI. We could
-            // split this into two separate developer knobs in the future.
-            if (basearch =="aarch64" && uploading) {
-                uploads.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
+            // Upload to relevant clouds
+            if (uploading) {
+                stage('Cloud Upload') {
+                    uploads.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
+                }
             }
         }
 
