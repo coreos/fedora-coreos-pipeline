@@ -96,7 +96,7 @@ try {
     lock(resource: "build-${containername}") {
     timeout(time: 60, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "256Mi", kvm: false) {
+            memory: "512Mi", kvm: false) {
 
         currentBuild.description = "[${gitref}@${shortcommit}] Running"
 
