@@ -58,7 +58,7 @@ def stream_info = pipecfg.streams[params.STREAM]
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
-    cosaPod(cpu: "1", memory: "256Mi",
+    cosaPod(cpu: "1", memory: "512Mi",
             image: params.COREOS_ASSEMBLER_IMAGE) {
     try {
 
