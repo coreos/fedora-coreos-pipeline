@@ -349,7 +349,25 @@ oc create secret generic oscontainer-push-registry-secret \
 oc label secret/oscontainer-push-registry-secret \
     jenkins.io/credentials-type=secretFile
 oc annotate secret/oscontainer-push-registry-secret \
-    jenkins.io/credentials-description="Registry push secret for CoreOS OSContainer"
+    jenkins.io/credentials-description="Push secret for registry for CoreOS OSContainer"
+```
+
+### [PROD] Create OSContainer image push secret for old location
+
+This secret is used to push the oscontainer and others to the old registry. The
+secret can be obtained from the `oscontainer-push-old-registry-secret` in
+BitWarden.
+
+After obtaining the secret data you can create the Kubernetes secret via:
+
+```
+oc create secret generic oscontainer-push-old-registry-secret \
+    --from-literal=filename=dockercfg \
+    --from-file=data=oscontainer-push-old-registry-secret
+oc label secret/oscontainer-push-old-registry-secret \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/oscontainer-push-old-registry-secret \
+    jenkins.io/credentials-description="Push secret for old registry for CoreOS OSContainer"
 ```
 
 ### [PROD] Create COSA image push secret

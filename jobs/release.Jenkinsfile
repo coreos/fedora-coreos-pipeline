@@ -168,9 +168,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
             def oscontainer_old_registry_repo = pipecfg.registry_repos?.oscontainer_old
             if (oscontainer_old_registry_repo) {
-                // For a period of time let's also mirror into the old location too
-                // Drop this after October 2022. See
-                // https://discussion.fedoraproject.org/t/updated-registry-location-for-fedora-coreos-ostree-native-container/42740
                 withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'REGISTRY_SECRET')]) {
                     shwrap("""
                     skopeo copy --all --authfile \$REGISTRY_SECRET \
