@@ -44,6 +44,10 @@ streams:
           - openstack
         x86_64:
           - vmware
+      # OPTIONAL: stream-specific container repos to push to
+      additional_registry_repos:
+        oscontainer_old: registry.ci.openshift.org/rhcos-devel/machine-os-oci-content
+        legacy_oscontainer_old: registry.ci.openshift.org/rhcos-devel/machine-os-content
     rawhide:
       type: mechanical
 
@@ -59,6 +63,14 @@ registry_repos:
   oscontainer: quay.io/fedora/fedora-coreos
   # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
   oscontainer_old: quay.io/coreos-assembler/fcos
+  # OPTIONAL: repo to which to push legacy oscontainer
+  legacy_oscontainer: quay.io/openshift-release-dev/rhel-coreos-dev
+  # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
+  legacy_oscontainer_old: registry.ci.openshift.org/rhcos/rhel-coreos
+  # OPTIONAL: repo to which to push the extensions container
+  extensions: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
+  # OPTIONAL: whether to also tag images with build ID
+  add_build_tag: true
 
 # OPTIONAL/TEMPORARY: enable AWS aarch64 hack; see comment in `build-arch.Jenkinsfile`.
 aws_aarch64_serial_console_hack: true
