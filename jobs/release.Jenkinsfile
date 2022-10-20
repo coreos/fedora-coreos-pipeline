@@ -151,31 +151,74 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
-        stage("Push OSContainer Manifest") {
-            // Ship a manifest list containing all requested architectures.
-            def oscontainer_registry_repo = pipecfg.registry_repos?.oscontainer
-            if (oscontainer_registry_repo) {
-                withCredentials([file(variable: 'REGISTRY_SECRET',
-                                      credentialsId: 'oscontainer-push-registry-secret')]) {
-                    def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
-                    shwrap("""
-                    cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
-                        --repo=${oscontainer_registry_repo} --tag=${params.STREAM} \
-                        --artifact=ostree --metajsonname=base-oscontainer \
-                        --build=${params.VERSION} ${arch_args}
-                    """)
-                }
-            }
-            def oscontainer_old_registry_repo = pipecfg.registry_repos?.oscontainer_old
-            if (oscontainer_old_registry_repo) {
-                withCredentials([file(credentialsId: 'oscontainer-secret', variable: 'REGISTRY_SECRET')]) {
-                    shwrap("""
-                    skopeo copy --all --authfile \$REGISTRY_SECRET \
-                        docker://${oscontainer_registry_repo}:${params.STREAM} \
-                        docker://${oscontainer_old_registry_repo}:${params.STREAM}
-                    """)
-                }
-            }
+        def registry_repos = pipeutils.get_registry_repos(pipecfg, params.STREAM)
+
+        // [config.yaml name -> [meta.json artifact name, meta.json toplevel name, tag suffix]]
+        // The config.yaml name is the name used in the `registry_repos` object. The
+        // meta.json artifact name is the "cosa name" for the artifact (in the `images`
+        // object). The top-level name is the key inserted with the pushed info. The tag
+        // suffix is needed to avoid the containers clashing in the OCP ART monorepo. It
+        // could be made configurable in the future. For now since FCOS doesn't need it and
+        // OCP ART doesn't actually care what the tag name is (it's just to stop GC), we
+        // hardcode it.
+        def push_containers = ['oscontainer': ['ostree', 'base-oscontainer', ''],
+                               'extensions': ['extensions-container', 'extensions-container', '-extensions'],
+                               'legacy_oscontainer': ['legacy-oscontainer', 'oscontainer', '-legacy']]
+
+        // filter out those not defined in the config
+        push_containers.keySet().retainAll(registry_repos.keySet())
+
+        // filter out those not built. this step makes the assumption that if an
+        // image isn't built for x86_64, then we don't upload it at all
+        def meta_x86_64 = readJSON file: "builds/${params.VERSION}/x86_64/meta.json"
+        def artifacts = meta_x86_64.images.keySet()
+
+        // in newer Groovy, retainAll can take a closure, which would be nicer here
+        for (key in (push_containers.keySet() as List)) {
+          if (!(push_containers[key][0] in artifacts)) {
+            push_containers.remove(key)
+          }
+        }
+
+        if (push_containers) {
+          stage("Push Containers") {
+            parallel push_containers.collectEntries{configname, val -> [configname, {
+              withCredentials([file(variable: 'REGISTRY_SECRET',
+                                    credentialsId: 'oscontainer-push-registry-secret')]) {
+                  def repo = registry_repos[configname]
+                  def (artifact, metajsonname, tag_suffix) = val
+                  def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
+                  def tag_args = " --tag=${params.STREAM}${tag_suffix}"
+                  if (registry_repos.add_build_tag) {
+                      tag_args += " --tag ${params.VERSION}${tag_suffix}"
+                  }
+                  shwrap("""
+                  cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
+                      --repo=${repo} ${tag_args} \
+                      --artifact=${artifact} --metajsonname=${metajsonname} \
+                      --build=${params.VERSION} ${arch_args}
+                  """)
+
+                  def old_repo = registry_repos["${configname}_old"]
+                  if (old_repo) {
+                    // a separate credential for the old location is optional; we support it
+                    // being merged as part of oscontainer-push-registry-secret
+                    pipeutils.tryWithOrWithoutCredentials([file(variable: 'OLD_REGISTRY_SECRET',
+                                                                credentialsId: 'oscontainer-push-old-registry-secret')]) {
+                      def authArg = "--authfile=\${REGISTRY_SECRET}"
+                      if (env.OLD_REGISTRY_SECRET) {
+                        authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
+                      }
+                      shwrap("""
+                      cosa copy-container ${authArg} ${tag_args} \
+                          --manifest-list-to-arch-tag=auto \
+                          ${repo} ${old_repo}
+                      """)
+                    }
+                  }
+              }
+            }]}
+          }
         }
 
         stage('Publish') {

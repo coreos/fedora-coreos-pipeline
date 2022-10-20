@@ -308,4 +308,11 @@ def build_artifacts(pipecfg, stream, basearch) {
     utils.runParallel(parallelruns, maxRuns)
 }
 
+def get_registry_repos(pipecfg, stream) {
+    def registry_repos = pipecfg.registry_repos ?: [:]
+    // merge top-level registry_repos with stream-specific bits
+    registry_repos += pipecfg.streams[stream].additional_registry_repos ?: [:]
+    return registry_repos
+}
+
 return this
