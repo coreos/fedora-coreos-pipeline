@@ -29,6 +29,9 @@ s3_bucket: fcos-builds
 
 registry_repos:
   oscontainer: quay.io/fedora/fedora-coreos
+  # For a period of time let's also mirror into the old location too
+  # Drop this after October 2022. See
+  # https://discussion.fedoraproject.org/t/updated-registry-location-for-fedora-coreos-ostree-native-container/42740
   oscontainer_old: quay.io/coreos-assembler/fcos
 
 default_artifacts:
