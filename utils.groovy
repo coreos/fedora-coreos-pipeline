@@ -241,22 +241,6 @@ def get_push_trigger() {
     ]
 }
 
-// For all architectures we need to build the metal/metal4k artifacts and the Live ISO. Since the
-// ISO depends on the Metal/Metal4k images we'll make sure to put the Metal* ones in the first run
-// and the Live ISO in the second run.
-def change_metal_artifacts_list_order(artifacts) {
-    if (artifacts.contains('live')) {
-        artifacts.remove("metal")
-        artifacts.remove("metal4k")
-        artifacts.remove("live")
-
-        artifacts.add(0, "metal")
-        artifacts.add(1, "metal4k")
-        artifacts.add("live")
-    }
-    return artifacts
-}
-
 // Gets desired artifacts to build from pipeline config
 def get_artifacts_to_build(pipecfg, stream, basearch) {
     def artifacts = []
@@ -274,4 +258,51 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
     }
     return artifacts.unique()
 }
+
+// Build all the artifacts requested from the pipeline config for this arch.
+def build_artifacts(pipecfg, stream, basearch) {
+
+    // First get the list of artifacts to build from the config
+    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch)
+
+    // Next let's do some massaging of the inputs based on two problems we
+    // need to consider:
+    //
+    // 1. We can't start too many parallel processes because we bump up into
+    //    PID limits in the pipeline. See 24c5265.
+    // 2. The `live` build depends on `metal` and `metal4k` artifacts to exist.
+
+    // For 1. we'll run at most 10 tasks in parallel
+    def maxRuns = 10
+
+    // For 2. we'll sort the artifact list such that `metal` and `metal4k`
+    // are at the front of the list and `live` is at the end. We'll also
+    // force there to be at least two parallel runs so metal* can finish
+    // before live is started..
+    if (artifacts.contains('live')) {
+        artifacts.remove("metal")
+        artifacts.remove("metal4k")
+        artifacts.remove("live")
+        artifacts.add(0, "metal")
+        artifacts.add(1, "metal4k")
+        artifacts.add("live")
+
+        // Define maxRuns as half of the number of artifacts. We round up here
+        // because if dividing by 2 gives us 1.5 then we want to round up to 2
+        // because `metal` and `metal4k` both need to go in the first run.
+        // Cast to Float here because `staticMethod java.lang.Math round float`
+        // is allowed but `staticMethod java.lang.Math round java.math.BigDecimal`
+        // gives scriptsecurity.sandbox.RejectedAccessException.
+        maxRuns = Math.round(artifacts.size().div(2) as Float) as Integer
+    }
+
+    // Define the parallel jobs in a map
+    parallelruns = artifacts.collectEntries {
+        [it, { shwrap("cosa buildextend-${it}") }]
+    }
+
+    // Execute!
+    utils.runParallel(parallelruns, maxRuns)
+}
+
 return this

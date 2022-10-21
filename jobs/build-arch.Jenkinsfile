@@ -341,47 +341,27 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         if (!params.MINIMAL) {
 
-            // We will parallel build all the different artifacts for this architecture. We split this up
-            // into two separate parallel runs to stay in the sweet spot and avoid hitting PID limits in
-            // our pipeline environment.
-            //
-            // First, define a list of all the derivative artifacts for this architecture.
-            def artifacts = pipeutils.get_artifacts_to_build(pipecfg, params.STREAM, basearch)
-            // Sort the artifacts for two parallel runs
-            artifacts = pipeutils.change_metal_artifacts_list_order(artifacts)
-            // Run the two runs of parallel builds
-            parallelruns = artifacts.collectEntries {
-                [it, {
-                    shwrap("""
-                    cosa buildextend-${it}
-                    """)
-                }]
-            }
-            def artifacts_split_idx = artifacts.size().intdiv(2)
-            // use [0..artifacts_split_idx] for the first run and
-            // [artifacts_split_idx+1..-1] for the second run so we
-            // can guarantee if we're only building metal/live artifacts
-            // that the two metal runs go in the first run.
-            // https://github.com/coreos/fedora-coreos-pipeline/pull/695
-            parallel parallelruns.subMap(artifacts[0..artifacts_split_idx])
-            parallel parallelruns.subMap(artifacts[artifacts_split_idx+1..-1])
+            // Build the remaining artifacts
+            stage("Build Artifacts") {
+                pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
 
-            // Hack for serial console on aarch64 aws images
-            // see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988
-            // Right now we only patch if platforms.yaml hasn't made it to this stream yet.
-            // Fold this back into the above parallel runs (i.e. add to config.yaml
-            // artifacts list for aarch64 and delete below code and knob) once platforms.yaml
-            // exists everywhere. https://github.com/coreos/fedora-coreos-config/pull/1181
-            if (basearch == "aarch64") {
-                stage('AWS') {
-                    if (pipecfg.aws_aarch64_serial_console_hack) {
-                        shwrap("""
-                        if [ ! -e src/config/platforms.yaml ]; then
-                            echo 'ZGlmZiAtLWdpdCBhL3NyYy9nZi1zZXQtcGxhdGZvcm0gYi9zcmMvZ2Ytc2V0LXBsYXRmb3JtCmluZGV4IDNiMWM1YWUzMS4uZGY1ZTBmOWQ3IDEwMDc1NQotLS0gYS9zcmMvZ2Ytc2V0LXBsYXRmb3JtCisrKyBiL3NyYy9nZi1zZXQtcGxhdGZvcm0KQEAgLTU5LDcgKzU5LDEzIEBAIGJsc2NmZ19wYXRoPSQoY29yZW9zX2dmIGdsb2ItZXhwYW5kIC9ib290L2xvYWRlci9lbnRyaWVzL29zdHJlZS0qLmNvbmYpCiBjb3Jlb3NfZ2YgZG93bmxvYWQgIiR7YmxzY2ZnX3BhdGh9IiAiJHt0bXBkfSIvYmxzLmNvbmYKICMgUmVtb3ZlIGFueSBwbGF0Zm9ybWlkIGN1cnJlbnRseSB0aGVyZQogc2VkIC1pIC1lICdzLCBpZ25pdGlvbi5wbGF0Zm9ybS5pZD1bYS16QS1aMC05XSosLGcnICIke3RtcGR9Ii9ibHMuY29uZgotc2VkIC1pIC1lICcvXm9wdGlvbnMgLyBzLCQsIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInLCcgIiR7dG1wZH0iL2Jscy5jb25mCitpZiBbICIkKGNvcmVvc19nZiBleGlzdHMgL2Jvb3QvY29yZW9zL3BsYXRmb3Jtcy5qc29uKSIgIT0gInRydWUiIC1hICIke3BsYXRmb3JtaWR9IiA9PSAnYXdzJyBdOyB0aGVuCisgICAgIyBPdXIgcGxhdGZvcm0gaXMgQVdTIGFuZCB3ZSBzdGlsbCBuZWVkIHRoZSBjb25zb2xlPXR0eVMwIGhhY2sgZm9yIHRoZSBsZWdhY3kKKyAgICAjIChubyBwbGF0Zm9ybXMueWFtbCkgcGF0aC4KKyAgICBzZWQgLWkgLWUgJ3N8Xlwob3B0aW9ucyAuKlwpfFwxIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInIGNvbnNvbGU9dHR5UzAsMTE1MjAwbjh8JyAiJHt0bXBkfSIvYmxzLmNvbmYKK2Vsc2UKKyAgICBzZWQgLWkgLWUgJy9eb3B0aW9ucyAvIHMsJCwgaWduaXRpb24ucGxhdGZvcm0uaWQ9JyIke3BsYXRmb3JtaWR9IicsJyAiJHt0bXBkfSIvYmxzLmNvbmYKK2ZpCiBpZiBbIC1uICIkcmVtb3ZlX2thcmdzIiBdOyB0aGVuCiAgICAgIyBSZW1vdmUgZXhpc3RpbmcgcWVtdS1zcGVjaWZpYyBrYXJncwogICAgIHNlZCAtaSAtZSAnL15vcHRpb25zIC8gc0AgJyIke3JlbW92ZV9rYXJnc30iJ0BAJyAiJHt0bXBkfSIvYmxzLmNvbmYKCg==' | base64 --decode | cosa shell -- sudo patch /usr/lib/coreos-assembler/gf-set-platform
-                        fi
-                        """)
+                // Hack for serial console on aarch64 aws images
+                // see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988
+                // Right now we only patch if platforms.yaml hasn't made it to this stream yet.
+                // Fold this back into the above parallel runs (i.e. add to config.yaml
+                // artifacts list for aarch64 and delete below code and knob) once platforms.yaml
+                // exists everywhere. https://github.com/coreos/fedora-coreos-config/pull/1181
+                if (basearch == "aarch64") {
+                    stage('aws') {
+                        if (pipecfg.aws_aarch64_serial_console_hack) {
+                            shwrap("""
+                            if [ ! -e src/config/platforms.yaml ]; then
+                                echo 'ZGlmZiAtLWdpdCBhL3NyYy9nZi1zZXQtcGxhdGZvcm0gYi9zcmMvZ2Ytc2V0LXBsYXRmb3JtCmluZGV4IDNiMWM1YWUzMS4uZGY1ZTBmOWQ3IDEwMDc1NQotLS0gYS9zcmMvZ2Ytc2V0LXBsYXRmb3JtCisrKyBiL3NyYy9nZi1zZXQtcGxhdGZvcm0KQEAgLTU5LDcgKzU5LDEzIEBAIGJsc2NmZ19wYXRoPSQoY29yZW9zX2dmIGdsb2ItZXhwYW5kIC9ib290L2xvYWRlci9lbnRyaWVzL29zdHJlZS0qLmNvbmYpCiBjb3Jlb3NfZ2YgZG93bmxvYWQgIiR7YmxzY2ZnX3BhdGh9IiAiJHt0bXBkfSIvYmxzLmNvbmYKICMgUmVtb3ZlIGFueSBwbGF0Zm9ybWlkIGN1cnJlbnRseSB0aGVyZQogc2VkIC1pIC1lICdzLCBpZ25pdGlvbi5wbGF0Zm9ybS5pZD1bYS16QS1aMC05XSosLGcnICIke3RtcGR9Ii9ibHMuY29uZgotc2VkIC1pIC1lICcvXm9wdGlvbnMgLyBzLCQsIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInLCcgIiR7dG1wZH0iL2Jscy5jb25mCitpZiBbICIkKGNvcmVvc19nZiBleGlzdHMgL2Jvb3QvY29yZW9zL3BsYXRmb3Jtcy5qc29uKSIgIT0gInRydWUiIC1hICIke3BsYXRmb3JtaWR9IiA9PSAnYXdzJyBdOyB0aGVuCisgICAgIyBPdXIgcGxhdGZvcm0gaXMgQVdTIGFuZCB3ZSBzdGlsbCBuZWVkIHRoZSBjb25zb2xlPXR0eVMwIGhhY2sgZm9yIHRoZSBsZWdhY3kKKyAgICAjIChubyBwbGF0Zm9ybXMueWFtbCkgcGF0aC4KKyAgICBzZWQgLWkgLWUgJ3N8Xlwob3B0aW9ucyAuKlwpfFwxIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInIGNvbnNvbGU9dHR5UzAsMTE1MjAwbjh8JyAiJHt0bXBkfSIvYmxzLmNvbmYKK2Vsc2UKKyAgICBzZWQgLWkgLWUgJy9eb3B0aW9ucyAvIHMsJCwgaWduaXRpb24ucGxhdGZvcm0uaWQ9JyIke3BsYXRmb3JtaWR9IicsJyAiJHt0bXBkfSIvYmxzLmNvbmYKK2ZpCiBpZiBbIC1uICIkcmVtb3ZlX2thcmdzIiBdOyB0aGVuCiAgICAgIyBSZW1vdmUgZXhpc3RpbmcgcWVtdS1zcGVjaWZpYyBrYXJncwogICAgIHNlZCAtaSAtZSAnL15vcHRpb25zIC8gc0AgJyIke3JlbW92ZV9rYXJnc30iJ0BAJyAiJHt0bXBkfSIvYmxzLmNvbmYKCg==' | base64 --decode | cosa shell -- sudo patch /usr/lib/coreos-assembler/gf-set-platform
+                            fi
+                            """)
+                        }
+                        shwrap("cosa buildextend-aws")
                     }
-                    shwrap("cosa buildextend-aws")
                 }
             }
 
