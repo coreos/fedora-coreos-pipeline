@@ -19,6 +19,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def creds = credentials
         uploaders["aliyun"] = {
             withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["ALIYUN_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.aliyun
                 shwrap("""
                 cosa buildextend-aliyun \
@@ -38,6 +39,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def creds = credentials
         uploaders["aws"] = {
             withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["AWS_BUILD_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.aws
                 def grant_user_args = c.test_accounts?.collect{"--grant-user ${it}"}.join(" ")
                 shwrap("""
@@ -60,6 +62,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def creds = credentials
         uploaders["azure"] = {
             withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG_AUTH",
+                                                        "AZURE_IMAGE_UPLOAD_CONFIG_PROFILE"])
                 def c = pipecfg.clouds.azure
                 shwrap("""cosa buildextend-azure \
                     --upload \
@@ -80,6 +84,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def creds = credentials
         uploaders["gcp"] = {
             withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["GCP_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.gcp
                 def extraArgs = []
                 if (c.family) {
@@ -129,6 +134,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def creds = credentials
         uploaders["kubevirt"] = {
             withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["KUBEVIRT_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.kubevirt
                 shwrap("""coreos-assembler buildextend-kubevirt \
                              --upload \
@@ -144,6 +150,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         def creds = credentials
         uploaders["powervs"] = {
             withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["POWERVS_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.powervs
                 // for powervs in RHCOS the images are uploaded to a bucket in each
                 // region that is uniquely named with the region as a suffix
