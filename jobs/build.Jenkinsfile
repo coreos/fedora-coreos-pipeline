@@ -356,30 +356,10 @@ lock(resource: "build-${params.STREAM}") {
 
         if (!params.MINIMAL) {
 
-            // We will parallel build all the different artifacts for this architecture. We split this up
-            // into two separate parallel runs to stay in the sweet spot and avoid hitting PID limits in
-            // our pipeline environment.
-            //
-            // First, define a list of all the derivative artifacts for this architecture.
-            def artifacts = pipeutils.get_artifacts_to_build(pipecfg, params.STREAM, basearch)
-            // Sort the artifacts for two parallel runs
-            artifacts = pipeutils.change_metal_artifacts_list_order(artifacts)
-            // Run the two runs of parallel builds
-            parallelruns = artifacts.collectEntries {
-                [it, {
-                    shwrap("""
-                    cosa buildextend-${it}
-                    """)
-                }]
+            // Build the remaining artifacts
+            stage("Build Artifacts") {
+                pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
             }
-            def artifacts_split_idx = artifacts.size().intdiv(2)
-            // use [0..artifacts_split_idx] for the first run and
-            // [artifacts_split_idx+1..-1] for the second run so we
-            // can guarantee if we're only building metal/live artifacts
-            // that the two metal runs go in the first run.
-            // https://github.com/coreos/fedora-coreos-pipeline/pull/695
-            parallel parallelruns.subMap(artifacts[0..artifacts_split_idx])
-            parallel parallelruns.subMap(artifacts[artifacts_split_idx+1..-1])
 
             // Run Kola TestISO tests for metal artifacts
             if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
