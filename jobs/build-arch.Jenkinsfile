@@ -384,7 +384,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
 
             // Run Kola TestISO tests for metal artifacts
-            kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+            if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+            }
 
             // Upload to relevant clouds
             if (uploading) {
@@ -456,6 +458,76 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
+        // Now that the metadata is uploaded go ahead and kick off some tests
+        // These can all be kicked off in parallel. These take little time
+        // so there isn't much benefit in running them in parallel, but it
+        // makes the UI view have less columns, which is useful.
+        parallelruns = [:]
+        if (!params.MINIMAL && uploading) {
+            // Kick off the Kola AWS job if we have an uploaded image and credentials for running those tests.
+            if (shwrapCapture("cosa meta --get-value aws") != "None" &&
+                utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
+                                             credentialsId: 'aws-kola-tests-config')])) {
+                parallelruns['Kola:AWS'] = {
+                    // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
+                    build job: 'kola-aws', wait: false, parameters: [
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                        string(name: 'ARCH', value: basearch),
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
+                    ]
+                }
+            }
+            // Kick off the Kola Azure job if we have an artifact and credentials for running those tests.
+            if (shwrapCapture("cosa meta --get-value images.azure") != "None" &&
+                utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
+                                             credentialsId: 'azure-kola-tests-config-auth'),
+                                        file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
+                                             credentialsId: 'azure-kola-tests-config-profile')])) {
+                parallelruns['Kola:Azure'] = {
+                    // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
+                    build job: 'kola-azure', wait: false, parameters: [
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
+                    ]
+                }
+            }
+            // Kick off the Kola GCP job if we have an uploaded image and credentials for running those tests.
+            if (shwrapCapture("cosa meta --get-value gcp") != "None" &&
+                utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
+                                             credentialsId: 'gcp-kola-tests-config')])) {
+                parallelruns['Kola:GCP'] = {
+                    // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
+                    build job: 'kola-gcp', wait: false, parameters: [
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
+                    ]
+                }
+            }
+            // Kick off the Kola OpenStack job if we have an artifact and credentials for running those tests.
+            if (shwrapCapture("cosa meta --get-value images.openstack") != "None" &&
+                utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                             credentialsId: 'openstack-kola-tests-config')])) {
+                parallelruns['Kola:OpenStack'] = {
+                    // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
+                    build job: 'kola-openstack', wait: false, parameters: [
+                        string(name: 'STREAM', value: params.STREAM),
+                        string(name: 'VERSION', value: newBuildID),
+                        string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                        string(name: 'ARCH', value: basearch),
+                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
+                    ]
+                }
+            }
+        }
+        // process this batch
+        parallel parallelruns
+
         stage('Destroy Remote') {
             shwrap("cosa remote-session destroy")
         }
@@ -463,47 +535,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         } // end withEnv
         } // end withPodmanRemoteArchBuilder
 
-        // Now that the metadata is uploaded go ahead and kick off some tests
-        // These can all be kicked off in parallel. These take little time
-        // so there isn't much benefit in running them in parallel, but it
-        // makes the UI view have less columns, which is useful.
-        parallelruns = [:]
-
-        if (basearch == "aarch64") {
-            if (!params.MINIMAL && uploading) {
-                // Kick off the Kola AWS job if we have credentials for running those tests.
-                if (utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
-                                            credentialsId: 'aws-kola-tests-config')])) {
-                    parallelruns['Kola:AWS'] = {
-                        // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
-                        build job: 'kola-aws', wait: false, parameters: [
-                            string(name: 'STREAM', value: params.STREAM),
-                            string(name: 'VERSION', value: newBuildID),
-                            string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                            string(name: 'ARCH', value: basearch),
-                            string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
-                        ]
-                    }
-                }
-                // Kick off the Kola OpenStack job if we have credentials for running those tests.
-                if (utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                            credentialsId: 'openstack-kola-tests-config')])) {
-                    parallelruns['Kola:OpenStack'] = {
-                        // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
-                        build job: 'kola-openstack', wait: false, parameters: [
-                            string(name: 'STREAM', value: params.STREAM),
-                            string(name: 'VERSION', value: newBuildID),
-                            string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
-                            string(name: 'ARCH', value: basearch),
-                            string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit)
-                        ]
-                    }
-                }
-            }
-        }
-
-        // process this batch
-        parallel parallelruns
 
         currentBuild.result = 'SUCCESS'
 
