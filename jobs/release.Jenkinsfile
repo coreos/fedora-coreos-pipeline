@@ -116,22 +116,21 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
 
-            // For production streams, promote the GCP image so that it
-            // will be the chosen image in an image family and deprecate
-            // all others. `ore gcloud promote-image` does this for us.
+            // For production streams, if the GCP image is in an image family
+            // then promote the GCP image so that it will be the chosen image
+            // in the image family and deprecate all others.
+            // `ore gcloud promote-image` does this for us.
             if ((basearch == 'x86_64') && (meta.gcp?.image) &&
-                    (stream_info.type == 'production')) {
+                (meta.gcp?.family) && (stream_info.type == 'production')) {
                 tryWithCredentials([file(variable: 'GCP_IMAGE_UPLOAD_CONFIG',
                                          credentialsId: 'gcp-image-upload-config')]) {
                     stage("GCP ${basearch}: Image Promotion") {
                         shwrap("""
-                        # pick up the project to use from the config
-                        gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
                         ore gcloud promote-image \
                             --log-level=INFO \
-                            --project=\${gcp_project} \
+                            --project=${meta.gcp.project} \
                             --json-key \${GCP_IMAGE_UPLOAD_CONFIG} \
-                            --family fedora-coreos-${params.STREAM} \
+                            --family "${meta.gcp.family} \
                             --image "${meta.gcp.image}"
                         """)
                     }
