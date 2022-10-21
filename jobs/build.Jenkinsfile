@@ -474,8 +474,8 @@ lock(resource: "build-${params.STREAM}") {
 
         if (!params.MINIMAL && uploading) {
             // Kick off the Kola AWS job if we have credentials for running those tests.
-            tryWithCredentials([file(variable: 'AWS_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'aws-kola-tests-config')]) {
+            if (utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
+                                        credentialsId: 'aws-kola-tests-config')])) {
                 parallelruns['Kola:AWS'] = {
                     // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
                     build job: 'kola-aws', wait: false, parameters: [
@@ -499,10 +499,10 @@ lock(resource: "build-${params.STREAM}") {
               //}
             }
             // Kick off the Kola Azure job if we have credentials for running those tests.
-            tryWithCredentials([file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
-                                     credentialsId: 'azure-kola-tests-config-profile'),
-                                file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
-                                     credentialsId: 'azure-kola-tests-config-auth')]) {
+            if (utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
+                                        credentialsId: 'azure-kola-tests-config-auth'),
+                                        file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
+                                        credentialsId: 'azure-kola-tests-config-profile')])) {
                 parallelruns['Kola:Azure'] = {
                     // We consider the Azure kola tests to be a followup job, so we use `wait: false` here.
                     build job: 'kola-azure', wait: false, parameters: [
@@ -514,8 +514,8 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
             // Kick off the Kola GCP job if we have credentials for running those tests.
-            tryWithCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'gcp-kola-tests-config')]) {
+            if (utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
+                                       credentialsId: 'gcp-kola-tests-config')])) {
                 parallelruns['Kola:GCP'] = {
                     // We consider the GCP kola tests to be a followup job, so we use `wait: false` here.
                     build job: 'kola-gcp', wait: false, parameters: [
@@ -527,8 +527,8 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
             // Kick off the Kola OpenStack job if we have credentials for running those tests.
-            tryWithCredentials([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'openstack-kola-tests-config')]) {
+            if (utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                        credentialsId: 'openstack-kola-tests-config')])) {
                 parallelruns['Kola:OpenStack'] = {
                     // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
                     build job: 'kola-openstack', wait: false, parameters: [
