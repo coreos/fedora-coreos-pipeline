@@ -2,11 +2,9 @@
 // Upload artifacts to clouds
 def upload_to_clouds(pipecfg, basearch, buildID, stream) {
 
-    // Get artifacts to upload, if we have an artifact built
-    // try to uplaoad it
-    def meta_json = "builds/${buildID}/${basearch}/meta.json"
-    def meta = readJSON file: meta_json
-    def artifacts = meta['images'].keySet() as List
+    // Get a list of the artifacts that are currently built.
+    def images_json = readJSON(text: shwrapCapture("cosa meta --get-value images"))
+    def artifacts = images_json.keySet()
 
     // Define an uploader closure for each artifact/cloud that we
     // support uploading to. Only add the closure to the map if the
