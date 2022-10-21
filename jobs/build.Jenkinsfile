@@ -38,9 +38,6 @@ properties([
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
-      booleanParam(name: 'MINIMAL',
-                   defaultValue: (official ? false : true),
-                   description: 'Whether to only build the OSTree and qemu images'),
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
                    description: "Don't error out if upgrade tests fail (temporary)"),
@@ -74,8 +71,7 @@ def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 // Note the supermin VM just uses 2G. The really hungry part is xz, which
 // without lots of memory takes lots of time. For now we just hardcode these
 // here; we can look into making them configurable through the template if
-// developers really need to tweak them (note that in the default minimal devel
-// workflow, only the qemu image is built).
+// developers really need to tweak them.
 def cosa_memory_request_mb = 8.5 * 1024 as Integer
 
 // Now that we've established the memory constraint based on xz above, derive
@@ -342,7 +338,6 @@ lock(resource: "build-${params.STREAM}") {
                     // are no apparent changes since the previous commit.
                     build job: 'build-arch', wait: false, parameters: [
                         booleanParam(name: 'FORCE', value: true),
-                        booleanParam(name: 'MINIMAL', value: params.MINIMAL),
                         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                         string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit),
                         string(name: 'COREOS_ASSEMBLER_IMAGE', value: params.COREOS_ASSEMBLER_IMAGE),
@@ -354,41 +349,38 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
-        if (!params.MINIMAL) {
+        // Build the remaining artifacts
+        stage("Build Artifacts") {
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
+        }
 
-            // Build the remaining artifacts
-            stage("Build Artifacts") {
-                pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
-            }
-
-            // Run Kola TestISO tests for metal artifacts
-            if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
-                    // For now we want to notify ourselves when a particular workaround is observed.
-                    // It won't fail the build, just give us information.
-                    // https://github.com/coreos/fedora-coreos-tracker/issues/1233
-                    // XXX: This relies on implementation details in kolatestIso(),
-                    //      but since this is a hack and probably short lived that's OK.
-                    // First check to make sure the files exist, then grep for the workaround.
-                    shwrap("cosa shell -- ls tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt")
-                    def grepRc = shwrapRc("""
-                         cosa shell -- grep 'tracker issue workaround engaged for .*issues/1233' \
-                            tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
-                    """)
-                    if (grepRc == 0) {
-                        warnError(message: 'Detected used workaround for #1233') {
-                            error('Detected used workaround for #1233')
-                        }
+        // Run Kola TestISO tests for metal artifacts
+        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+            stage("Kola:TestISO") {
+                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+                // For now we want to notify ourselves when a particular workaround is observed.
+                // It won't fail the build, just give us information.
+                // https://github.com/coreos/fedora-coreos-tracker/issues/1233
+                // XXX: This relies on implementation details in kolatestIso(),
+                //      but since this is a hack and probably short lived that's OK.
+                // First check to make sure the files exist, then grep for the workaround.
+                shwrap("cosa shell -- ls tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt")
+                def grepRc = shwrapRc("""
+                     cosa shell -- grep 'tracker issue workaround engaged for .*issues/1233' \
+                        tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
+                """)
+                if (grepRc == 0) {
+                    warnError(message: 'Detected used workaround for #1233') {
+                        error('Detected used workaround for #1233')
                     }
                 }
             }
+        }
 
-            // Upload to relevant clouds
-            if (uploading) {
-                stage('Cloud Upload') {
-                    libupload.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
-                }
+        // Upload to relevant clouds
+        if (uploading) {
+            stage('Cloud Upload') {
+                libupload.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
         }
 
@@ -458,7 +450,7 @@ lock(resource: "build-${params.STREAM}") {
         // makes the UI view have less columns, which is useful.
         parallelruns = [:]
 
-        if (!params.MINIMAL && uploading) {
+        if (uploading) {
             // Kick off the Kola AWS job if we have an uploaded image and credentials for running those tests.
             if (shwrapCapture("cosa meta --get-value aws") != "None" &&
                 utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',

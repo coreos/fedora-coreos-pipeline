@@ -38,9 +38,6 @@ properties([
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
-      booleanParam(name: 'MINIMAL',
-                   defaultValue: (official ? false : true),
-                   description: 'Whether to only build the OSTree and qemu images'),
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
                    description: "Don't error out if upgrade tests fail (temporary)"),
@@ -339,44 +336,41 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                  allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
         }
 
-        if (!params.MINIMAL) {
+        // Build the remaining artifacts
+        stage("Build Artifacts") {
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
 
-            // Build the remaining artifacts
-            stage("Build Artifacts") {
-                pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
-
-                // Hack for serial console on aarch64 aws images
-                // see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988
-                // Right now we only patch if platforms.yaml hasn't made it to this stream yet.
-                // Fold this back into the above parallel runs (i.e. add to config.yaml
-                // artifacts list for aarch64 and delete below code and knob) once platforms.yaml
-                // exists everywhere. https://github.com/coreos/fedora-coreos-config/pull/1181
-                if (basearch == "aarch64") {
-                    stage('aws') {
-                        if (pipecfg.aws_aarch64_serial_console_hack) {
-                            shwrap("""
-                            if ! cosa shell -- test -e src/config/platforms.yaml; then
-                                echo 'ZGlmZiAtLWdpdCBhL3NyYy9nZi1zZXQtcGxhdGZvcm0gYi9zcmMvZ2Ytc2V0LXBsYXRmb3JtCmluZGV4IDNiMWM1YWUzMS4uZGY1ZTBmOWQ3IDEwMDc1NQotLS0gYS9zcmMvZ2Ytc2V0LXBsYXRmb3JtCisrKyBiL3NyYy9nZi1zZXQtcGxhdGZvcm0KQEAgLTU5LDcgKzU5LDEzIEBAIGJsc2NmZ19wYXRoPSQoY29yZW9zX2dmIGdsb2ItZXhwYW5kIC9ib290L2xvYWRlci9lbnRyaWVzL29zdHJlZS0qLmNvbmYpCiBjb3Jlb3NfZ2YgZG93bmxvYWQgIiR7YmxzY2ZnX3BhdGh9IiAiJHt0bXBkfSIvYmxzLmNvbmYKICMgUmVtb3ZlIGFueSBwbGF0Zm9ybWlkIGN1cnJlbnRseSB0aGVyZQogc2VkIC1pIC1lICdzLCBpZ25pdGlvbi5wbGF0Zm9ybS5pZD1bYS16QS1aMC05XSosLGcnICIke3RtcGR9Ii9ibHMuY29uZgotc2VkIC1pIC1lICcvXm9wdGlvbnMgLyBzLCQsIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInLCcgIiR7dG1wZH0iL2Jscy5jb25mCitpZiBbICIkKGNvcmVvc19nZiBleGlzdHMgL2Jvb3QvY29yZW9zL3BsYXRmb3Jtcy5qc29uKSIgIT0gInRydWUiIC1hICIke3BsYXRmb3JtaWR9IiA9PSAnYXdzJyBdOyB0aGVuCisgICAgIyBPdXIgcGxhdGZvcm0gaXMgQVdTIGFuZCB3ZSBzdGlsbCBuZWVkIHRoZSBjb25zb2xlPXR0eVMwIGhhY2sgZm9yIHRoZSBsZWdhY3kKKyAgICAjIChubyBwbGF0Zm9ybXMueWFtbCkgcGF0aC4KKyAgICBzZWQgLWkgLWUgJ3N8Xlwob3B0aW9ucyAuKlwpfFwxIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInIGNvbnNvbGU9dHR5UzAsMTE1MjAwbjh8JyAiJHt0bXBkfSIvYmxzLmNvbmYKK2Vsc2UKKyAgICBzZWQgLWkgLWUgJy9eb3B0aW9ucyAvIHMsJCwgaWduaXRpb24ucGxhdGZvcm0uaWQ9JyIke3BsYXRmb3JtaWR9IicsJyAiJHt0bXBkfSIvYmxzLmNvbmYKK2ZpCiBpZiBbIC1uICIkcmVtb3ZlX2thcmdzIiBdOyB0aGVuCiAgICAgIyBSZW1vdmUgZXhpc3RpbmcgcWVtdS1zcGVjaWZpYyBrYXJncwogICAgIHNlZCAtaSAtZSAnL15vcHRpb25zIC8gc0AgJyIke3JlbW92ZV9rYXJnc30iJ0BAJyAiJHt0bXBkfSIvYmxzLmNvbmYKCg==' | base64 --decode | cosa shell -- sudo patch /usr/lib/coreos-assembler/gf-set-platform
-                            fi
-                            """)
-                        }
-                        shwrap("cosa buildextend-aws")
+            // Hack for serial console on aarch64 aws images
+            // see https://github.com/coreos/fedora-coreos-tracker/issues/920#issuecomment-914334988
+            // Right now we only patch if platforms.yaml hasn't made it to this stream yet.
+            // Fold this back into the above parallel runs (i.e. add to config.yaml
+            // artifacts list for aarch64 and delete below code and knob) once platforms.yaml
+            // exists everywhere. https://github.com/coreos/fedora-coreos-config/pull/1181
+            if (basearch == "aarch64") {
+                stage('aws') {
+                    if (pipecfg.aws_aarch64_serial_console_hack) {
+                        shwrap("""
+                        if ! cosa shell -- test -e src/config/platforms.yaml; then
+                            echo 'ZGlmZiAtLWdpdCBhL3NyYy9nZi1zZXQtcGxhdGZvcm0gYi9zcmMvZ2Ytc2V0LXBsYXRmb3JtCmluZGV4IDNiMWM1YWUzMS4uZGY1ZTBmOWQ3IDEwMDc1NQotLS0gYS9zcmMvZ2Ytc2V0LXBsYXRmb3JtCisrKyBiL3NyYy9nZi1zZXQtcGxhdGZvcm0KQEAgLTU5LDcgKzU5LDEzIEBAIGJsc2NmZ19wYXRoPSQoY29yZW9zX2dmIGdsb2ItZXhwYW5kIC9ib290L2xvYWRlci9lbnRyaWVzL29zdHJlZS0qLmNvbmYpCiBjb3Jlb3NfZ2YgZG93bmxvYWQgIiR7YmxzY2ZnX3BhdGh9IiAiJHt0bXBkfSIvYmxzLmNvbmYKICMgUmVtb3ZlIGFueSBwbGF0Zm9ybWlkIGN1cnJlbnRseSB0aGVyZQogc2VkIC1pIC1lICdzLCBpZ25pdGlvbi5wbGF0Zm9ybS5pZD1bYS16QS1aMC05XSosLGcnICIke3RtcGR9Ii9ibHMuY29uZgotc2VkIC1pIC1lICcvXm9wdGlvbnMgLyBzLCQsIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInLCcgIiR7dG1wZH0iL2Jscy5jb25mCitpZiBbICIkKGNvcmVvc19nZiBleGlzdHMgL2Jvb3QvY29yZW9zL3BsYXRmb3Jtcy5qc29uKSIgIT0gInRydWUiIC1hICIke3BsYXRmb3JtaWR9IiA9PSAnYXdzJyBdOyB0aGVuCisgICAgIyBPdXIgcGxhdGZvcm0gaXMgQVdTIGFuZCB3ZSBzdGlsbCBuZWVkIHRoZSBjb25zb2xlPXR0eVMwIGhhY2sgZm9yIHRoZSBsZWdhY3kKKyAgICAjIChubyBwbGF0Zm9ybXMueWFtbCkgcGF0aC4KKyAgICBzZWQgLWkgLWUgJ3N8Xlwob3B0aW9ucyAuKlwpfFwxIGlnbml0aW9uLnBsYXRmb3JtLmlkPSciJHtwbGF0Zm9ybWlkfSInIGNvbnNvbGU9dHR5UzAsMTE1MjAwbjh8JyAiJHt0bXBkfSIvYmxzLmNvbmYKK2Vsc2UKKyAgICBzZWQgLWkgLWUgJy9eb3B0aW9ucyAvIHMsJCwgaWduaXRpb24ucGxhdGZvcm0uaWQ9JyIke3BsYXRmb3JtaWR9IicsJyAiJHt0bXBkfSIvYmxzLmNvbmYKK2ZpCiBpZiBbIC1uICIkcmVtb3ZlX2thcmdzIiBdOyB0aGVuCiAgICAgIyBSZW1vdmUgZXhpc3RpbmcgcWVtdS1zcGVjaWZpYyBrYXJncwogICAgIHNlZCAtaSAtZSAnL15vcHRpb25zIC8gc0AgJyIke3JlbW92ZV9rYXJnc30iJ0BAJyAiJHt0bXBkfSIvYmxzLmNvbmYKCg==' | base64 --decode | cosa shell -- sudo patch /usr/lib/coreos-assembler/gf-set-platform
+                        fi
+                        """)
                     }
+                    shwrap("cosa buildextend-aws")
                 }
             }
+        }
 
-            // Run Kola TestISO tests for metal artifacts
-            if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
-                }
+        // Run Kola TestISO tests for metal artifacts
+        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+            stage("Kola:TestISO") {
+                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
             }
+        }
 
-            // Upload to relevant clouds
-            if (uploading) {
-                stage('Cloud Upload') {
-                    libupload.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
-                }
+        // Upload to relevant clouds
+        if (uploading) {
+            stage('Cloud Upload') {
+                libupload.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
         }
 
@@ -447,7 +441,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // so there isn't much benefit in running them in parallel, but it
         // makes the UI view have less columns, which is useful.
         parallelruns = [:]
-        if (!params.MINIMAL && uploading) {
+        if (uploading) {
             // Kick off the Kola AWS job if we have an uploaded image and credentials for running those tests.
             if (shwrapCapture("cosa meta --get-value aws") != "None" &&
                 utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
