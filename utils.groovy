@@ -179,16 +179,8 @@ def tryWithMessagingCredentials(Closure body) {
         sed -i s,FEDORA_MESSAGING_X509_CERT_PATH,${FEDORA_MESSAGING_X509_CERT_PATH}, ${FEDORA_MESSAGING_CONF}
         ''')
         // Also sync it over to the remote if we're operating in a remote session
-        shwrap('''
-        if [ -n "${COREOS_ASSEMBLER_REMOTE_SESSION:-}" ]; then
-            cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
-                $(dirname ${FEDORA_MESSAGING_CONF})
-            cosa remote-session sync {,:}/${FEDORA_MESSAGING_CONF}
-            cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \
-                $(dirname ${FEDORA_MESSAGING_X509_CERT_PATH})
-            cosa remote-session sync {,:}/${FEDORA_MESSAGING_X509_CERT_PATH}/
-        fi
-        ''')
+        utils.syncCredentialsIfInRemoteSession(["FEDORA_MESSAGING_CONF",
+                                                "FEDORA_MESSAGING_X509_CERT_PATH"])
         body()
     }
 }

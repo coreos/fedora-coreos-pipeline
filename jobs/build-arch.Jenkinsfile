@@ -167,6 +167,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
+        // Sync over AWS Build Upload Secret if it exists
+        if (env.AWS_BUILD_UPLOAD_CONFIG) {
+            utils.syncCredentialsIfInRemoteSession(["AWS_BUILD_UPLOAD_CONFIG"])
+        }
+
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
@@ -183,13 +188,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
 
             shwrap("""
-            # sync over AWS secret if it exists
-            if [ -f \${AWS_BUILD_UPLOAD_CONFIG} ]; then
-                dir=\$(dirname \${AWS_BUILD_UPLOAD_CONFIG})
-                cosa shell -- sudo install -d -D -o builder -g builder --mode 777 \${dir}
-                cosa remote-session sync \${dir}/ :\${dir}/
-            fi
-
             cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
             """)
 
