@@ -1,11 +1,11 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, official, uploading, uploads
+def pipeutils, pipecfg, official, uploading, libupload
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    uploads = load("uploads.groovy")
+    libupload = load("libupload.groovy")
 
     def jenkinscfg = pipeutils.load_jenkins_config()
 
@@ -375,7 +375,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             // Upload to relevant clouds
             if (uploading) {
                 stage('Cloud Upload') {
-                    uploads.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
+                    libupload.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
                 }
             }
         }
