@@ -472,8 +472,8 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         if (basearch == "aarch64") {
             if (!params.MINIMAL && uploading) {
                 // Kick off the Kola AWS job if we have credentials for running those tests.
-                tryWithCredentials([file(variable: 'AWS_KOLA_TESTS_CONFIG',
-                                         credentialsId: 'aws-kola-tests-config')]) {
+                if (utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
+                                            credentialsId: 'aws-kola-tests-config')])) {
                     parallelruns['Kola:AWS'] = {
                         // We consider the AWS kola tests to be a followup job, so we use `wait: false` here.
                         build job: 'kola-aws', wait: false, parameters: [
@@ -486,8 +486,8 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                     }
                 }
                 // Kick off the Kola OpenStack job if we have credentials for running those tests.
-                tryWithCredentials([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                         credentialsId: 'openstack-kola-tests-config')]) {
+                if (utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                            credentialsId: 'openstack-kola-tests-config')])) {
                     parallelruns['Kola:OpenStack'] = {
                         // We consider the OpenStack kola tests to be a followup job, so we use `wait: false` here.
                         build job: 'kola-openstack', wait: false, parameters: [
