@@ -333,9 +333,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         // Run Kola Tests
-        def n = 4 // VMs are 2G each and arch builders have approx 32G
-        kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
-             allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
+        stage("Kola") {
+            def n = 4 // VMs are 2G each and arch builders have approx 32G
+            kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+                 allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
+        }
 
         if (!params.MINIMAL) {
 
@@ -385,7 +387,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
             // Run Kola TestISO tests for metal artifacts
             if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+                stage("Kola:TestISO") {
+                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+                }
             }
 
             // Upload to relevant clouds
