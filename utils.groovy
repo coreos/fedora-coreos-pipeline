@@ -301,7 +301,7 @@ def build_artifacts(pipecfg, stream, basearch) {
 
     // Define the parallel jobs in a map
     parallelruns = artifacts.collectEntries {
-        [it, { shwrap("cosa buildextend-${it}") }]
+        ["💽:${it}", { shwrap("cosa buildextend-${it}") }]
     }
 
     // Execute!

@@ -17,7 +17,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: "aliyun-image-upload-config")]
     if (artifacts.contains("aliyun") && utils.credentialsExist(credentials)) {
         def creds = credentials
-        uploaders["aliyun"] = {
+        uploaders["☁️ ⬆️ :aliyun"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["ALIYUN_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.aliyun
@@ -37,7 +37,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: "aws-build-upload-config")]
     if (artifacts.contains("aws") && utils.credentialsExist(credentials)) {
         def creds = credentials
-        uploaders["aws"] = {
+        uploaders["☁️ ⬆️ :aws"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["AWS_BUILD_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.aws
@@ -60,7 +60,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: 'azure-image-upload-config-profile')]
     if (artifacts.contains("azure") && utils.credentialsExist(credentials)) {
         def creds = credentials
-        uploaders["azure"] = {
+        uploaders["☁️ ⬆️ :azure"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG_AUTH",
                                                         "AZURE_IMAGE_UPLOAD_CONFIG_PROFILE"])
@@ -82,7 +82,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: "gcp-image-upload-config")]
     if (artifacts.contains("gcp") && utils.credentialsExist(credentials)) {
         def creds = credentials
-        uploaders["gcp"] = {
+        uploaders["☁️ ⬆️ :gcp"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["GCP_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.gcp
@@ -132,7 +132,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: "kubevirt-image-upload-config")]
     if (artifacts.contains("kubevirt") && utils.credentialsExist(credentials)) {
         def creds = credentials
-        uploaders["kubevirt"] = {
+        uploaders["☁️ ⬆️ :kubevirt"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["KUBEVIRT_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.kubevirt
@@ -148,7 +148,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: "powervs-image-upload-config")]
     if (artifacts.contains("powervs") && utils.credentialsExist(credentials)) {
         def creds = credentials
-        uploaders["powervs"] = {
+        uploaders["☁️ ⬆️ :powervs"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["POWERVS_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.powervs
