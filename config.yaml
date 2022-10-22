@@ -85,6 +85,7 @@ clouds:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
+    test_architectures: [x86_64]
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import
     description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
@@ -93,3 +94,5 @@ clouds:
     licenses:
       - "fedora-coreos-${STREAM}"
       - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
+  openstack:
+    test_architectures: [x86_64, aarch64]

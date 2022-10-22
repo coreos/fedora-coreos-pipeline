@@ -87,6 +87,8 @@ clouds:
     # REQUIRED (if AWS build upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-image-uploads/ami-import
+    # OPTIONAL: list of architectures to limit cloud testing to.
+    test_architectures: [x86_64]
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.
@@ -94,6 +96,8 @@ clouds:
     # REQUIRED (if Aliyun image upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-image-uploads/ami-import
+    # OPTIONAL: list of architectures to limit cloud testing to.
+    test_architectures: [x86_64]
   azure:
     # REQUIRED (if Azure image upload credentials provided): resource group, storage
     # account, and storage container to use for image file uploads
@@ -105,6 +109,8 @@ clouds:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
+    # OPTIONAL: list of architectures to limit cloud testing to.
+    test_architectures: [x86_64]
   gcp:
     # REQUIRED (if GCP image upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
@@ -122,6 +128,11 @@ clouds:
     licenses:
       - "fedora-coreos-${STREAM}"
       - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
+    # OPTIONAL: list of architectures to limit cloud testing to.
+    test_architectures: [x86_64]
+  openstack:
+    # OPTIONAL: list of architectures to limit cloud testing to.
+    test_architectures: [x86_64, aarch64]
   powervs:
     # REQUIRED (if POWERVS image upload credentials provided): the object storage
     # service instance to use.
