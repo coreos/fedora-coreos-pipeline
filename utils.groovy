@@ -315,4 +315,54 @@ def get_registry_repos(pipecfg, stream) {
     return registry_repos
 }
 
+
+// Runs followup cloud tests based on conditions
+def run_cloud_tests(pipecfg, stream, version, s3_stream_dir, basearch, commit) {
+    def testruns = [:]
+    // Define a set of parameters that are common to all test.
+    def params = [string(name: 'STREAM', value: stream),
+                  string(name: 'VERSION', value: version),
+                  string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
+                  string(name: 'ARCH', value: basearch),
+                  string(name: 'SRC_CONFIG_COMMIT', value: commit)]
+
+    // Kick off the Kola AWS job if we have an uploaded image and credentials for running those tests.
+    if (shwrapCapture("cosa meta --get-value amis") != "None" &&
+        utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
+                                     credentialsId: 'aws-kola-tests-config')])) {
+        testruns['Kola:AWS'] = { build job: 'kola-aws', wait: false, parameters: params }
+      // XXX: This is failing right now. Disable until the New
+      // Year when someone can dig into the problem.
+      //testruns['Kola:Kubernetes'] = { build job: 'kola-kubernetes', wait: false, parameters: params }
+    }
+
+    // Kick off the Kola Azure job if we have an artifact and credentials for running those tests.
+    if (shwrapCapture("cosa meta --get-value images.azure") != "None" &&
+        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
+                                     credentialsId: 'azure-kola-tests-config-auth'),
+                                file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
+                                     credentialsId: 'azure-kola-tests-config-profile')])) {
+        testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
+    }
+
+    // Kick off the Kola GCP job if we have an uploaded image and credentials for running those tests.
+    if (shwrapCapture("cosa meta --get-value gcp") != "None" &&
+        utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
+                                     credentialsId: 'gcp-kola-tests-config')])) {
+        testruns['Kola:GCP'] = { build job: 'kola-gcp', wait: false, parameters: params }
+    }
+
+    // Kick off the Kola OpenStack job if we have an artifact and credentials for running those tests.
+    if (shwrapCapture("cosa meta --get-value images.openstack") != "None" &&
+        utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                     credentialsId: 'openstack-kola-tests-config')])) {
+        testruns['Kola:OpenStack'] = { build job: 'kola-openstack', wait: false, parameters: params }
+    }
+
+    // Now run the kickoff jobs in parallel. These take little time
+    // so there isn't much benefit in running them in parallel, but it
+    // makes the UI view have less columns, which is useful.
+    parallel testruns
+}
+
 return this
