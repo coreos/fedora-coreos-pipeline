@@ -295,12 +295,12 @@ def build_artifacts(pipecfg, stream, basearch) {
     }
 
     // For 2. we'll run at most 10 tasks in parallel
-    if (maxRuns > 10) {
+    if (!maxRuns || maxRuns > 10) {
         maxRuns = 10
     }
 
     // Define the parallel jobs in a map
-    parallelruns = artifacts.collectEntries {
+    def parallelruns = artifacts.collectEntries {
         ["💽:${it}", { shwrap("cosa buildextend-${it}") }]
     }
 
