@@ -347,7 +347,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             // artifacts list for aarch64 and delete below code and knob) once platforms.yaml
             // exists everywhere. https://github.com/coreos/fedora-coreos-config/pull/1181
             if (basearch == "aarch64") {
-                stage('aws') {
+                stage('💽:aws') {
                     if (pipecfg.aws_aarch64_serial_console_hack) {
                         shwrap("""
                         if ! cosa shell -- test -e src/config/platforms.yaml; then
