@@ -130,8 +130,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             --log-level=INFO \
                             --project=${meta.gcp.project} \
                             --json-key \${GCP_IMAGE_UPLOAD_CONFIG} \
-                            --family "${meta.gcp.family} \
-                            --image "${meta.gcp.image}"
+                            --family=${meta.gcp.family} \
+                            --image=${meta.gcp.image}
                         """)
                     }
                 }
