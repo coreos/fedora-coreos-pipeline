@@ -443,7 +443,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         parallelruns = [:]
         if (uploading) {
             // Kick off the Kola AWS job if we have an uploaded image and credentials for running those tests.
-            if (shwrapCapture("cosa meta --get-value aws") != "None" &&
+            if (shwrapCapture("cosa meta --get-value amis") != "None" &&
                 utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
                                              credentialsId: 'aws-kola-tests-config')])) {
                 parallelruns['Kola:AWS'] = {

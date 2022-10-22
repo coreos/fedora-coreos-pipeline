@@ -449,10 +449,9 @@ lock(resource: "build-${params.STREAM}") {
         // so there isn't much benefit in running them in parallel, but it
         // makes the UI view have less columns, which is useful.
         parallelruns = [:]
-
         if (uploading) {
             // Kick off the Kola AWS job if we have an uploaded image and credentials for running those tests.
-            if (shwrapCapture("cosa meta --get-value aws") != "None" &&
+            if (shwrapCapture("cosa meta --get-value amis") != "None" &&
                 utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
                                              credentialsId: 'aws-kola-tests-config')])) {
                 parallelruns['Kola:AWS'] = {
@@ -523,7 +522,6 @@ lock(resource: "build-${params.STREAM}") {
                 }
             }
         }
-
         // process this batch
         parallel parallelruns
 
