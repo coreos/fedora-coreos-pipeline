@@ -1,38 +1,86 @@
 streams:
-    stable:
+    "4.12":
       type: production
-    testing:
+      variants: []
+      src_config_ref: master
+      cosa_image: "coreos-assembler:main"
+    "4.11":
       type: production
-    next:
+      cosa_image: "coreos-assembler:rhcos-4.11"
+      skip_artifacts:
+        s390x:
+          - ibmcloud
+    "4.10":
       type: production
-    testing-devel:
-      type: development
-      default: true
-    next-devel:         # do not touch; line managed by `next-devel/manage.py`
-      type: development # do not touch; line managed by `next-devel/manage.py`
-    rawhide:
-      type: mechanical
-    # branched:
-    #  type: mechanical
-    # bodhi-updates:
-    #   type: mechanical
-    # bodhi-updates-testing:
-    #   type: mechanical
-
-additional_arches: [aarch64, ppc64le, s390x]
+      cosa_image: "coreos-assembler:rhcos-4.10"
+      skip_artifacts:
+        aarch64:
+          - azure
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+    "4.9":
+      type: production
+      cosa_image: "coreos-assembler:rhcos-4.9"
+      skip_artifacts:
+        aarch64:
+          - azure
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - nutanix
+    "4.8":
+      type: production
+      cosa_image: "coreos-assembler:rhcos-4.8"
+      skip_artifacts:
+        aarch64:
+          - azure
+          - openstack
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - azurestack
+          - nutanix
+    "4.7":
+      type: production
+      cosa_image: "coreos-assembler:rhcos-4.7"
+      skip_artifacts:
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - azurestack
+          - nutanix
+    "4.6":
+      type: production
+      cosa_image: "coreos-assembler:rhcos-4.6"
+      skip_artifacts:
+        ppc64le:
+          - powervs
+        s390x:
+          - ibmcloud
+        x86_64:
+          - aliyun
+          - azurestack
+          - ibmcloud
+          - nutanix
+# additional_arches: [aarch64, ppc64le, s390x]
+additional_arches: [ppc64le, s390x]
 
 source_config:
-  url: https://github.com/coreos/fedora-coreos-config
+  url: https://github.com/openshift/os
+  ref: release-${STREAM}
+  yumrepos: https://gitlab.cee.redhat.com/coreos/redhat-coreos.git
 
-# remove to disable S3 uploads
-s3_bucket: fcos-builds
-
-registry_repos:
-  oscontainer: quay.io/fedora/fedora-coreos
-  # For a period of time let's also mirror into the old location too
-  # Drop this after October 2022. See
-  # https://discussion.fedoraproject.org/t/updated-registry-location-for-fedora-coreos-ostree-native-container/42740
-  oscontainer_old: quay.io/coreos-assembler/fcos
 
 default_artifacts:
   all:
@@ -41,24 +89,29 @@ default_artifacts:
     - live
     - openstack
   aarch64:
+    - aws
     - azure
   ppc64le:
     - powervs
   s390x:
+    - dasd
     - ibmcloud
   x86_64:
     - aliyun
     - aws
     - azure
     - azurestack
-    - digitalocean
-    - exoscale
     - gcp
     - ibmcloud
     - nutanix
-    - virtualbox
     - vmware
-    - vultr
+
+# remove to disable S3 uploads
+s3_bucket: rhcos-ci
+# path: releases/4.11-devel
+
+registry_repos:
+  oscontainer: registry.ci.openshift.org/rhcos-devel/machine-os-content
 
 # Temporary hack for AWS aarch64; see comment in `build-arch.Jenkinsfile`.
 aws_aarch64_serial_console_hack: true
@@ -68,20 +121,9 @@ clouds:
     # Accounts to share newly created AMIs with
     test_accounts:
       - "013116697141"
-    bucket: fcos-builds/ami-import
-    primary_region: us-east-1
   azure:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
-    test_architectures: [x86_64]
   gcp:
-    bucket: fedora-coreos-cloud-image-uploads/image-import
-    description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
-    family: "fedora-coreos-${STREAM}"
-    public: true
-    licenses:
-      - "fedora-coreos-${STREAM}"
-      - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
-  openstack:
-    test_architectures: [x86_64, aarch64]
+    bucket: fedora-coreos-cloud-image-uploads
