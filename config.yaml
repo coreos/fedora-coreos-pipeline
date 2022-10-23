@@ -113,9 +113,6 @@ s3_bucket: rhcos-ci
 registry_repos:
   oscontainer: registry.ci.openshift.org/rhcos-devel/machine-os-content
 
-# Temporary hack for AWS aarch64; see comment in `build-arch.Jenkinsfile`.
-aws_aarch64_serial_console_hack: true
-
 clouds:
   aws:
     # Accounts to share newly created AMIs with
