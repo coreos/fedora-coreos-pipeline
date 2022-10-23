@@ -234,15 +234,15 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     ${arch_args} s3 --acl=public-read ${s3_stream_dir}/builds
                 """)
 
-                // Run plume to publish official builds; This will handle modifying
-                // object ACLs, modifying AMI image attributes,
-                // and creating/modifying the releases.json metadata index
-                shwrap("""
-                plume release --distro fcos \
-                    --version ${params.VERSION} \
-                    --stream ${params.STREAM} \
-                    --bucket ${pipecfg.s3_bucket}
-                """)
+//              // Run plume to publish official builds; This will handle modifying
+//              // object ACLs, modifying AMI image attributes,
+//              // and creating/modifying the releases.json metadata index
+//              shwrap("""
+//              plume release --distro fcos \
+//                  --version ${params.VERSION} \
+//                  --stream ${params.STREAM} \
+//                  --bucket ${pipecfg.s3_bucket}
+//              """)
             }
 
             pipeutils.tryWithMessagingCredentials() {
