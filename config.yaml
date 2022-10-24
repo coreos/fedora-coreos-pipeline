@@ -124,3 +124,6 @@ clouds:
     test_storage_container: fedora-coreos-testing-image-blobs
   gcp:
     bucket: fedora-coreos-cloud-image-uploads
+    public: true
+    licenses:
+      - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
