@@ -88,6 +88,8 @@ default_artifacts:
     - metal4k
     - live
     - openstack
+    - legacy-oscontainer
+    - extensions-container
   aarch64:
     - aws
     - azure
