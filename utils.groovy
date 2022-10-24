@@ -243,18 +243,12 @@ def get_push_trigger() {
 
 // Gets desired artifacts to build from pipeline config
 def get_artifacts_to_build(pipecfg, stream, basearch) {
-    def artifacts = []
-    if  (pipecfg.streams[stream].artifacts?."${basearch}" != null) {
-        artifacts = pipecfg.streams[stream]['artifacts'][basearch]
-    } else { // Get the list difference from default with skip artifacts
-        def default_artifacts =  pipecfg['default_artifacts'][basearch]
-        def skip_artifacts = pipecfg.streams[stream].skip_artifacts?."${basearch}"
-        if (default_artifacts != null) {
-            artifacts = default_artifacts
-        }
-        if (skip_artifacts != null) {
-            artifacts -= skip_artifacts
-        }
+    // Explicit stream-level override takes precedence
+    def artifacts = pipecfg.streams[stream].artifacts?."${basearch}"
+    if (artifacts == null) {
+        // Get the list difference from default with skip artifacts
+        artifacts = pipecfg.default_artifacts."${basearch}" ?: []
+        artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
     }
     return artifacts.unique()
 }
