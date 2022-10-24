@@ -35,24 +35,17 @@ registry_repos:
   oscontainer_old: quay.io/coreos-assembler/fcos
 
 default_artifacts:
+  all:
+    - metal
+    - metal4k
+    - live
+    - openstack
   aarch64:
     - azure
-    - openstack
-    - live
-    - metal
-    - metal4k
   ppc64le:
-    - openstack
     - powervs
-    - live
-    - metal
-    - metal4k
   s390x:
     - ibmcloud
-    - openstack
-    - live
-    - metal
-    - metal4k
   x86_64:
     - aliyun
     - aws
@@ -62,11 +55,7 @@ default_artifacts:
     - exoscale
     - gcp
     - ibmcloud
-    - live
     - nutanix
-    - metal
-    - metal4k
-    - openstack
     - virtualbox
     - vmware
     - vultr
