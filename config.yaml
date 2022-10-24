@@ -1,17 +1,17 @@
 streams:
     "4.12":
-      type: production
+      type: mechanical
       variants: []
       src_config_ref: master
       cosa_image: "coreos-assembler:main"
     "4.11":
-      type: production
+      type: mechanical
       cosa_image: "coreos-assembler:rhcos-4.11"
       skip_artifacts:
         s390x:
           - ibmcloud
     "4.10":
-      type: production
+      type: mechanical
       cosa_image: "coreos-assembler:rhcos-4.10"
       skip_artifacts:
         aarch64:
@@ -21,7 +21,7 @@ streams:
         s390x:
           - ibmcloud
     "4.9":
-      type: production
+      type: mechanical
       cosa_image: "coreos-assembler:rhcos-4.9"
       skip_artifacts:
         aarch64:
@@ -34,7 +34,7 @@ streams:
           - aliyun
           - nutanix
     "4.8":
-      type: production
+      type: mechanical
       cosa_image: "coreos-assembler:rhcos-4.8"
       skip_artifacts:
         aarch64:
@@ -49,7 +49,7 @@ streams:
           - azurestack
           - nutanix
     "4.7":
-      type: production
+      type: mechanical
       cosa_image: "coreos-assembler:rhcos-4.7"
       skip_artifacts:
         ppc64le:
@@ -61,7 +61,7 @@ streams:
           - azurestack
           - nutanix
     "4.6":
-      type: production
+      type: mechanical
       cosa_image: "coreos-assembler:rhcos-4.6"
       skip_artifacts:
         ppc64le:
