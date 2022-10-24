@@ -248,6 +248,7 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
     if (artifacts == null) {
         // Get the list difference from default with skip artifacts
         artifacts = pipecfg.default_artifacts."${basearch}" ?: []
+        artifacts += pipecfg.default_artifacts.all ?: []
         artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
     }
     return artifacts.unique()

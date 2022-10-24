@@ -10,15 +10,16 @@ source_config:
 
 # OPTIONAL: default artifacts to build per architecture
 default_artifacts:
-  aarch64:
-    - openstack
-    - metal
-  x86_64:
-    - aws
-    - vmware
+  # default artifacts on all arches
+  all:
     - metal
     - metal4k
     - live
+  aarch64:
+    - openstack
+  x86_64:
+    - aws
+    - vmware
 
 # REQUIRED: streams to build
 streams:
