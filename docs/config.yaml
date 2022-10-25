@@ -90,6 +90,16 @@ clouds:
     bucket: fedora-coreos-image-uploads/ami-import
     # OPTIONAL: list of architectures to limit cloud testing to.
     test_architectures: [x86_64]
+    # REQUIRED (if AWS GovCloud image upload credentials provided):
+    # separate set of data for GovCloud uploads
+    govcloud:
+      # OPTIONAL: accounts to share newly created AMIs with
+      test_accounts:
+        - "1234567890"
+      # REQUIRED: the region to do initial image creation in.
+      primary_region: us-gov-east-1
+      # REQUIRED: the bucket+prefix where image files are uploaded to then initiate an image import.
+      bucket: fedora-coreos-govcloud-image-uploads/ami-import
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.

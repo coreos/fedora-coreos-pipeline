@@ -57,6 +57,30 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             }
         }
     }
+    credentials = [file(variable: "AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG",
+                        credentialsId: "aws-govcloud-image-upload-config")]
+    if (artifacts.contains("aws") && utils.credentialsExist(credentials)) {
+        def creds = credentials
+        uploaders["☁️ ⬆️ :aws:govcloud"] = {
+            withCredentials(creds) {
+                utils.syncCredentialsIfInRemoteSession(["AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG"])
+                def c = pipecfg.clouds.aws.govcloud
+                def grant_user_args = ""
+                if (c.test_accounts) {
+                    grant_user_args = c.test_accounts.collect{"--grant-user ${it}"}.join(" ")
+                }
+                shwrap("""
+                cosa buildextend-aws \
+                    --upload \
+                    --arch=${basearch} \
+                    --build=${buildID} \
+                    --region=${c.primary_region} ${grant_user_args} \
+                    --bucket=s3://${c.bucket} \
+                    --credentials-file=\${AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG}
+                """)
+            }
+        }
+    }
     credentials = [file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_AUTH',
                         credentialsId: 'azure-image-upload-config-auth'),
                    file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_PROFILE',

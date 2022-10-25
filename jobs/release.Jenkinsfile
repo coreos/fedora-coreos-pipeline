@@ -138,14 +138,21 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
 
 
-            if ((basearch in ['aarch64', 'x86_64']) && params.AWS_REPLICATION) {
+            if (meta.amis && params.AWS_REPLICATION) {
                 // Replicate AMI to other regions.
-                stage("Replicate ${basearch} AWS AMI") {
-                    withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                          credentialsId: 'aws-build-upload-config')]) {
-                        shwrap("""
-                        cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
-                        """)
+                stage("${basearch} AWS AMI Replication") {
+                    def replicated = false
+                    def ids = ['aws-build-upload-config', 'aws-govcloud-image-upload-config']
+                    for (id in ids) {
+                        tryWithCredentials([file(variable: 'AWS_CONFIG_FILE', credentialsId: id)]) {
+                            shwrap("""
+                            cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
+                            """)
+                            replicated = true
+                        }
+                    }
+                    if (!replicated) {
+                        error("AWS Replication asked for but no credentials exist")
                     }
                 }
             }

@@ -123,6 +123,31 @@ oc annotate secret/aws-kola-tests-config \
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden
 
+### [OPTIONAL] Creating AWS GovCloud credentials configs
+
+If you want to upload to AWS GovCloud you can create a separate
+set of credentials for performing that action:
+
+```
+cat <<'EOF' > /path/to/aws-govcloud-image-upload-config
+[default]
+aws_access_key_id=keyid
+aws_secret_access_key=key
+EOF
+```
+
+Then create the secret in OpenShift:
+
+```
+oc create secret generic aws-govcloud-image-upload-config \
+    --from-literal=filename=aws_config_file \
+    --from-file=data=/path/to/aws-govcloud-image-upload-config
+oc label secret/aws-govcloud-image-upload-config \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/aws-govcloud-image-upload-config \
+    jenkins.io/credentials-description="AWS GovCloud image upload credentials config"
+```
+
 ### [OPTIONAL] Creating GCP credentials configs
 
 If you are in production where we upload images to GCP OR you want to
