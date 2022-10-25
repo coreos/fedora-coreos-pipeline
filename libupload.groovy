@@ -41,7 +41,10 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["AWS_BUILD_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.aws
-                def grant_user_args = c.test_accounts?.collect{"--grant-user ${it}"}.join(" ")
+                def grant_user_args = ""
+                if (c.test_accounts) {
+                    grant_user_args = c.test_accounts.collect{"--grant-user ${it}"}.join(" ")
+                }
                 shwrap("""
                 cosa buildextend-aws \
                     --upload \
