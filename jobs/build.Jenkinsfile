@@ -386,11 +386,9 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Archive') {
             // lower to make sure we don't go over and account for overhead
-            def xz_memlimit = cosa_memory_request_mb - 512
-            shwrap("""
-            export XZ_DEFAULTS=--memlimit=${xz_memlimit}Mi
-            cosa compress --compressor xz
-            """)
+            pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
+                shwrap("cosa compress --compressor xz")
+            }
 
             if (uploading) {
               // just upload as public-read for now, but see discussions in
