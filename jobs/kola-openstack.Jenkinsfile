@@ -60,9 +60,10 @@ lock(resource: "kola-openstack-${params.ARCH}") {
         s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
     }
 
+    // Go with 1Gi here because we download/decompress/upload the image
+    def cosa_memory_request_mb = 1024
     try { timeout(time: 90, unit: 'MINUTES') {
-        // Go with 1Gi here because we download/decompress/upload the image
-        cosaPod(memory: "1Gi", kvm: false,
+        cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 image: params.COREOS_ASSEMBLER_IMAGE) {
 
             def openstack_image_name, openstack_image_filepath
@@ -79,8 +80,10 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                     cosa init --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
                     cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                         --url=s3://${s3_stream_dir}/builds --artifact=openstack
-                    cosa decompress --build=${params.VERSION} --artifact=openstack
                     """)
+                    pipeutils.withXzMemLimit(cosa_memory_request_mb - 256) {
+                        shwrap("cosa decompress --build=${params.VERSION} --artifact=openstack")
+                    }
                     openstack_image_filepath = shwrapCapture("""
                     cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path openstack
                     """)
