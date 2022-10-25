@@ -265,7 +265,8 @@ def build_artifacts(pipecfg, stream, basearch) {
     //
     // 1. The `live` build depends on `metal` and `metal4k` artifacts to exist.
     // 2. We can't start too many parallel processes because we bump up into
-    //    PID limits in the pipeline. See 24c5265.
+    //    PID limits in the pipeline. See 24c5265. It also makes it easier to
+    //    bump up against memory limits.
 
     // For 1. we'll sort the artifact list such that `metal` and `metal4k`
     // are at the front of the list and `live` is at the end. We'll also
@@ -289,9 +290,9 @@ def build_artifacts(pipecfg, stream, basearch) {
         maxRuns = Math.round(artifacts.size().div(2) as Float) as Integer
     }
 
-    // For 2. we'll run at most 10 tasks in parallel
-    if (!maxRuns || maxRuns > 10) {
-        maxRuns = 10
+    // For 2. we'll run at most 8 tasks in parallel
+    if (!maxRuns || maxRuns > 8) {
+        maxRuns = 8
     }
 
     // Define the parallel jobs in a map
