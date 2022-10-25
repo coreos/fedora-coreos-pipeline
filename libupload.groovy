@@ -75,8 +75,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     --build=${buildID} \
                     --resource-group ${c.resource_group} \
                     --storage-account ${c.storage_account} \
-                    --container=${c.storage_container} \
-                    --force
+                    --container=${c.storage_container}
                  """)
             }
         }
