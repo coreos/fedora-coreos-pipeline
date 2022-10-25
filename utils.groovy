@@ -378,4 +378,13 @@ def run_cloud_tests(pipecfg, stream, version, s3_stream_dir, basearch, commit) {
     parallel testruns
 }
 
+// Run closure, ensuring that any xz process started inside will not go over a
+// certain memory amount, which is especially useful for pods with hard set
+// memory limits.
+def withXzMemLimit(limitMi, Closure body) {
+    withEnv(["XZ_DEFAULTS=--memlimit=${limitMi}Mi"]) {
+        body()
+    }
+}
+
 return this
