@@ -386,7 +386,7 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Archive') {
             // lower to make sure we don't go over and account for overhead
-            pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
+            pipeutils.withXzMemLimit(cosa_memory_request_mb - 256) {
                 shwrap("cosa compress --compressor xz")
             }
 
