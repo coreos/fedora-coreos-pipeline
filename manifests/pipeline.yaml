@@ -16,33 +16,8 @@ parameters:
   - description: Git branch/tag reference for pipeline configuration
     name: PIPECFG_REF
     value: main
-  - description: Image of coreos-assembler to use
-    name: COREOS_ASSEMBLER_IMAGE
-    value: quay.io/coreos-assembler/coreos-assembler:main
 
 objects:
-
-  ### COREOS-ASSEMBLER ###
-
-  # keep a local copy of coreos-assembler so we're not constantly pulling it
-  # each time from app.ci
-  - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      name: coreos-assembler
-    spec:
-      lookupPolicy:
-        # this allows e.g. the pipeline to directly reference the imagestream
-        local: true
-      tags:
-        - name: main
-          from:
-            kind: DockerImage
-            name: ${COREOS_ASSEMBLER_IMAGE}
-          importPolicy:
-            scheduled: true
-          referencePolicy:
-            type: Local
 
   ### JENKINS CONFIG ###
 

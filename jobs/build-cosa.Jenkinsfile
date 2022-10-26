@@ -53,7 +53,7 @@ properties([
              trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
-             defaultValue: "coreos-assembler:main",
+             defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
              trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,

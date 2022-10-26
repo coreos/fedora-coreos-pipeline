@@ -46,7 +46,7 @@ properties([
                    description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
-             defaultValue: "coreos-assembler:main",
+             defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
              trim: true),
       booleanParam(name: 'KOLA_RUN_SLEEP',
                    defaultValue: false,

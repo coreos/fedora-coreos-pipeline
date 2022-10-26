@@ -520,20 +520,27 @@ If working on the production pipeline, you may simply do:
 ```
 
 You may also want to provide additional switches depending on the
-circumstances. Below are some of the options. To see more run
-`./deploy --help`.
+circumstances. Below are the available options:
 
 - `--pipeline <URL>[@REF]`
     - Git source URL and optional git ref for pipeline Jenkinsfile.
-- `--cosa-img <FQIN>`
-    - Image of coreos-assembler to use.
+- `--pipecfg <URL>[@REF]`
+    - Git source URL and optional git ref for pipeline configuration, if
+      not in-tree.
 
-For example, to target a specific combination of pipeline, and cosa image:
+For example, to target a specific pipeline:
 
 ```
 ./deploy \
-    --pipeline https://github.com/jlebon/fedora-coreos-pipeline     \
-    --cosa-img quay.io/jlebon/coreos-assembler:random-tag           \
+    --pipeline https://github.com/jlebon/fedora-coreos-pipeline
+```
+
+Or to build with the canonical pipeline but a different
+pipecfg:
+
+```
+./deploy \
+    --pipecfg https://github.com/jlebon/fedora-coreos-pipecfg
 ```
 
 See `./deploy --help` for more information.
@@ -543,8 +550,7 @@ This will create:
 1. the Jenkins controller imagestream,
 2. the Jenkins agent imagestream,
 3. the Jenkins agent BuildConfig (if a root CA cert was provided),
-4. the coreos-assembler imagestream, and
-5. the jenkins-config configmap.
+4. the jenkins-config configmap.
 
 We can now start a build of the Jenkins controller:
 

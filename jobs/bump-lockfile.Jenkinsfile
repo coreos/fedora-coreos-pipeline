@@ -25,7 +25,7 @@ properties([
                trim: true),
         string(name: 'COREOS_ASSEMBLER_IMAGE',
                description: 'Override coreos-assembler image to use',
-               defaultValue: "coreos-assembler:main",
+               defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
                trim: true),
         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                      defaultValue: false,
@@ -92,20 +92,13 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
         archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
     }
 
-    // If we are using the image stream (the default) then just translate
-    // that into 'quay.io/coreos-assembler/coreos-assembler:main'.
-    def image = params.COREOS_ASSEMBLER_IMAGE
-    if (image == "coreos-assembler:main") {
-        image = "quay.io/coreos-assembler/coreos-assembler:main"
-    }
-
     // Initialize the sessions on the remote builders
     stage("Initialize Remotes") {
         parallel archinfo.keySet().collectEntries{arch -> [arch, {
             if (arch != "x86_64") {
                 pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                     archinfo[arch]['session'] = shwrapCapture("""
-                    cosa remote-session create --image ${image} --expiration 4h --workdir ${env.WORKSPACE}
+                    cosa remote-session create --image ${params.COREOS_ASSEMBLER_IMAGE} --expiration 4h --workdir ${env.WORKSPACE}
                     """)
                     withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                         shwrap("""
