@@ -21,6 +21,10 @@ default_artifacts:
     - aws
     - vmware
 
+# OPTIONAL: coreos-assembler image to build with. supports ${STREAM} variable.
+# If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
+cosa_img: quay.io/jlebon/coreos-assembler:pr3139-${STREAM}
+
 # REQUIRED: streams to build
 streams:
     testing-devel:
@@ -49,6 +53,8 @@ streams:
       additional_registry_repos:
         oscontainer_old: registry.ci.openshift.org/rhcos-devel/machine-os-oci-content
         legacy_oscontainer_old: registry.ci.openshift.org/rhcos-devel/machine-os-content
+      # OPTIONAL: override default coreos-assembler image to build with
+      cosa_img: quay.io/coreos-assembler/coreos-assembler:stable
     rawhide:
       type: mechanical
 

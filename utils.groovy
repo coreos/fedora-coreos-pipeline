@@ -388,4 +388,12 @@ def withXzMemLimit(limitMi, Closure body) {
     }
 }
 
+def get_cosa_img(pipecfg, stream) {
+    // stream-level override takes precedence over top-level
+    def cosa_img = pipecfg.streams[stream].cosa_img ?: pipecfg.cosa_img
+    // otherwise, default to canonical cosa image
+    cosa_img = cosa_img ?: 'quay.io/coreos-assembler/coreos-assembler:main'
+    return utils.substituteStr(cosa_img, [STREAM: stream])
+}
+
 return this

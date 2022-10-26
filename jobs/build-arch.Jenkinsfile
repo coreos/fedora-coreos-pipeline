@@ -46,7 +46,7 @@ properties([
                    description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
-             defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
+             defaultValue: "",
              trim: true),
       booleanParam(name: 'KOLA_RUN_SLEEP',
                    defaultValue: false,
@@ -65,6 +65,10 @@ properties([
     )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
+
+// runtime parameter always wins
+def cosa_img = params.COREOS_ASSEMBLER_IMAGE
+cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
@@ -90,7 +94,7 @@ def ncpus = 1
 // `cosa remote-session create --image=`).
 // [1] https://github.com/coreos/coreos-assembler/pull/2919
 // [2] https://github.com/coreos/coreos-assembler/pull/2979
-def cosa_pod_image = params.COREOS_ASSEMBLER_IMAGE
+def cosa_pod_image = cosa_img
 if (cosa_pod_image =~ '^quay.io/coreos-assembler/coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
     cosa_pod_image = "quay.io/coreos-assembler/coreos-assembler:main"
 }
@@ -151,7 +155,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${params.COREOS_ASSEMBLER_IMAGE} --expiration 4h --workdir ${env.WORKSPACE}
+        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
