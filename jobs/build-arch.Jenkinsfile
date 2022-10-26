@@ -46,7 +46,7 @@ properties([
                    description: 'Force AWS AMI replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
-             defaultValue: "coreos-assembler:main",
+             defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
              trim: true),
       booleanParam(name: 'KOLA_RUN_SLEEP',
                    defaultValue: false,
@@ -91,8 +91,8 @@ def ncpus = 1
 // [1] https://github.com/coreos/coreos-assembler/pull/2919
 // [2] https://github.com/coreos/coreos-assembler/pull/2979
 def cosa_pod_image = params.COREOS_ASSEMBLER_IMAGE
-if (cosa_pod_image =~ '^coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
-    cosa_pod_image = "coreos-assembler:main"
+if (cosa_pod_image =~ '^quay.io/coreos-assembler/coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
+    cosa_pod_image = "quay.io/coreos-assembler/coreos-assembler:main"
 }
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
@@ -118,15 +118,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
     try {
 
         currentBuild.description = "[${params.STREAM}][${basearch}] Running"
-
-        // If we are using the image stream (the default) then just translate
-        // that into a quay registry equivalent (the multi-arch builders can't
-        // run containers from image streams).
-        def image = params.COREOS_ASSEMBLER_IMAGE
-        if (image.startsWith("coreos-assembler:")) {
-            image = image.replaceAll("coreos-assembler:",
-                                     "quay.io/coreos-assembler/coreos-assembler:")
-        }
 
         // Add in AWS Build Upload credentials here if they exist. In
         // the future we might choose to be more granular about when
@@ -160,7 +151,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${image} --expiration 4h --workdir ${env.WORKSPACE}
+        cosa remote-session create --image ${params.COREOS_ASSEMBLER_IMAGE} --expiration 4h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 

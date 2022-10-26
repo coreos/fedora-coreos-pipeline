@@ -30,7 +30,7 @@ properties([
              trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
-             defaultValue: "coreos-assembler:main",
+             defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
              trim: true),
       string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to run tests against',
