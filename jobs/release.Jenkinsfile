@@ -33,7 +33,7 @@ properties([
                    description: 'Force AWS AMI replication'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
-             defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
+             defaultValue: "",
              trim: true)
     ]),
     durabilityHint('PERFORMANCE_OPTIMIZED')
@@ -44,6 +44,10 @@ properties([
 if (params.VERSION == "") {
     throw new Exception("Missing VERSION parameter!")
 }
+
+// runtime parameter always wins
+def cosa_img = params.COREOS_ASSEMBLER_IMAGE
+cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 currentBuild.description = "[${params.STREAM}][${params.ARCHES}] - ${params.VERSION}"
 
@@ -58,8 +62,7 @@ def stream_info = pipecfg.streams[params.STREAM]
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
-    cosaPod(cpu: "1", memory: "512Mi",
-            image: params.COREOS_ASSEMBLER_IMAGE) {
+    cosaPod(cpu: "1", memory: "512Mi", image: cosa_img) {
     try {
 
         def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
