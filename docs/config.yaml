@@ -88,6 +88,8 @@ clouds:
     # REQUIRED (if AWS build upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-image-uploads/ami-import
+    # OPTIONAL: boolean: whether or not to set the image/snapshot as public
+    public: true
     # OPTIONAL: list of architectures to limit cloud testing to.
     test_architectures: [x86_64]
     # REQUIRED (if AWS GovCloud image upload credentials provided):
@@ -100,6 +102,8 @@ clouds:
       primary_region: us-gov-east-1
       # REQUIRED: the bucket+prefix where image files are uploaded to then initiate an image import.
       bucket: fedora-coreos-govcloud-image-uploads/ami-import
+      # OPTIONAL: boolean: whether or not to set the image/snapshot as public
+      public: true
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.

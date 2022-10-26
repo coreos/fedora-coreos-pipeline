@@ -65,11 +65,13 @@ aws_aarch64_serial_console_hack: true
 
 clouds:
   aws:
+    bucket: fcos-builds/ami-import
+    primary_region: us-east-1
+    # we make our images public in the release job via plume
+    public: false
     # Accounts to share newly created AMIs with
     test_accounts:
       - "013116697141"
-    bucket: fcos-builds/ami-import
-    primary_region: us-east-1
   azure:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
