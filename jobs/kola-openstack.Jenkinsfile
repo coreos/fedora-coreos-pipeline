@@ -60,8 +60,8 @@ lock(resource: "kola-openstack-${params.ARCH}") {
         s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
     }
 
-    // Go with 1Gi here because we download/decompress/upload the image
-    def cosa_memory_request_mb = 1024
+    // Go with 1.5Gi here because we download/decompress/upload the image
+    def cosa_memory_request_mb = 1536
     try { timeout(time: 90, unit: 'MINUTES') {
         cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 image: params.COREOS_ASSEMBLER_IMAGE) {
