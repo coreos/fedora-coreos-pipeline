@@ -72,6 +72,8 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
+
 // If we are a mechanical stream then we can pin packages but we
 // don't maintin complete lockfiles so we can't build in strict mode.
 def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
@@ -83,21 +85,6 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 // the build-arch pod is mostly triggering the work on a remote node, so we
 // can be conservative with our request
 def ncpus = 1
-
-// We recently did some golang migration [1] and happened to add the
-// `cosa remote-session` pieces [2] after that migration. This makes
-// it not easy to backport to ther branches. For a period of time
-// let's use the latest COSA for our COSA pod for multi-arch builds
-// instead of the versioned COSA. We will still use the versioned COSA
-// on the remote so the actual building will happened with the correctly
-// versioned COSA (substituted below and passed as an argument to
-// `cosa remote-session create --image=`).
-// [1] https://github.com/coreos/coreos-assembler/pull/2919
-// [2] https://github.com/coreos/coreos-assembler/pull/2979
-def cosa_pod_image = cosa_img
-if (cosa_pod_image =~ '^quay.io/coreos-assembler/coreos-assembler:rhcos-4.(6|7|8|9|10|11)$') {
-    cosa_pod_image = "quay.io/coreos-assembler/coreos-assembler:main"
-}
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] Waiting"
@@ -118,7 +105,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
     timeout(time: 240, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
-            image: cosa_pod_image) {
+            image: cosa_controller_img) {
     try {
 
         currentBuild.description = "[${params.STREAM}][${basearch}] Running"
