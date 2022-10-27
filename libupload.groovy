@@ -27,8 +27,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     --arch=${basearch} \
                     --build=${buildID} \
                     --region=${c.primary_region} \
-                    --bucket=s3://${c.bucket} \
-                    --credentials-file=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
+                    --bucket=${c.bucket} \
+                    --config=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
                 """)
             }
         }
