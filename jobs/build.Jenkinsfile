@@ -306,7 +306,8 @@ lock(resource: "build-${params.STREAM}") {
         stage("Kola") {
             def n = ncpus - 1 // remove 1 for upgrade test
             kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
-                 allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
+                 allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
+                 skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
         }
 
         // If we are uploading results then let's do an early archive
@@ -356,7 +357,8 @@ lock(resource: "build-${params.STREAM}") {
         // Run Kola TestISO tests for metal artifacts
         if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
             stage("Kola:TestISO") {
-                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch)
+                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                            skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
                 // For now we want to notify ourselves when a particular workaround is observed.
                 // It won't fail the build, just give us information.
                 // https://github.com/coreos/fedora-coreos-tracker/issues/1233
