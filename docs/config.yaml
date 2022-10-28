@@ -72,10 +72,12 @@ s3_bucket: fcos-builds
 # OPTIONAL: container registry-related keys
 registry_repos:
   # OPTIONAL: repo to which to push oscontainer
+  # CONFLICTS WITH: legacy_oscontainer
   oscontainer: quay.io/fedora/fedora-coreos
   # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
   oscontainer_old: quay.io/coreos-assembler/fcos
   # OPTIONAL: repo to which to push legacy oscontainer
+  # CONFLICTS WITH: oscontainer
   legacy_oscontainer: quay.io/openshift-release-dev/rhel-coreos-dev
   # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
   legacy_oscontainer_old: registry.ci.openshift.org/rhcos/rhel-coreos
