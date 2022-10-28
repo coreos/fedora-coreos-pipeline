@@ -73,8 +73,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
                 shwrap("""
                 cosa init --branch ${ref} ${pipecfg.source_config.url}
-                cosa buildfetch --artifact=ostree --build=${params.VERSION} \
-                    --arch=all --url=s3://${s3_stream_dir}/builds
+                cosa buildfetch --build=${params.VERSION} --arch=all --url=s3://${s3_stream_dir}/builds
                 """)
             }
         }
@@ -91,6 +90,28 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 echo "ERROR: Requested base architectures: $basearches"
                 currentBuild.result = 'FAILURE'
                 return
+            }
+        }
+
+        // Fetch Artifact files for pieces we still need to upload. Note that we
+        // need to do this early in this job before we've run any stages that
+        // modify/update meta.json because buildfetch will re-download and
+        // overwrite meta.json.
+        stage('Fetch Artifacts') {
+            // We need to fetch a few artifacts if they were built. This assumes if
+            // it was built for one platform it was built for all.
+            def fetch_artifacts = ['ostree', 'extensions-container', 'legacy-oscontainer']
+            def meta = readJSON file: "builds/${params.VERSION}/x86_64/meta.json"
+            fetch_artifacts.retainAll(meta.images.keySet())
+
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                  credentialsId: 'aws-build-upload-config')]) {
+                def fetch_args = basearches.collect{"--arch=${it}"}
+                fetch_args += fetch_artifacts.collect{"--artifact=${it}"}
+                shwrap("""
+                cosa buildfetch --build=${params.VERSION} \
+                    --url=s3://${s3_stream_dir}/builds ${fetch_args.join(' ')}
+                """)
             }
         }
 
