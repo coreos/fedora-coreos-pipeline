@@ -59,9 +59,8 @@ boolean checkKolaSuccess(file) {
 
 def aws_s3_cp_allow_noent(src, dest) {
     // see similar code in `cosa buildfetch`
-    withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                          credentialsId: 'aws-build-upload-config')]) {
-    shwrap("""
+    shwrapWithAWSBuildUploadCredentials("""
+    export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
     python3 -c '
 import os, sys, tempfile, botocore, boto3
 src = sys.argv[1]
@@ -98,7 +97,6 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
         def remotejson = "s3://${s3_stream_dir}/builds/builds.json"
         aws_s3_cp_allow_noent(remotejson, './remote-builds.json')
         shwrap("""
-        export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
         # If no remote json exists then this is the first run
         # and we'll just upload the local builds.json
         if [ -f ./remote-builds.json ]; then
@@ -109,7 +107,11 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
             mkdir -p builds
             cp \$TMPD/builds/builds.json builds/builds.json
         fi
-        aws s3 cp --cache-control=max-age=300 --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
+        """)
+        shwrapWithAWSBuildUploadCredentials("""
+        export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
+        aws s3 cp --cache-control=max-age=300    \
+            --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
         """)
     }
 }
@@ -394,6 +396,31 @@ def get_cosa_img(pipecfg, stream) {
     // otherwise, default to canonical cosa image
     cosa_img = cosa_img ?: 'quay.io/coreos-assembler/coreos-assembler:main'
     return utils.substituteStr(cosa_img, [STREAM: stream])
+}
+
+// Run a closure inside a context that has access to the AWS Build
+// Upload credentials.
+def withAWSBuildUploadCredentials(Closure body) {
+    withCredentials([file(variable: 'AWS_BUILD_UPLOAD_CONFIG',
+                          credentialsId: 'aws-build-upload-config')]) {
+        utils.syncCredentialsIfInRemoteSession(['AWS_BUILD_UPLOAD_CONFIG'])
+        body()
+    }
+}
+
+// Run commands inside a context that has access to the AWS Build
+// Upload credentials.
+def shwrapWithAWSBuildUploadCredentials(cmds) {
+    withAWSBuildUploadCredentials() {
+        shwrap(cmds)
+    }
+}
+
+// Return true or false based on if the AWS Build Upload credential exists
+def AWSBuildUploadCredentialExists() {
+    def creds = [file(variable: 'AWS_BUILD_UPLOAD_CONFIG',
+                      credentialsId: 'aws-build-upload-config')]
+    return utils.credentialsExist(creds)
 }
 
 return this
