@@ -55,7 +55,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     --build=${buildID} \
                     --region=${c.primary_region} \
                     --bucket=s3://${c.bucket} \
-                    --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG}
+                    --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG} \
                     ${extraArgs.join(' ')} 
                 """)
             }
