@@ -182,50 +182,50 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         // in newer Groovy, retainAll can take a closure, which would be nicer here
         for (key in (push_containers.keySet() as List)) {
-          if (!(push_containers[key][0] in artifacts)) {
-            push_containers.remove(key)
-          }
+            if (!(push_containers[key][0] in artifacts)) {
+                push_containers.remove(key)
+            }
         }
 
         if (push_containers) {
-          stage("Push Containers") {
-            parallel push_containers.collectEntries{configname, val -> [configname, {
-              withCredentials([file(variable: 'REGISTRY_SECRET',
-                                    credentialsId: 'oscontainer-push-registry-secret')]) {
-                  def repo = registry_repos[configname]
-                  def (artifact, metajsonname, tag_suffix) = val
-                  def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
-                  def tag_args = " --tag=${params.STREAM}${tag_suffix}"
-                  if (registry_repos.add_build_tag) {
-                      tag_args += " --tag ${params.VERSION}${tag_suffix}"
-                  }
-                  shwrap("""
-                  cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
-                      --repo=${repo} ${tag_args} \
-                      --artifact=${artifact} --metajsonname=${metajsonname} \
-                      --build=${params.VERSION} ${arch_args}
-                  """)
+            stage("Push Containers") {
+                parallel push_containers.collectEntries{configname, val -> [configname, {
+                    withCredentials([file(variable: 'REGISTRY_SECRET',
+                                          credentialsId: 'oscontainer-push-registry-secret')]) {
+                        def repo = registry_repos[configname]
+                        def (artifact, metajsonname, tag_suffix) = val
+                        def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
+                        def tag_args = " --tag=${params.STREAM}${tag_suffix}"
+                        if (registry_repos.add_build_tag) {
+                            tag_args += " --tag ${params.VERSION}${tag_suffix}"
+                        }
+                        shwrap("""
+                        cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
+                            --repo=${repo} ${tag_args} \
+                            --artifact=${artifact} --metajsonname=${metajsonname} \
+                            --build=${params.VERSION} ${arch_args}
+                        """)
 
-                  def old_repo = registry_repos["${configname}_old"]
-                  if (old_repo) {
-                    // a separate credential for the old location is optional; we support it
-                    // being merged as part of oscontainer-push-registry-secret
-                    pipeutils.tryWithOrWithoutCredentials([file(variable: 'OLD_REGISTRY_SECRET',
-                                                                credentialsId: 'oscontainer-push-old-registry-secret')]) {
-                      def authArg = "--authfile=\${REGISTRY_SECRET}"
-                      if (env.OLD_REGISTRY_SECRET) {
-                        authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
-                      }
-                      shwrap("""
-                      cosa copy-container ${authArg} ${tag_args} \
-                          --manifest-list-to-arch-tag=auto \
-                          ${repo} ${old_repo}
-                      """)
+                        def old_repo = registry_repos["${configname}_old"]
+                        if (old_repo) {
+                            // a separate credential for the old location is optional; we support it
+                            // being merged as part of oscontainer-push-registry-secret
+                            pipeutils.tryWithOrWithoutCredentials([file(variable: 'OLD_REGISTRY_SECRET',
+                                                                        credentialsId: 'oscontainer-push-old-registry-secret')]) {
+                                def authArg = "--authfile=\${REGISTRY_SECRET}"
+                                if (env.OLD_REGISTRY_SECRET) {
+                                    authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
+                                }
+                                shwrap("""
+                                cosa copy-container ${authArg} ${tag_args} \
+                                    --manifest-list-to-arch-tag=auto \
+                                    ${repo} ${old_repo}
+                                """)
+                            }
+                        }
                     }
-                  }
-              }
-            }]}
-          }
+                }]}
+            }
         }
 
         stage('Publish') {
