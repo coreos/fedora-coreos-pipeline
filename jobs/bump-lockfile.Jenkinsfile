@@ -25,7 +25,7 @@ properties([
                trim: true),
         string(name: 'COREOS_ASSEMBLER_IMAGE',
                description: 'Override coreos-assembler image to use',
-               defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
+               defaultValue: "",
                trim: true),
         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                      defaultValue: false,
@@ -37,6 +37,10 @@ properties([
     )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
+
+// runtime parameter always wins
+def cosa_img = params.COREOS_ASSEMBLER_IMAGE
+cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 echo "Waiting for bump-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
@@ -59,7 +63,7 @@ def cosa_memory_request_mb = 8.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTES') { 
-    cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
+    cosaPod(image: cosa_img,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi") {
     currentBuild.description = "[${params.STREAM}] Running"
 
@@ -98,7 +102,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
             if (arch != "x86_64") {
                 pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                     archinfo[arch]['session'] = shwrapCapture("""
-                    cosa remote-session create --image ${params.COREOS_ASSEMBLER_IMAGE} --expiration 4h --workdir ${env.WORKSPACE}
+                    cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
                     """)
                     withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                         shwrap("""
