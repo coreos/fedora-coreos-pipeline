@@ -71,14 +71,13 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                shwrap("""
-                cosa init --branch ${ref} ${pipecfg.source_config.url}
-                cosa buildfetch --build=${params.VERSION} --arch=all --url=s3://${s3_stream_dir}/builds
-                """)
-            }
+            def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+            pipeutils.shwrapWithAWSBuildUploadCredentials("""
+            cosa init --branch ${ref} ${pipecfg.source_config.url}
+            cosa buildfetch --build=${params.VERSION} \
+                --arch=all --url=s3://${s3_stream_dir}/builds \
+                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+            """)
         }
 
         def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split() as Set
@@ -107,15 +106,15 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             def meta = readJSON file: "builds/${params.VERSION}/x86_64/meta.json"
             fetch_artifacts.retainAll(meta.images.keySet())
 
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def fetch_args = basearches.collect{"--arch=${it}"}
-                fetch_args += fetch_artifacts.collect{"--artifact=${it}"}
-                shwrap("""
-                cosa buildfetch --build=${params.VERSION} \
-                    --url=s3://${s3_stream_dir}/builds ${fetch_args.join(' ')}
-                """)
-            }
+            def fetch_args = basearches.collect{"--arch=${it}"}
+            fetch_args += fetch_artifacts.collect{"--artifact=${it}"}
+
+            pipeutils.shwrapWithAWSBuildUploadCredentials("""
+            cosa buildfetch --build=${params.VERSION} \
+                --url=s3://${s3_stream_dir}/builds    \
+                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                ${fetch_args.join(' ')}
+            """)
         }
 
         for (basearch in basearches) {
@@ -258,8 +257,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         }
 
         stage('Publish') {
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
+            pipeutils.withAWSBuildUploadCredentials() {
                 // Since some of the earlier operations (like AWS replication) only modify
                 // the individual meta.json files we need to re-generate the release metadata
                 // to get the new info and upload it back to s3.
@@ -267,7 +265,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 shwrap("""
                 cosa generate-release-meta --build-id ${params.VERSION} --workdir .
                 cosa buildupload --build=${params.VERSION} --skip-builds-json \
-                    ${arch_args} s3 --acl=public-read ${s3_stream_dir}/builds
+                    ${arch_args} s3 --aws-config-file=\${AWS_BUILD_UPLOAD_CONFIG} \
+                    --acl=public-read ${s3_stream_dir}/builds
                 """)
 
                 // Run plume to publish official builds; This will handle modifying
@@ -277,7 +276,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 plume release --distro fcos \
                     --version ${params.VERSION} \
                     --stream ${params.STREAM} \
-                    --bucket ${pipecfg.s3_bucket}
+                    --bucket ${pipecfg.s3_bucket} \
+                    --aws-credentials \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
             }
 

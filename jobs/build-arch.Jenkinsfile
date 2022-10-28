@@ -110,16 +110,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         currentBuild.description = "[${params.STREAM}][${basearch}] Running"
 
-        // Add in AWS Build Upload credentials here if they exist. In
-        // the future we might choose to be more granular about when
-        // we load this.
-        pipeutils.tryWithOrWithoutCredentials([file(variable: 'AWS_BUILD_UPLOAD_CONFIG',
-                                                    credentialsId: 'aws-build-upload-config')]) {
 
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
-        if (pipecfg.s3_bucket && utils.pathExists("\${AWS_BUILD_UPLOAD_CONFIG}")) {
+        if (pipecfg.s3_bucket && pipeutils.AWSBuildUploadCredentialExists()) {
             // see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
             s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         }
@@ -145,11 +140,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
-
-        // Sync over AWS Build Upload Secret if it exists
-        if (env.AWS_BUILD_UPLOAD_CONFIG) {
-            utils.syncCredentialsIfInRemoteSession(["AWS_BUILD_UPLOAD_CONFIG"])
-        }
 
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
@@ -194,14 +184,14 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // buildfetch previous build info
         stage('BuildFetch') {
             if (s3_stream_dir) {
-                shwrap("""
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
                 cosa buildfetch --arch=${basearch} \
                     --url s3://${s3_stream_dir}/builds \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
                 if (parent_version != "") {
                     // also fetch the parent version; this is used by cosa to do the diff
-                    shwrap("""
+                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa buildfetch --arch=${basearch} \
                         --build ${parent_version} \
                         --url s3://${s3_stream_dir}/builds \
@@ -268,7 +258,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         if (official && uploading) {
             pipeutils.tryWithMessagingCredentials() {
                 stage('Sign OSTree') {
-                    shwrap("""
+                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa sign --build=${newBuildID} --arch=${basearch} \
                         robosignatory --s3 ${s3_stream_dir}/builds \
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
@@ -361,27 +351,27 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             """)
 
             if (uploading) {
-              // just upload as public-read for now, but see discussions in
-              // https://github.com/coreos/fedora-coreos-tracker/issues/189
-              shwrap("""
-              cosa buildupload --skip-builds-json s3 \
-                  --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                  --acl=public-read ${s3_stream_dir}/builds
-              """)
-              pipeutils.bump_builds_json(
-                  params.STREAM,
-                  newBuildID,
-                  basearch,
-                  s3_stream_dir)
+                // just upload as public-read for now, but see discussions in
+                // https://github.com/coreos/fedora-coreos-tracker/issues/189
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa buildupload --skip-builds-json s3 \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                    --acl=public-read ${s3_stream_dir}/builds
+                """)
+                pipeutils.bump_builds_json(
+                    params.STREAM,
+                    newBuildID,
+                    basearch,
+                    s3_stream_dir)
             } else {
-              // Without an S3 server, just archive into the PVC
-              // itself. Otherwise there'd be no other way to retrieve the
-              // artifacts. But note we only keep one build at a time.
-              shwrap("""
-              rm -rf ${local_builddir}
-              mkdir -p ${local_builddir}
-              cosa remote-session sync :builds/ ${local_builddir}
-              """)
+                // Without an S3 server, just archive into the PVC
+                // itself. Otherwise there'd be no other way to retrieve the
+                // artifacts. But note we only keep one build at a time.
+                shwrap("""
+                rm -rf ${local_builddir}
+                mkdir -p ${local_builddir}
+                cosa remote-session sync :builds/ ${local_builddir}
+                """)
             }
         }
 
@@ -394,7 +384,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             pipeutils.tryWithMessagingCredentials() {
                 parallelruns = [:]
                 parallelruns['Sign Images'] = {
-                    shwrap("""
+                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa sign --build=${newBuildID} --arch=${basearch} \
                         robosignatory --s3 ${s3_stream_dir}/builds \
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
@@ -435,8 +425,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         currentBuild.result = 'SUCCESS'
 
-// tryWithOrWithoutCredentials and main try finish here
-}} catch (e) {
+} catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
@@ -476,4 +465,4 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             """)
         }
     }
-}}}}} // try-catch-finally, cosaPod, timeout, and locks finish here
+}}}}} // finally, cosaPod, timeout, and locks finish here
