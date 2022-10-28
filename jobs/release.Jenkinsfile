@@ -189,7 +189,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         // could be made configurable in the future. For now since FCOS doesn't need it and
         // OCP ART doesn't actually care what the tag name is (it's just to stop GC), we
         // hardcode it.
-        def push_containers = ['oscontainer': ['ostree', 'base-oscontainer', ''],
+        def push_containers = ['oscontainer': ['ostree', 'oscontainer', ''],
                                'extensions': ['extensions-container', 'extensions-container', '-extensions'],
                                'legacy_oscontainer': ['legacy-oscontainer', 'oscontainer', '-legacy']]
 
@@ -209,6 +209,11 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         }
 
         if (push_containers) {
+            // Sanity-check we're not asked to push both the legacy oscontainer and new one.
+            // cosa will also error on this, but we can give a clearer message.
+            if ('oscontainer' in push_containers && 'legacy_oscontainer' in push_containers) {
+                error("Cannot push both oscontainer and legacy_oscontainer")
+            }
             stage("Push Containers") {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
                     withCredentials([file(variable: 'REGISTRY_SECRET',
