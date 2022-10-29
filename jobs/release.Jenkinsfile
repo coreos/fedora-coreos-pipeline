@@ -49,12 +49,14 @@ if (params.VERSION == "") {
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
+def stream_info = pipecfg.streams[params.STREAM]
+
+def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
+
 currentBuild.description = "[${params.STREAM}][${params.ARCHES}] - ${params.VERSION}"
 
 // Get the list of requested architectures to release
 def basearches = params.ARCHES.split() as Set
-
-def stream_info = pipecfg.streams[params.STREAM]
 
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
@@ -62,12 +64,22 @@ def stream_info = pipecfg.streams[params.STREAM]
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
-    cosaPod(cpu: "1", memory: "512Mi", image: cosa_img) {
+    cosaPod(cpu: "1", memory: "512Mi", image: cosa_controller_img) {
     try {
 
         def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
         def ostree_prod_refs = [:]
+
+        // We ran into an issue running podman in the pipeline [1] so
+        // for now we're going to run the release job in a remote
+        // session on a multi-arch builder.
+        // [1] https://github.com/coreos/fedora-coreos-pipeline/issues/723
+        pipeutils.withPodmanRemoteArchBuilder(arch: pipecfg.release_job_builder_arch) {
+        def session = shwrapCapture("""
+        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
+        """)
+        withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
@@ -80,7 +92,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             """)
         }
 
-        def builtarches = shwrapCapture("jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]' builds/builds.json").split() as Set
+        def builtarches = shwrapCapture("""
+                          cosa shell -- cat builds/builds.json | \
+                              jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]'
+                          """).split() as Set
         assert builtarches.contains("x86_64"): "The x86_64 architecture was not in builtarches."
         if (!builtarches.containsAll(basearches)) {
             if (params.ALLOW_MISSING_ARCHES) {
@@ -103,7 +118,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             // We need to fetch a few artifacts if they were built. This assumes if
             // it was built for one platform it was built for all.
             def fetch_artifacts = ['ostree', 'extensions-container', 'legacy-oscontainer']
-            def meta = readJSON file: "builds/${params.VERSION}/x86_64/meta.json"
+            def meta = readJSON(text: shwrapCapture("cosa meta --arch=x86_64 --dump"))
             fetch_artifacts.retainAll(meta.images.keySet())
 
             def fetch_args = basearches.collect{"--arch=${it}"}
@@ -118,9 +133,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         }
 
         for (basearch in basearches) {
-            def meta_json = "builds/${params.VERSION}/${basearch}/meta.json"
-            def meta = readJSON file: meta_json
-
+            def meta = readJSON(text: shwrapCapture("cosa meta --arch=${basearch} --dump"))
 
             // For production streams, import the OSTree into the prod
             // OSTree repo.
@@ -200,7 +213,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         // filter out those not built. this step makes the assumption that if an
         // image isn't built for x86_64, then we don't upload it at all
-        def meta_x86_64 = readJSON file: "builds/${params.VERSION}/x86_64/meta.json"
+        def meta_x86_64 = readJSON(text: shwrapCapture("cosa meta --arch=x86_64 --dump"))
         def artifacts = meta_x86_64.images.keySet()
 
         // in newer Groovy, retainAll can take a closure, which would be nicer here
@@ -220,6 +233,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
+                        utils.syncCredentialsIfInRemoteSession(["REGISTRY_SECRET"])
                         def repo = registry_repos[configname]
                         def (artifact, metajsonname, tag_suffix) = val
                         def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
@@ -240,6 +254,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             // being merged as part of oscontainer-push-registry-secret
                             pipeutils.tryWithOrWithoutCredentials([file(variable: 'OLD_REGISTRY_SECRET',
                                                                         credentialsId: 'oscontainer-push-old-registry-secret')]) {
+                                utils.syncCredentialsIfInRemoteSession(["OLD_REGISTRY_SECRET"])
                                 def authArg = "--authfile=\${REGISTRY_SECRET}"
                                 if (env.OLD_REGISTRY_SECRET) {
                                     authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
@@ -273,7 +288,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 // object ACLs, modifying AMI image attributes,
                 // and creating/modifying the releases.json metadata index
                 shwrap("""
-                plume release --distro fcos \
+                cosa shell -- plume release --distro fcos \
                     --version ${params.VERSION} \
                     --stream ${params.STREAM} \
                     --bucket ${pipecfg.s3_bucket} \
@@ -290,6 +305,9 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
         }
+
+        } // end withEnv
+        } // end withPodmanRemoteArchBuilder
 
         if (ostree_prod_refs.size() > 0) {
             stage("OSTree Import: Wait and Verify") {
