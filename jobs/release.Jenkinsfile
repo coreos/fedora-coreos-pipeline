@@ -239,6 +239,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             tag_args += "--tag=${params.VERSION}${tag_suffix}"
                         }
                         shwrap("""
+                        mkdir -p /var/tmp/builder
+                        export HOME=/var/tmp/builder # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668147
                         cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
                             --repo=${repo} ${tag_args.join(' ')} \
                             --artifact=${artifact} --metajsonname=${metajsonname} \
@@ -256,6 +258,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                                     authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
                                 }
                                 shwrap("""
+                                export HOME=/var/tmp/builder # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668147
                                 cosa copy-container ${authArg} ${tag_args.join(' ')} \
                                     --manifest-list-to-arch-tag=auto \
                                     ${repo} ${old_repo}
