@@ -51,8 +51,6 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
-
 currentBuild.description = "[${params.STREAM}][${params.ARCHES}] - ${params.VERSION}"
 
 // Get the list of requested architectures to release
@@ -64,22 +62,12 @@ def basearches = params.ARCHES.split() as Set
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
-    cosaPod(cpu: "1", memory: "512Mi", image: cosa_controller_img) {
+    cosaPod(cpu: "1", memory: "512Mi", image: cosa_img) {
     try {
 
         def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
         def gcp_image = ""
         def ostree_prod_refs = [:]
-
-        // We ran into an issue running podman in the pipeline [1] so
-        // for now we're going to run the release job in a remote
-        // session on a multi-arch builder.
-        // [1] https://github.com/coreos/fedora-coreos-pipeline/issues/723
-        pipeutils.withPodmanRemoteArchBuilder(arch: pipecfg.release_job_builder_arch) {
-        def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
-        """)
-        withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
@@ -233,7 +221,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
-                        utils.syncCredentialsIfInRemoteSession(["REGISTRY_SECRET"])
                         def repo = registry_repos[configname]
                         def (artifact, metajsonname, tag_suffix) = val
                         def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
@@ -254,7 +241,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             // being merged as part of oscontainer-push-registry-secret
                             pipeutils.tryWithOrWithoutCredentials([file(variable: 'OLD_REGISTRY_SECRET',
                                                                         credentialsId: 'oscontainer-push-old-registry-secret')]) {
-                                utils.syncCredentialsIfInRemoteSession(["OLD_REGISTRY_SECRET"])
                                 def authArg = "--authfile=\${REGISTRY_SECRET}"
                                 if (env.OLD_REGISTRY_SECRET) {
                                     authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
@@ -305,9 +291,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
         }
-
-        } // end withEnv
-        } // end withPodmanRemoteArchBuilder
 
         if (ostree_prod_refs.size() > 0) {
             stage("OSTree Import: Wait and Verify") {

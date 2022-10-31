@@ -66,9 +66,6 @@ streams:
 # REQUIRED: other architectures supported other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
 
-# OPTIONAL: alternatively use a remote builder for the release job
-release_job_builder_arch: ppc64le
-
 # OPTIONAL: S3 bucket to which to upload build artifacts
 s3_bucket: fcos-builds
 
