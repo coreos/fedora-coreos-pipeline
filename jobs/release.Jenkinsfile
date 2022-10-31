@@ -109,6 +109,13 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             def meta = readJSON(text: shwrapCapture("cosa meta --arch=x86_64 --dump"))
             fetch_artifacts.retainAll(meta.images.keySet())
 
+            // If `legacy-oscontainer` exists then we know we don't need to
+            // pull the `ostree` artifact because we'll be pushing the
+            // legacy oscontainer in its place.
+            if ('legacy-oscontainer' in fetch_artifacts) {
+                fetch_artifacts.remove('ostree')
+            }
+
             def fetch_args = basearches.collect{"--arch=${it}"}
             fetch_args += fetch_artifacts.collect{"--artifact=${it}"}
 
@@ -212,10 +219,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         }
 
         if (push_containers) {
-            // Sanity-check we're not asked to push both the legacy oscontainer and new one.
-            // cosa will also error on this, but we can give a clearer message.
+            // We only support pushing one of the legacy and new oscontainers.
+            // If the legacy oscontainer was built, that's the one we push.
             if ('oscontainer' in push_containers && 'legacy_oscontainer' in push_containers) {
-                error("Cannot push both oscontainer and legacy_oscontainer")
+                push_containers.remove('oscontainer')
             }
             stage("Push Containers") {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
