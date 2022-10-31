@@ -223,7 +223,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
                         def repo = registry_repos[configname]
                         def (artifact, metajsonname, tag_suffix) = val
-                        def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
+                        def extra_args = basearches.collect{"--arch ${it}"}.join(" ")
+                        if (registry_repos.v2s2) {
+                            extra_args += " --v2s2"
+                        }
                         def tag_args = " --tag=${params.STREAM}${tag_suffix}"
                         if (registry_repos.add_build_tag) {
                             tag_args += " --tag ${params.VERSION}${tag_suffix}"
@@ -232,7 +235,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                         cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
                             --repo=${repo} ${tag_args} \
                             --artifact=${artifact} --metajsonname=${metajsonname} \
-                            --build=${params.VERSION} ${arch_args}
+                            --build=${params.VERSION} ${extra_args}
                         """)
 
                         def old_repo = registry_repos["${configname}_old"]
