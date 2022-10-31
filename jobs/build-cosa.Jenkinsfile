@@ -136,6 +136,8 @@ try {
                     images += " --image=docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}"
                 }
                 shwrap("""
+                mkdir /var/tmp/builder
+                export HOME=/var/tmp/builder # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668147
                 cosa push-container-manifest --v2s2 \
                     --auth=\$REGISTRY_SECRET --tag ${gitref} \
                     --repo ${params.CONTAINER_REGISTRY_REPO} ${images}
@@ -145,6 +147,7 @@ try {
                 // that would be preferable.
                 if (gitref == "main") {
                     shwrap("""
+                    export HOME=/var/tmp/builder # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668147
                     skopeo copy --all --authfile \$REGISTRY_SECRET   \
                         docker://${params.CONTAINER_REGISTRY_REPO}:main \
                         docker://${params.CONTAINER_REGISTRY_REPO}:latest
@@ -155,6 +158,7 @@ try {
             stage('Delete Intermediate Tags') {
                 parallel basearches.collectEntries{arch -> [arch, {
                     shwrap("""
+                    export HOME=/var/tmp/builder # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668147
                     skopeo delete --authfile=\$REGISTRY_SECRET \
                         docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}
                     """)
