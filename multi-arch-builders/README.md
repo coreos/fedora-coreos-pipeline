@@ -25,11 +25,11 @@ Bring the instance up with appropriate details:
 
 ```bash
 NAME='coreos-aarch64-builder'
-AMI='ami-0cd88be9379abf352'
+AMI=''
 TYPE='a1.metal'
 DISK='200'
-SUBNET='subnet-0732e4cda7466a2ae'
-SECURITY_GROUPS='sg-7d0b4c05'
+SUBNET='subnet-050b478f586723c62'
+SECURITY_GROUPS='sg-0ff537e445349ca0e'
 USERDATA="${PWD}/coreos-aarch64-builder.ign"
 aws ec2 run-instances                     \
     --output json                         \
@@ -223,11 +223,11 @@ Bring the instance up with appropriate details:
 
 ```bash
 NAME='coreos-x86_64-builder'
-AMI='ami-068df0b4ca626835d'
+AMI=''
 TYPE='c6a.xlarge'
 DISK='100'
-SUBNET='subnet-0732e4cda7466a2ae'
-SECURITY_GROUPS='sg-7d0b4c05'
+SUBNET='subnet-050b478f586723c62'
+SECURITY_GROUPS='sg-0ff537e445349ca0e'
 USERDATA="${PWD}/coreos-x86_64-builder.ign"
 aws ec2 run-instances                     \
     --output json                         \
