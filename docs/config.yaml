@@ -26,6 +26,9 @@ hotfix:
   # OPTIONAL/TEMPORARY: skip all tests that require a signed kernel
   skip_secureboot_tests_hack: true
 
+# OPTIONAL/TEMPORARY: whether to use `versionary` to derive version numbers
+versionary_hack: true
+
 # OPTIONAL: coreos-assembler image to build with. Supports ${STREAM} variable.
 # If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
 cosa_img: quay.io/jlebon/coreos-assembler:pr3139-${STREAM}
