@@ -435,4 +435,11 @@ def AWSBuildUploadCredentialExists() {
     return utils.credentialsExist(creds)
 }
 
+// Emits Slack message if set up, otherwise does nothing.
+def trySlackSend(params) {
+    if (utils.credentialsExist([string(credentialsId: 'slack-api-token', variable: 'UNUSED')])) {
+        slackSend(params)
+    }
+}
+
 return this

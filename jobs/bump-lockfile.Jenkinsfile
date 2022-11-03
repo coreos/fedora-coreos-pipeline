@@ -1,9 +1,8 @@
-def pipeutils, pipecfg, official
+def pipeutils, pipecfg
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    official = pipeutils.isOfficial()
 }
 
 repo = "coreos/fedora-coreos-config"
@@ -290,7 +289,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
     if (currentBuild.result == 'UNSTABLE') {
         color = 'warning'
     }
-    if (official && currentBuild.result != 'SUCCESS') {
-        slackSend(color: color, message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
+    if (currentBuild.result != 'SUCCESS') {
+        pipeutils.trySlackSend(color: color, message: ":fcos: :trashfire: <${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
     }
 }

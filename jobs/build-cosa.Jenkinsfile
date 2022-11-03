@@ -1,11 +1,10 @@
-def pipeutils, pipecfg, official
+def pipeutils, pipecfg
 def gitref, commit, shortcommit
 def containername = 'coreos-assembler'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    official = pipeutils.isOfficial()
 }
 
 properties([
@@ -183,8 +182,8 @@ try {
     } else {
         currentBuild.description = "[${gitref}@${shortcommit}] ❌"
     }
-    if (official && currentBuild.result != 'SUCCESS') {
+    if (currentBuild.result != 'SUCCESS') {
         message = ":fcos: :trashfire: build-cosa <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
-        slackSend(color: 'danger', message: message)
+        pipeutils.trySlackSend(color: 'danger', message: message)
     }
 }

@@ -1,9 +1,8 @@
-def pipeutils, pipecfg, official
+def pipeutils, pipecfg
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    official = pipeutils.isOfficial()
 }
 
 properties([
@@ -182,8 +181,8 @@ lock(resource: "kola-azure-${params.ARCH}") {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        if (official && currentBuild.result != 'SUCCESS') {
-            slackSend(color: 'danger', message: ":fcos: :azure: :trashfire: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+        if (currentBuild.result != 'SUCCESS') {
+            pipeutils.trySlackSend(color: 'danger', message: ":fcos: :azure: :trashfire: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }

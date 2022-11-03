@@ -1,10 +1,9 @@
-def pipeutils, official
+def pipeutils
 def gitref, commit, shortcommit
 def containername = 'fcos-buildroot'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    official = pipeutils.isOfficial()
     pipecfg = pipeutils.load_pipecfg()
 }
 
@@ -175,8 +174,8 @@ try {
     } else {
         currentBuild.description = "[${gitref}@${shortcommit}] ❌"
     }
-    if (official && currentBuild.result != 'SUCCESS') {
+    if (currentBuild.result != 'SUCCESS') {
         message = ":fcos: :trashfire: build-${containername} <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
-        slackSend(color: 'danger', message: message)
+        pipeutils.trySlackSend(color: 'danger', message: message)
     }
 }

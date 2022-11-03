@@ -1,9 +1,8 @@
-def pipeutils, pipecfg, official
+def pipeutils, pipecfg
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    official = pipeutils.isOfficial()
 }
 
 properties([
@@ -135,7 +134,7 @@ try { timeout(time: 90, unit: 'MINUTES') {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    if (official && currentBuild.result != 'SUCCESS') {
-        slackSend(color: 'danger', message: ":fcos: :aws: :trashfire: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+    if (currentBuild.result != 'SUCCESS') {
+        pipeutils.trySlackSend(color: 'danger', message: ":fcos: :aws: :trashfire: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
     }
 }
