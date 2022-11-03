@@ -32,6 +32,8 @@ s3:
 registry_repos:
   oscontainer: quay.io/fedora/fedora-coreos
 
+versionary_hack: true
+
 default_artifacts:
   all:
     - metal

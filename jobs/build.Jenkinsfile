@@ -191,9 +191,7 @@ lock(resource: "build-${params.STREAM}") {
         def new_version = ""
         if (params.VERSION) {
             new_version = params.VERSION
-        } else if (official) {
-            // only use versioning that matches prod if we are running in the
-            // official pipeline.
+        } else if (pipecfg.versionary_hack) {
             new_version = shwrapCapture("/usr/lib/coreos-assembler/fcos-versionary")
         }
 
