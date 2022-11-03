@@ -15,19 +15,21 @@ def load_pipecfg() {
     def url = jenkinscfg['pipecfg-url']
     def ref = jenkinscfg['pipecfg-ref']
 
+    def pipecfg
     if (url == 'in-tree') {
-        return readYaml(file: "config.yaml")
+        pipecfg = readYaml(file: "config.yaml")
+    } else {
+        // this uses the `checkout` workflow step instead of just manually cloning so
+        // that changes show up in the Jenkins UI
+        checkout([
+            $class: 'GitSCM',
+            branches: [[name: "origin/${ref}"]],
+            extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pipecfg']],
+            userRemoteConfigs: [[url: url]]
+        ])
+        pipecfg = readYaml(file: "pipecfg/config.yaml")
     }
-
-    // this uses the `checkout` workflow step instead of just manually cloning so
-    // that changes show up in the Jenkins UI
-    checkout([
-        $class: 'GitSCM',
-        branches: [[name: "origin/${ref}"]],
-        extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pipecfg']],
-        userRemoteConfigs: [[url: url]]
-    ])
-    return readYaml(file: "pipecfg/config.yaml")
+    return pipecfg
 }
 
 def get_source_config_ref_for_stream(pipecfg, stream) {
