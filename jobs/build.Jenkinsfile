@@ -438,7 +438,7 @@ lock(resource: "build-${params.STREAM}") {
         // Since we are only running this stage for non-production (i.e. mechanical
         // and development) builds we'll default to not doing AWS AMI replication.
         // We'll also default to allowing failures for additonal architectures.
-        if (official && uploading && stream_info.type != "production") {
+        if (uploading && stream_info.type != "production") {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
