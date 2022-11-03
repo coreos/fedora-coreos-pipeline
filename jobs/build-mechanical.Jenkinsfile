@@ -34,7 +34,8 @@ node {
         // cron or manual build: build all mechanical streams
         mechanical_streams.each{
             build job: 'build', wait: false, parameters: [
-              string(name: 'STREAM', value: it)
+              string(name: 'STREAM', value: it),
+              booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
             ]
         }
     }

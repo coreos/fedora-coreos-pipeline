@@ -23,7 +23,8 @@ node {
     stream = pipeutils.stream_from_branch(change.GIT_BRANCH)
     if (stream in development_streams) {
         build job: 'build', wait: false, parameters: [
-          string(name: 'STREAM', value: stream)
+          string(name: 'STREAM', value: stream),
+          booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
         ]
     }
 }

@@ -29,6 +29,9 @@ properties([
       booleanParam(name: 'FORCE',
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
+      booleanParam(name: 'EARLY_ARCH_JOBS',
+                   defaultValue: true,
+                   description: "Fork off the multi-arch jobs before all tests have run"),
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
                    description: "Don't error out if upgrade tests fail (temporary)"),
@@ -325,45 +328,54 @@ lock(resource: "build-${params.STREAM}") {
                  skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
         }
 
-        // If we are uploading results then let's do an early archive
-        // of just the OSTree. This has the desired side effect of
-        // reserving our build ID before we fork off multi-arch builds.
-        stage('Archive OSTree') {
-            if (uploading) {
-                // run with --force here in case the previous run of the
-                // pipeline died in between buildupload and bump_builds_json()
-                pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa buildupload --force --skip-builds-json --artifact=ostree \
-                    s3 --aws-config-file=\${AWS_BUILD_UPLOAD_CONFIG} \
-                    --acl=public-read ${s3_stream_dir}/builds
-                """)
-                pipeutils.bump_builds_json(
-                    params.STREAM,
-                    newBuildID,
-                    basearch,
-                    s3_stream_dir)
+        // Define a closure for what to do when we want to fork off
+        // the multi-arch builds.
+        archive_ostree_and_fork_mArch_jobs = {
+            // If we are uploading results then let's do an early archive
+            // of just the OSTree. This has the desired side effect of
+            // reserving our build ID before we fork off multi-arch builds.
+            stage('Archive OSTree') {
+                if (uploading) {
+                    // run with --force here in case the previous run of the
+                    // pipeline died in between buildupload and bump_builds_json()
+                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                    cosa buildupload --force --skip-builds-json --artifact=ostree \
+                        s3 --aws-config-file=\${AWS_BUILD_UPLOAD_CONFIG} \
+                        --acl=public-read ${s3_stream_dir}/builds
+                    """)
+                    pipeutils.bump_builds_json(
+                        params.STREAM,
+                        newBuildID,
+                        basearch,
+                        s3_stream_dir)
+                }
+            }
+
+            stage('Fork Multi-Arch Builds') {
+                if (uploading) {
+                    for (arch in additional_arches) {
+                        // We pass in FORCE=true here since if we got this far we know
+                        // we want to do a build even if the code tells us that there
+                        // are no apparent changes since the previous commit.
+                        build job: 'build-arch', wait: false, parameters: [
+                            booleanParam(name: 'FORCE', value: true),
+                            booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
+                            string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit),
+                            string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
+                            string(name: 'STREAM', value: params.STREAM),
+                            string(name: 'VERSION', value: newBuildID),
+                            string(name: 'ARCH', value: arch),
+                            string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
+                            string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
+                        ]
+                    }
+                }
             }
         }
 
-        stage('Fork Multi-Arch Builds') {
-            if (uploading) {
-                for (arch in additional_arches) {
-                    // We pass in FORCE=true here since if we got this far we know
-                    // we want to do a build even if the code tells us that there
-                    // are no apparent changes since the previous commit.
-                    build job: 'build-arch', wait: false, parameters: [
-                        booleanParam(name: 'FORCE', value: true),
-                        booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
-                        string(name: 'SRC_CONFIG_COMMIT', value: src_config_commit),
-                        string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
-                        string(name: 'STREAM', value: params.STREAM),
-                        string(name: 'VERSION', value: newBuildID),
-                        string(name: 'ARCH', value: arch),
-                        string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
-                        string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
-                    ]
-                }
-            }
+        // If desired let's go ahead and archive+fork the multi-arch jobs
+        if (params.EARLY_ARCH_JOBS) {
+            archive_ostree_and_fork_mArch_jobs.call()
         }
 
         // Build the remaining artifacts
@@ -411,6 +423,12 @@ lock(resource: "build-${params.STREAM}") {
             stage('Cloud Upload') {
                 libcloud.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
+        }
+
+        // If we didn't do an early archive and start multi-arch
+        // jobs let's go ahead and do those pieces now
+        if (!params.EARLY_ARCH_JOBS) {
+            archive_ostree_and_fork_mArch_jobs.call()
         }
 
         stage('Archive') {
