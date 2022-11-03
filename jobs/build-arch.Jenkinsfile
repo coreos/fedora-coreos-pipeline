@@ -453,9 +453,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
     }
 
     echo message
-    if (official) {
-        slackSend(color: color, message: message)
-    }
+    pipeutils.trySlackSend(color: color, message: message)
     if (official) {
         pipeutils.tryWithMessagingCredentials() {
             shwrap("""
