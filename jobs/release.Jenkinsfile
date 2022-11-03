@@ -65,7 +65,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     cosaPod(cpu: "1", memory: "512Mi", image: cosa_img) {
     try {
 
-        def s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
+        def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
         def gcp_image = ""
         def ostree_prod_refs = [:]
 
@@ -273,11 +273,15 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 // Run plume to publish official builds; This will handle modifying
                 // object ACLs, modifying AMI image attributes,
                 // and creating/modifying the releases.json metadata index
+                // Note here we pass the bucket instead of `s3_stream_dir` but
+                // plume currently only actually interacts with objects under
+                // the `s3_stream_dir` key (i.e. `pipecfg.s3.builds_key`).
+                // We'll make this more explicit in the future.
                 shwrap("""
                 cosa shell -- plume release --distro fcos \
                     --version ${params.VERSION} \
                     --stream ${params.STREAM} \
-                    --bucket ${pipecfg.s3_bucket} \
+                    --bucket ${pipecfg.s3.bucket} \
                     --aws-credentials \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
             }

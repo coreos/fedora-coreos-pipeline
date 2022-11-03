@@ -31,14 +31,14 @@ cosaPod() {
         // if so
         production_streams.each{stream ->
             for (subdir in ["streams", "updates"]) {
-                shwrap("aws s3 cp s3://${pipecfg.s3_bucket}/${subdir}/${stream}.json ${subdir}/${stream}.json")
+                shwrap("aws s3 cp s3://${pipecfg.s3.bucket}/${subdir}/${stream}.json ${subdir}/${stream}.json")
             }
             if (shwrapRc("git diff --exit-code") != 0) {
                 shwrap("git reset --hard HEAD")
                 for (subdir in ["streams", "updates"]) {
                     shwrap("""
                         aws s3 cp --acl public-read --cache-control 'max-age=60' \
-                            ${subdir}/${stream}.json s3://${pipecfg.s3_bucket}/${subdir}/${stream}.json
+                            ${subdir}/${stream}.json s3://${pipecfg.s3.bucket}/${subdir}/${stream}.json
                     """)
                 }
                 pipeutils.tryWithMessagingCredentials() {
@@ -56,7 +56,7 @@ cosaPod() {
                 python3 -c 'import sys, yaml, json; json.dump(yaml.safe_load(sys.stdin.read()), sys.stdout)' \
                     < release-notes/${stream}.yml > release-notes/${stream}.json
                 aws s3 cp --acl public-read --cache-control 'max-age=60' \
-                    release-notes/${stream}.json s3://${pipecfg.s3_bucket}/release-notes/${stream}.json
+                    release-notes/${stream}.json s3://${pipecfg.s3.bucket}/release-notes/${stream}.json
             """)
         }
     }

@@ -56,7 +56,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
 
     def s3_stream_dir = params.S3_STREAM_DIR
     if (s3_stream_dir == "") {
-        s3_stream_dir = "${pipecfg.s3_bucket}/prod/streams/${params.STREAM}"
+        s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
     }
 
     // Go with 1.5Gi here because we download/decompress/upload the image
