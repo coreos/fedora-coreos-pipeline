@@ -91,7 +91,7 @@ node {
 // pipeline older streams and we've created some branches in the COSA
 // git repo that we'd like to build and push only to the staging quay repo.
 def container_registry_repo = params.CONTAINER_REGISTRY_REPO
-if ((gitref.startsWith("rhcos-") && gitref.endsWith("-new")) {
+if (gitref.startsWith("rhcos-") && gitref.endsWith("-new")) {
     container_registry_repo = params.CONTAINER_REGISTRY_STAGING_REPO
 }
 
