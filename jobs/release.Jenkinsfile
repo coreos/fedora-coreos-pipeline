@@ -3,7 +3,6 @@ node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    def jenkinscfg = pipeutils.load_jenkins_config()
 }
 
 properties([

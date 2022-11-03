@@ -6,8 +6,6 @@ node {
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     libupload = load("libupload.groovy")
-
-    def jenkinscfg = pipeutils.load_jenkins_config()
 }
 
 // Base URL through which to download artifacts
