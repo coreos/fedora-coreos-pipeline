@@ -40,10 +40,6 @@ def get_source_config_ref_for_stream(pipecfg, stream) {
     }
 }
 
-// Tells us if we're running if the official Jenkins for the FCOS pipeline
-boolean isOfficial() {
-    return (env.JENKINS_URL in ['https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/'])
-}
 
 // Parse and handle the result of Kola
 boolean checkKolaSuccess(file) {

@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, official, uploading, libupload
+def pipeutils, pipecfg, uploading, libupload
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -8,13 +8,6 @@ node {
     libupload = load("libupload.groovy")
 
     def jenkinscfg = pipeutils.load_jenkins_config()
-
-    official = pipeutils.isOfficial()
-    if (official) {
-        echo "Running in official (prod) mode."
-    } else {
-        echo "Running in unofficial pipeline on ${env.JENKINS_URL}."
-    }
 }
 
 // Base URL through which to download artifacts
