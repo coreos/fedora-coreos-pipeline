@@ -87,6 +87,14 @@ node {
     shortcommit = commit.substring(0,7)
 }
 
+// HACK: for a period of time we're going to be hacking on the RHCOS
+// pipeline older streams and we've created some branches in the COSA
+// git repo that we'd like to build and push only to the staging quay repo.
+def container_registry_repo = params.CONTAINER_REGISTRY_REPO
+if ((gitref.startsWith("rhcos-") && gitref.endsWith("-new")) {
+    container_registry_repo = params.CONTAINER_REGISTRY_STAGING_REPO
+}
+
 currentBuild.description = "[${gitref}@${shortcommit}] Waiting"
 
 // Get the list of requested architectures to build for
@@ -139,7 +147,7 @@ try {
                 export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
                 cosa push-container-manifest --v2s2 \
                     --auth=\$REGISTRY_SECRET --tag ${gitref} \
-                    --repo ${params.CONTAINER_REGISTRY_REPO} ${images}
+                    --repo ${container_registry_repo} ${images}
                 """)
                 // Specifically for the `main` branch let's also update the `latest` tag
                 // If there was a way to alias/tie these two together in the Quay UI
@@ -148,8 +156,8 @@ try {
                     shwrap("""
                     export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
                     skopeo copy --all --authfile \$REGISTRY_SECRET   \
-                        docker://${params.CONTAINER_REGISTRY_REPO}:main \
-                        docker://${params.CONTAINER_REGISTRY_REPO}:latest
+                        docker://${container_registry_repo}:main \
+                        docker://${container_registry_repo}:latest
                     """)
                 }
             }
