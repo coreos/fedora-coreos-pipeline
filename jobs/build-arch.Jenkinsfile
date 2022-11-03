@@ -49,13 +49,22 @@ properties([
              description: 'The exact config repo git commit to build against',
              defaultValue: '',
              trim: true),
-    ]),
+    ] + pipeutils.add_hotfix_parameters_if_supported()),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
         artifactNumToKeepStr: '100'
     )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
+
+// Reload pipecfg if a hotfix build was provided. The reason we do this here
+// instead of loading the right one upfront is so that we don't modify the
+// parameter definitions above and their default values.
+if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
+    node {
+        pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
+    }
+}
 
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
@@ -319,7 +328,8 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         // Upload to relevant clouds
-        if (uploading) {
+        // XXX: we don't support cloud uploads yet for hotfixes
+        if (uploading && !pipecfg.hotfix) {
             stage('Cloud Upload') {
                 libcloud.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
