@@ -45,13 +45,22 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
-    ]),
+    ] + pipeutils.add_hotfix_parameters_if_supported()),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
         artifactNumToKeepStr: '100'
     )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
+
+// Reload pipecfg if a hotfix build was provided. The reason we do this here
+// instead of loading the right one upfront is so that we don't modify the
+// parameter definitions above and their default values.
+if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
+    node {
+        pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
+    }
+}
 
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
@@ -324,7 +333,9 @@ lock(resource: "build-${params.STREAM}") {
                         string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
                         string(name: 'STREAM', value: params.STREAM),
                         string(name: 'VERSION', value: newBuildID),
-                        string(name: 'ARCH', value: arch)
+                        string(name: 'ARCH', value: arch),
+                        string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
+                        string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
                     ]
                 }
             }
@@ -360,7 +371,8 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // Upload to relevant clouds
-        if (uploading) {
+        // XXX: we don't support cloud uploads yet for hotfixes
+        if (uploading && !pipecfg.hotfix) {
             stage('Cloud Upload') {
                 libcloud.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
@@ -436,7 +448,9 @@ lock(resource: "build-${params.STREAM}") {
                     string(name: 'ADDITIONAL_ARCHES', value: additional_arches.join(" ")),
                     string(name: 'VERSION', value: newBuildID),
                     booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
-                    booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION)
+                    booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
+                    string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
+                    string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
                 ]
             }
         }

@@ -23,6 +23,8 @@ default_artifacts:
 
 # OPTIONAL: hotfix-related keys
 hotfix:
+  # REQUIRED: name for hotfix used to tag pushed resources
+  name: art1234
   # OPTIONAL/TEMPORARY: skip all tests that require a signed kernel
   skip_secureboot_tests_hack: true
 
