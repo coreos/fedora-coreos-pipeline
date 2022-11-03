@@ -143,7 +143,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
-        def local_builddir = "/srv/devel/streams/${params.STREAM}"
         def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
         def src_config_commit
         if (params.SRC_CONFIG_COMMIT) {
@@ -197,14 +196,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
-            } else if (utils.pathExists(local_builddir)) {
-                // if using local builddir then sync it from local and then
-                // push to the remote
-                shwrap("""
-                COREOS_ASSEMBLER_REMOTE_SESSION= \
-                    cosa buildfetch --url=${local_builddir} --arch=${basearch}
-                cosa remote-session sync ./ :/srv/
-                """)
             }
         }
 
@@ -364,15 +355,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                     newBuildID,
                     basearch,
                     s3_stream_dir)
-            } else {
-                // Without an S3 server, just archive into the PVC
-                // itself. Otherwise there'd be no other way to retrieve the
-                // artifacts. But note we only keep one build at a time.
-                shwrap("""
-                rm -rf ${local_builddir}
-                mkdir -p ${local_builddir}
-                cosa remote-session sync :builds/ ${local_builddir}
-                """)
             }
         }
 
