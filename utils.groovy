@@ -57,6 +57,15 @@ boolean checkKolaSuccess(file) {
     return true
 }
 
+def get_s3_streams_dir(pipecfg, stream) {
+    def s = pipecfg.s3.bucket
+    if (pipecfg.s3.builds_key) {
+        def key = utils.substituteStr(pipecfg.s3.builds_key, [STREAM: stream])
+        s += "/${key}"
+    }
+    return s
+}
+
 def aws_s3_cp_allow_noent(src, dest) {
     // see similar code in `cosa buildfetch`
     shwrapWithAWSBuildUploadCredentials("""

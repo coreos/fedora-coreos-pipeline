@@ -24,8 +24,10 @@ additional_arches: [aarch64, ppc64le, s390x]
 source_config:
   url: https://github.com/coreos/fedora-coreos-config
 
-# remove to disable S3 uploads
-s3_bucket: fcos-builds
+s3:
+  bucket: fcos-builds
+  # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
+  builds_key: "prod/streams/${STREAM}"
 
 registry_repos:
   oscontainer: quay.io/fedora/fedora-coreos

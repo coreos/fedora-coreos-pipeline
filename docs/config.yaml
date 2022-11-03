@@ -26,7 +26,7 @@ hotfix:
   # OPTIONAL/TEMPORARY: skip all tests that require a signed kernel
   skip_secureboot_tests_hack: true
 
-# OPTIONAL: coreos-assembler image to build with. supports ${STREAM} variable.
+# OPTIONAL: coreos-assembler image to build with. Supports ${STREAM} variable.
 # If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
 cosa_img: quay.io/jlebon/coreos-assembler:pr3139-${STREAM}
 
@@ -71,8 +71,14 @@ streams:
 # REQUIRED: other architectures supported other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
 
-# OPTIONAL: S3 bucket to which to upload build artifacts
-s3_bucket: fcos-builds
+# OPTIONAL: S3 bucket and key to which to upload build artifacts. For reference,
+# the builds.json file will be located at
+# `${s3.bucket}/${s3.builds_key}/builds/builds.json`.
+s3:
+  # REQUIRED: S3 bucket name
+  bucket: rhcos-jlebon
+  # OPTIONAL: S3 bucket subkey. Supports `${STREAM}` variable.
+  builds_key: "streams/${STREAM}"
 
 # OPTIONAL: container registry-related keys
 registry_repos:
