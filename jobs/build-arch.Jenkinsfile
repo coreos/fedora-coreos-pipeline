@@ -233,19 +233,16 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         currentBuild.description = "[${params.STREAM}][${basearch}] ⚡ ${newBuildID}"
 
-
-        if (official) {
-            pipeutils.tryWithMessagingCredentials() {
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                    build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                    --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                    --state STARTED
-                """)
-            }
+        pipeutils.tryWithMessagingCredentials() {
+            shwrap("""
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+                --state STARTED
+            """)
         }
 
-        if (official && uploading) {
+        if (uploading) {
             pipeutils.tryWithMessagingCredentials() {
                 stage('Sign OSTree') {
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
@@ -363,7 +360,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // must be run after the archive stage because the artifacts
         // are pulled from their S3 locations. They can be run in
         // parallel.
-        if (official && uploading) {
+        if (uploading) {
             pipeutils.tryWithMessagingCredentials() {
                 parallelruns = [:]
                 parallelruns['Sign Images'] = {
@@ -436,14 +433,12 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
     echo message
     pipeutils.trySlackSend(color: color, message: message)
-    if (official) {
-        pipeutils.tryWithMessagingCredentials() {
-            shwrap("""
-            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
-                --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
-                --state FINISHED --result ${currentBuild.result}
-            """)
-        }
+    pipeutils.tryWithMessagingCredentials() {
+        shwrap("""
+        /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+            build.state.change --build ${newBuildID} --basearch ${basearch} --stream ${params.STREAM} \
+            --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
+            --state FINISHED --result ${currentBuild.result}
+        """)
     }
 }}}}} // finally, cosaPod, timeout, and locks finish here
