@@ -78,7 +78,7 @@ except botocore.exceptions.ClientError as e:
     if e.response["Error"]["Code"] != "404":
         raise e
     print(f"{src} does not exist")
-    ' '${src}' '${dest}'""")}
+    ' '${src}' '${dest}'""")
 }
 
 def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
