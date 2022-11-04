@@ -347,7 +347,6 @@ def run_cloud_tests(pipecfg, stream, version, s3_stream_dir, basearch, commit) {
     // Define a set of parameters that are common to all test.
     def params = [string(name: 'STREAM', value: stream),
                   string(name: 'VERSION', value: version),
-                  string(name: 'S3_STREAM_DIR', value: s3_stream_dir),
                   string(name: 'ARCH', value: basearch),
                   string(name: 'SRC_CONFIG_COMMIT', value: commit)]
 
