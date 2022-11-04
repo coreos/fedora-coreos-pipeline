@@ -20,10 +20,6 @@ properties([
              description: 'Target architecture',
              defaultValue: 'x86_64',
              trim: true),
-      string(name: 'S3_STREAM_DIR',
-             description: 'Override the Fedora CoreOS S3 stream directory',
-             defaultValue: '',
-             trim: true),
       string(name: 'KOLA_TESTS',
              description: 'Override tests to run',
              defaultValue: "",
@@ -54,10 +50,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
     // Use eastus region for now
     def region = "eastus"
 
-    def s3_stream_dir = params.S3_STREAM_DIR
-    if (s3_stream_dir == "") {
-        s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
-    }
+    def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
     // Go with 1.5Gi here because we download/decompress/upload the image
     def cosa_memory_request_mb = 1536

@@ -20,10 +20,6 @@ properties([
              description: 'Target architecture',
              defaultValue: 'x86_64',
              trim: true),
-      string(name: 'S3_STREAM_DIR',
-             description: 'Override the Fedora CoreOS S3 stream directory',
-             defaultValue: '',
-             trim: true),
       string(name: 'KOLA_TESTS',
              description: 'Override tests to run',
              defaultValue: "",
@@ -46,10 +42,7 @@ properties([
 
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
 
-def s3_stream_dir = params.S3_STREAM_DIR
-if (s3_stream_dir == "") {
-    s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
-}
+def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 try { timeout(time: 30, unit: 'MINUTES') {
     cosaPod(memory: "512Mi", kvm: false,

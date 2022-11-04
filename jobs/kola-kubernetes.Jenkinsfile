@@ -20,10 +20,6 @@ properties([
              description: 'Target architecture',
              defaultValue: 'x86_64',
              trim: true),
-      string(name: 'S3_STREAM_DIR',
-             description: 'Override the Fedora CoreOS S3 stream directory',
-             defaultValue: '',
-             trim: true),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override the coreos-assembler image to use',
              defaultValue: "quay.io/coreos-assembler/coreos-assembler:main",
@@ -42,10 +38,7 @@ properties([
 
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
 
-def s3_stream_dir = params.S3_STREAM_DIR
-if (s3_stream_dir == "") {
-    s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
-}
+def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 try { timeout(time: 60, unit: 'MINUTES') {
     cosaPod(memory: "512Mi", kvm: false,
