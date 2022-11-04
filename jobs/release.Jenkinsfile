@@ -106,7 +106,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             // We need to fetch a few artifacts if they were built. This assumes if
             // it was built for one platform it was built for all.
             def fetch_artifacts = ['ostree', 'extensions-container', 'legacy-oscontainer']
-            def meta = readJSON(text: shwrapCapture("cosa meta --arch=x86_64 --dump"))
+            def meta = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=x86_64 --dump"))
             fetch_artifacts.retainAll(meta.images.keySet())
 
             def fetch_args = basearches.collect{"--arch=${it}"}
@@ -121,7 +121,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         }
 
         for (basearch in basearches) {
-            def meta = readJSON(text: shwrapCapture("cosa meta --arch=${basearch} --dump"))
+            def meta = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=${basearch} --dump"))
 
             // For production streams, import the OSTree into the prod
             // OSTree repo.
@@ -201,7 +201,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         // filter out those not built. this step makes the assumption that if an
         // image isn't built for x86_64, then we don't upload it at all
-        def meta_x86_64 = readJSON(text: shwrapCapture("cosa meta --arch=x86_64 --dump"))
+        def meta_x86_64 = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=x86_64 --dump"))
         def artifacts = meta_x86_64.images.keySet()
 
         // in newer Groovy, retainAll can take a closure, which would be nicer here
