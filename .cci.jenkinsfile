@@ -13,11 +13,9 @@ node {
         def found_error = false
         files.each {
             try {
-                def l = load(it.path)
-                println("${it.path}: OK")
+                println("${it.path}")
+                load(it.path)
             } catch (e) {
-                println("${it.path}: ERROR")
-                println(e)
                 found_error = true
             }
         }
