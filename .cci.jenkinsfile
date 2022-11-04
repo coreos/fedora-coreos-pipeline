@@ -3,8 +3,32 @@
 node {
     checkout scm
 
-    stage("Test") {
-        // for now, just sanity check all the manifests
+    stage("Check Groovy") {
+        // hacky way to convert Jenkinsfiles into a "library" without executing it
+        shwrap("""
+        find . -type f -name '*.Jenkinsfile' -exec sed -i -e '1i\\return this' '{}' +
+        """)
+
+        def files = findFiles(glob: '**/*.groovy') + findFiles(glob: '**/*.Jenkinsfile')
+        def found_error = false
+        files.each {
+            try {
+                def l = load(it.path)
+                println("${it.path}: OK")
+            } catch (e) {
+                println("${it.path}: ERROR")
+                println(e)
+                found_error = true
+            }
+        }
+
+        if (found_error) {
+            error "Syntax errors found"
+        }
+    }
+
+    stage("Check Manifests") {
+        // just sanity check all the manifests
         shwrap("""
         find manifests/ -iname '*.yaml' | xargs -n 1 oc create --dry-run -f
         """)
