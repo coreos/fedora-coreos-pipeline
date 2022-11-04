@@ -422,8 +422,8 @@ def shwrapWithAWSBuildUploadCredentials(cmds) {
 
 // Return true or false based on if the AWS Build Upload credential exists
 def AWSBuildUploadCredentialExists() {
-    def creds = [file(variable: 'AWS_BUILD_UPLOAD_CONFIG',
-                      credentialsId: 'aws-build-upload-config')]
+    def creds = [file(variable: 'AWS_BUILD_UPLOAD_CONFIG'),
+                      credentialsId: 'aws-build-upload-config']
     return utils.credentialsExist(creds)
 }
 
