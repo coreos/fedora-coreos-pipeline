@@ -23,8 +23,8 @@ properties([
              defaultValue: '',
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
-             description: 'Space-separated list of additional target architectures',
-             defaultValue: pipecfg.additional_arches.join(" "),
+             description: 'Override default additional target architectures (space-separated)',
+             defaultValue: "",
              trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,
@@ -56,6 +56,8 @@ properties([
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
+def additional_arches = params.ADDITIONAL_ARCHES.split()
+additional_arches = additional_arches ?: pipecfg.additional_arches
 
 def stream_info = pipecfg.streams[params.STREAM]
 
@@ -311,7 +313,7 @@ lock(resource: "build-${params.STREAM}") {
 
         stage('Fork Multi-Arch Builds') {
             if (uploading) {
-                for (arch in params.ADDITIONAL_ARCHES.split()) {
+                for (arch in additional_arches) {
                     // We pass in FORCE=true here since if we got this far we know
                     // we want to do a build even if the code tells us that there
                     // are no apparent changes since the previous commit.
@@ -431,7 +433,7 @@ lock(resource: "build-${params.STREAM}") {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'ARCHES', value: basearch + " " + params.ADDITIONAL_ARCHES),
+                    string(name: 'ADDITIONAL_ARCHES', value: additional_arches.join(" ")),
                     string(name: 'VERSION', value: newBuildID),
                     booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
                     booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION)

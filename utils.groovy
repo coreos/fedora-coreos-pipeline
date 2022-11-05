@@ -70,6 +70,12 @@ def validate_pipecfg(pipecfg) {
             error("S3 bucket ${pipecfg.s3.bucket} can only be used on ${protected_buckets[pipecfg.s3.bucket]}")
         }
     }
+
+    // check that additional arches requested are a subset of what we support
+    def unsupported = pipecfg.additional_arches - get_supported_additional_arches()
+    if (unsupported) {
+        error("Unsupported architectures requested: ${unsupported.join(' ')}")
+    }
 }
 
 def get_source_config_ref_for_stream(pipecfg, stream) {
@@ -482,6 +488,19 @@ def trySlackSend(params) {
     if (utils.credentialsExist([string(credentialsId: 'slack-api-token', variable: 'UNUSED')])) {
         slackSend(params)
     }
+}
+
+// Returns the set of architectures that this Jenkins instance has support for.
+def get_supported_additional_arches() {
+    def known_additional_arches = ["aarch64", "s390x", "ppc64le"]
+    def supported = []
+    for (arch in known_additional_arches) {
+        if (utils.credentialsExist([string(credentialsId: "coreos-${arch}-builder-host",
+                                           variable: 'UNUSED')])) {
+            supported += arch
+        }
+    }
+    return supported
 }
 
 return this
