@@ -16,9 +16,9 @@ properties([
              description: 'Fedora CoreOS version to release',
              defaultValue: '',
              trim: true),
-      string(name: 'ARCHES',
-             description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64" + " " + pipecfg.additional_arches.join(" "),
+      string(name: 'ADDITIONAL_ARCHES',
+             description: 'Override additional target architectures (space-separated)',
+             defaultValue: "",
              trim: true),
       booleanParam(name: 'ALLOW_MISSING_ARCHES',
                    defaultValue: false,
@@ -47,13 +47,17 @@ if (params.VERSION == "") {
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
+def basearches = params.ADDITIONAL_ARCHES.split() as List
+basearches = basearches ?: pipecfg.additional_arches
+
+// we always release for x86_64
+basearches += 'x86_64'
+// make sure there are no duplicates
+basearches = basearches.unique()
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-currentBuild.description = "[${params.STREAM}][${params.ARCHES}] - ${params.VERSION}"
-
-// Get the list of requested architectures to release
-def basearches = params.ARCHES.split() as Set
+currentBuild.description = "[${params.STREAM}][${basearches.join(' ')}] - ${params.VERSION}"
 
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
@@ -327,6 +331,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     throw e
 } finally {
     if (currentBuild.result != 'SUCCESS') {
-        pipeutils.trySlackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCHES}] (${params.VERSION})")
+        pipeutils.trySlackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
     }
 }}} // try-catch-finally, cosaPod and lock finish here

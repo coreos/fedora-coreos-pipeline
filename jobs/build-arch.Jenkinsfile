@@ -24,7 +24,7 @@ properties([
              trim: true),
       string(name: 'ARCH',
              description: 'The target architecture',
-             choices: pipecfg.additional_arches,
+             choices: pipeutils.get_supported_additional_arches(),
              trim: true),
       booleanParam(name: 'FORCE',
                    defaultValue: false,

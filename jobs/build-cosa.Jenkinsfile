@@ -1,10 +1,9 @@
-def pipeutils, pipecfg
+def pipeutils
 def gitref, commit, shortcommit
 def containername = 'coreos-assembler'
 node {
     checkout scm
     pipeutils = load("utils.groovy")
-    pipecfg = pipeutils.load_pipecfg()
 }
 
 properties([
@@ -32,7 +31,7 @@ properties([
     parameters([
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64" + " " + pipecfg.additional_arches.join(" "),
+             defaultValue: "x86_64" + " " + pipeutils.get_supported_additional_arches().join(" "),
              trim: true),
       string(name: 'COREOS_ASSEMBLER_GIT_URL',
              description: 'Override the coreos-assembler git repo to use',

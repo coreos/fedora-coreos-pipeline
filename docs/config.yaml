@@ -71,7 +71,7 @@ streams:
     rawhide:
       type: mechanical
 
-# REQUIRED: other architectures supported other than x86_64
+# REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
 
 # OPTIONAL: S3 bucket and key to which to upload build artifacts. For reference,
