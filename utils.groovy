@@ -153,6 +153,10 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
             insert_build ${buildid} \$TMPD ${arch}
             mkdir -p builds
             cp \$TMPD/builds/builds.json builds/builds.json
+        elif [ -n "\${COREOS_ASSEMBLER_REMOTE_SESSION:-}" ]; then
+            # If in a remote session then copy the builds.json back local
+            mkdir -p ./builds # make local builds directory first
+            cosa shell -- cat builds/builds.json > builds/builds.json
         fi
         """)
         shwrapWithAWSBuildUploadCredentials("""
