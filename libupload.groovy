@@ -1,4 +1,84 @@
 
+// Replicate artifacts in various clouds
+def replicate_to_clouds(pipecfg, basearch, buildID) {
+
+    def meta = readJSON(text: shwrapCapture("cosa meta --arch=${basearch} --dump"))
+    def replicators = [:]
+    def credentials
+
+    credentials = [file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
+                        credentialsId: "aliyun-image-upload-config")]
+    if (meta.aliyun) {
+        def creds = credentials
+        replicators["☁️ 🔄:aliyun"] = {
+            withCredentials(creds) {
+                def c = pipecfg.clouds.aliyun
+                def extraArgs = []
+                if (c.public) {
+                    extraArgs += "--public"
+                }
+                shwrap("""
+                coreos-assembler aliyun-replicate \
+                    --build=${buildID} \
+                    --arch=${basearch} \
+                    --config=\${ALIYUN_IMAGE_UPLOAD_CONFIG} \
+                    ${extraArgs.join(' ')}
+                """)
+            }
+        }
+    }
+    if (meta.amis) {
+        replicators["☁️ 🔄:aws"] = {
+            def replicated = false
+            def ids = ['aws-build-upload-config', 'aws-govcloud-image-upload-config']
+            def c = pipecfg.clouds.aws
+            for (id in ids) {
+                tryWithCredentials([file(variable: 'AWS_CONFIG_FILE', credentialsId: id)]) {
+                    shwrap("""
+                    cosa aws-replicate \
+                        --build=${buildID} \
+                        --arch=${basearch} \
+                        --credentials-file=\${AWS_CONFIG_FILE} \
+                        --log-level=INFO
+                    """)
+                    replicated = true
+                }
+            }
+            if (!replicated) {
+                        error("AWS Replication asked for but no credentials exist")
+            }
+        }
+    }
+    credentials = [file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
+                        credentialsId: "powervs-image-upload-config")]
+    if (meta.powervs) {
+        def creds = credentials
+        replicators["☁️ 🔄:powervs"] = {
+            withCredentials(creds) {
+                def c = pipecfg.clouds.powervs
+                // for powervs in RHCOS the images are uploaded to a bucket in each
+                // region that is uniquely named with the region as a suffix
+                // i.e. `rhcos-powervs-images-us-east`
+                def regions = []
+                if (c.regions) {
+                     regions = c.regions.join(" ")
+                }
+                shwrap("""
+                cosa powervs-replicate \
+                    --cloud-object-storage ${c.cloud_object_storage_service_instance} \
+                    --build ${buildID} \
+                    --arch=${basearch} \
+                    --bucket-prefix ${c.bucket} \
+                    --regions ${regions} \
+                    --credentials-file \${"POWER_IMAGE_UPLOAD_CONFIG"} \
+                    --force
+                """)
+            }
+        }
+    }
+
+    parallel replicators
+}
 // Upload artifacts to clouds
 def upload_to_clouds(pipecfg, basearch, buildID, stream) {
 
