@@ -22,13 +22,13 @@ properties([
       booleanParam(name: 'ALLOW_MISSING_ARCHES',
                    defaultValue: false,
                    description: 'Allow release to continue even with missing architectures'),
-      // Default to true for AWS_REPLICATION because the only case
+      // Default to true for CLOUD_REPLICATION because the only case
       // where we are running the job by hand is when we're doing a
       // production release and we want to replicate there. Defaulting
       // to true means there is less opportunity for human error.
-      booleanParam(name: 'AWS_REPLICATION',
+      booleanParam(name: 'CLOUD_REPLICATION',
                    defaultValue: true,
-                   description: 'Force AWS AMI replication'),
+                   description: 'Force cloud image replication'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
              defaultValue: "",
@@ -160,7 +160,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
 
 
-            if (meta.amis && params.AWS_REPLICATION) {
+            if (meta.amis && params.CLOUD_REPLICATION) {
                 // Replicate AMI to other regions.
                 stage("${basearch} AWS AMI Replication") {
                     def replicated = false

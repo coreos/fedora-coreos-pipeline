@@ -32,9 +32,9 @@ properties([
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
                    description: "Don't error out if upgrade tests fail (temporary)"),
-      booleanParam(name: 'AWS_REPLICATION',
+      booleanParam(name: 'CLOUD_REPLICATION',
                    defaultValue: false,
-                   description: 'Force AWS AMI replication for non-production'),
+                   description: 'Force cloud image replication for non-production'),
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
              defaultValue: "",
@@ -434,7 +434,7 @@ lock(resource: "build-${params.STREAM}") {
                     string(name: 'ARCHES', value: basearch + " " + params.ADDITIONAL_ARCHES),
                     string(name: 'VERSION', value: newBuildID),
                     booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
-                    booleanParam(name: 'AWS_REPLICATION', value: params.AWS_REPLICATION)
+                    booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION)
                 ]
             }
         }
