@@ -101,6 +101,10 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["ALIYUN_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.aliyun
+                def extraArgs = []
+                if (c.public) {
+                    extraArgs += "--public"
+                }
                 shwrap("""
                 cosa buildextend-aliyun \
                     --upload \
@@ -108,7 +112,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     --build=${buildID} \
                     --region=${c.primary_region} \
                     --bucket=${c.bucket} \
-                    --config=\${ALIYUN_IMAGE_UPLOAD_CONFIG}
+                    --config=\${ALIYUN_IMAGE_UPLOAD_CONFIG} \
+                    ${extraArgs.join(' ')}
                 """)
             }
         }

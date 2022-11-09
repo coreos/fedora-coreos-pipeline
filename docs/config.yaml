@@ -138,6 +138,8 @@ clouds:
     # REQUIRED (if Aliyun image upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-image-uploads/ami-import
+    # OPTIONAL: boolean: whether or not to set the image/snapshot as public
+    public: true
     # OPTIONAL: list of architectures to limit cloud testing to.
     test_architectures: [x86_64]
   azure:
