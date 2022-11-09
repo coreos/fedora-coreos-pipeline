@@ -11,7 +11,6 @@ node {
 // Base URL through which to download artifacts
 BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
 
-
 properties([
     pipelineTriggers([]),
     parameters([
@@ -23,7 +22,8 @@ properties([
              defaultValue: '',
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
-             description: 'Override default additional target architectures (space-separated)',
+             description: "Override additional architectures (space-separated). " +
+                          "Supported: ${pipeutils.get_supported_additional_arches().join(' ')}",
              defaultValue: "",
              trim: true),
       booleanParam(name: 'FORCE',
