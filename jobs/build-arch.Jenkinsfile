@@ -57,12 +57,15 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+def build_description = "[${params.STREAM}][${params.ARCH}]"
+
 // Reload pipecfg if a hotfix build was provided. The reason we do this here
 // instead of loading the right one upfront is so that we don't modify the
 // parameter definitions above and their default values.
 if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
     node {
         pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
+        build_description = "[${params.STREAM}-${pipecfg.hotfix.name}][${params.ARCH}]"
     }
 }
 
@@ -87,7 +90,7 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 def ncpus = 1
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
-currentBuild.description = "[${params.STREAM}][${params.ARCH}] Waiting"
+currentBuild.description = "${build_description} Waiting"
 
 // declare these early so we can use them in `finally` block
 assert params.VERSION != ""
@@ -108,7 +111,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             image: cosa_controller_img) {
     try {
 
-        currentBuild.description = "[${params.STREAM}][${basearch}] Running"
+        currentBuild.description = "${build_description} Running"
 
 
         // this is defined IFF we *should* and we *can* upload to S3
@@ -231,7 +234,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
-        currentBuild.description = "[${params.STREAM}][${basearch}] ⚡ ${newBuildID}"
+        currentBuild.description = "${build_description} ⚡ ${newBuildID}"
 
         pipeutils.tryWithMessagingCredentials() {
             shwrap("""

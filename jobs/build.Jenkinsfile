@@ -53,12 +53,15 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+def build_description = "[${params.STREAM}]"
+
 // Reload pipecfg if a hotfix build was provided. The reason we do this here
 // instead of loading the right one upfront is so that we don't modify the
 // parameter definitions above and their default values.
 if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
     node {
         pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
+        build_description = "[${params.STREAM}-${pipecfg.hotfix.name}]"
     }
 }
 
@@ -89,7 +92,7 @@ def cosa_memory_request_mb = 8.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 echo "Waiting for build-${params.STREAM} lock"
-currentBuild.description = "[${params.STREAM}] Waiting"
+currentBuild.description = "${build_description} Waiting"
 
 // declare these early so we can use them in `finally` block
 def newBuildID, basearch
@@ -102,7 +105,8 @@ lock(resource: "build-${params.STREAM}") {
     try {
 
         basearch = shwrapCapture("cosa basearch")
-        currentBuild.description = "[${params.STREAM}][${basearch}] Running"
+        build_description += "[${basearch}]"
+        currentBuild.description = "${build_description} Running"
 
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
@@ -229,12 +233,12 @@ lock(resource: "build-${params.STREAM}") {
         def buildID = shwrapCapture("readlink builds/latest")
         if (prevBuildID == buildID) {
             currentBuild.result = 'SUCCESS'
-            currentBuild.description = "[${params.STREAM}] 💤 (no new build)"
+            currentBuild.description = "${build_description} 💤 (no new build)"
             return
         }
 
         newBuildID = buildID
-        currentBuild.description = "[${params.STREAM}][${basearch}] ⚡ ${newBuildID}"
+        currentBuild.description = "${build_description} ⚡ ${newBuildID}"
 
 
         pipeutils.tryWithMessagingCredentials() {
