@@ -1,11 +1,11 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, uploading, libupload
+def pipeutils, pipecfg, uploading, libcloud
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
-    libupload = load("libupload.groovy")
+    libcloud = load("libcloud.groovy")
 }
 
 // Base URL through which to download artifacts
@@ -360,7 +360,7 @@ lock(resource: "build-${params.STREAM}") {
         // Upload to relevant clouds
         if (uploading) {
             stage('Cloud Upload') {
-                libupload.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
+                libcloud.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
         }
 
