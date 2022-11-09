@@ -83,8 +83,14 @@ streams:
       # building with a cosa too old to support `cosa remote-session`, which
       # should only be the case for RHCOS 4.11 and older.
       cosa_controller_img_hack: quay.io/coreos-assembler/coreos-assembler:latest
+      # OPTIONAL: override additional architectures to build for
+      additional_arches:
+        - s390x
     rawhide:
       type: mechanical
+      # OPTIONAL: additional architectures to skip building for
+      skip_additional_arches:
+        - s390x
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]

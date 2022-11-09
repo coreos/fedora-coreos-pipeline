@@ -61,7 +61,7 @@ if (params.VERSION == "") {
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 def basearches = params.ADDITIONAL_ARCHES.split() as List
-basearches = basearches ?: pipecfg.additional_arches
+basearches = basearches ?: pipeutils.get_additional_arches(pipecfg, params.STREAM)
 
 // we always release for x86_64
 basearches += 'x86_64'
