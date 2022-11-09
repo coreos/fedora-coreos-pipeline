@@ -1,8 +1,9 @@
-def pipeutils, pipecfg
+def pipeutils, pipecfg, libcloud
 node {
     checkout scm
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
+    libcloud = load("libcloud.groovy")
 }
 
 properties([
@@ -160,23 +161,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
 
 
-            if (meta.amis && params.CLOUD_REPLICATION) {
-                // Replicate AMI to other regions.
-                stage("${basearch} AWS AMI Replication") {
-                    def replicated = false
-                    def ids = ['aws-build-upload-config', 'aws-govcloud-image-upload-config']
-                    for (id in ids) {
-                        tryWithCredentials([file(variable: 'AWS_CONFIG_FILE', credentialsId: id)]) {
-                            shwrap("""
-                            cosa aws-replicate --build=${params.VERSION} --arch=${basearch} --log-level=INFO
-                            """)
-                            replicated = true
-                        }
-                    }
-                    if (!replicated) {
-                        error("AWS Replication asked for but no credentials exist")
-                    }
-                }
+            if (params.CLOUD_REPLICATION) {
+                libcloud.replicate_to_clouds(pipecfg, basearch, params.VERSION)
             }
         }
 
