@@ -194,6 +194,14 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                                'extensions': ['extensions-container', 'extensions-container', '-extensions'],
                                'legacy_oscontainer': ['legacy-oscontainer', 'oscontainer', '-legacy']]
 
+        // XXX: hack: on releases that don't support pushing the
+        // base-oscontainer, remove it from the list.
+        def schema = "/usr/lib/coreos-assembler/v1.json"
+        assert utils.pathExists(schema) : "cosa image missing ${schema}"
+        if (shwrapRc("jq -e '.optional|contains([\"base-oscontainer\"])' ${schema}") != 0) {
+            push_containers.remove('oscontainer')
+        }
+
         // filter out those not defined in the config
         push_containers.keySet().retainAll(registry_repos.keySet())
 
