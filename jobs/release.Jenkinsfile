@@ -39,12 +39,15 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+def build_description = "[${params.STREAM}]"
+
 // Reload pipecfg if a hotfix build was provided. The reason we do this here
 // instead of loading the right one upfront is so that we don't modify the
 // parameter definitions above and their default values.
 if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
     node {
         pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
+        build_description = "[${params.STREAM}-${pipecfg.hotfix.name}]"
     }
 }
 
@@ -67,7 +70,8 @@ basearches = basearches.unique()
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-currentBuild.description = "[${params.STREAM}][${basearches.join(' ')}] - ${params.VERSION}"
+build_description += "[${basearches.join(' ')}][${params.VERSION}]"
+currentBuild.description = "${build_description} Waiting"
 
 // We just lock here out of an abundance of caution in case somehow two release
 // jobs run for the same stream, but that really shouldn't happen. Anyway, if it
@@ -77,6 +81,8 @@ def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
     cosaPod(cpu: "1", memory: "512Mi", image: cosa_img) {
     try {
+
+        currentBuild.description = "${build_description} Running"
 
         def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
         def gcp_image = ""
@@ -340,6 +346,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
         currentBuild.result = 'SUCCESS'
+        currentBuild.description = "${build_description} ✓"
 
 // main try finishes here
 } catch (e) {
