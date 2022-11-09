@@ -189,3 +189,16 @@ clouds:
     # a suffix. If replication occurs other buckets in other regions will get
     # uploaded to. i.e. "fedora-coreos-image-uploads-us-east", "fedora-coreos-image-uploads-ca-tor"
     bucket: fedora-coreos-image-uploads
+    # REQUIRED (if POWERVS image upload credentials provided): the regions list
+    # where image files are uploaded. TODO: We need to validate if these regions are really required,
+    # or if we can auto-detect them, as we do for the other clouds.
+  regions:
+      - us-east
+      - au-syd
+      - br-sao
+      - ca-tor
+      - eu-de
+      - eu-gb
+      - jp-osa
+      - jp-tok
+      - us-south
