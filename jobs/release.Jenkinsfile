@@ -17,7 +17,8 @@ properties([
              defaultValue: '',
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
-             description: 'Override additional target architectures (space-separated)',
+             description: "Override additional architectures (space-separated). " +
+                          "Supported: ${pipeutils.get_supported_additional_arches().join(' ')}",
              defaultValue: "",
              trim: true),
       booleanParam(name: 'ALLOW_MISSING_ARCHES',
