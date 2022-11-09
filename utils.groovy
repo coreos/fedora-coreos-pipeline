@@ -499,6 +499,14 @@ def get_cosa_img(pipecfg, stream) {
     return utils.substituteStr(cosa_img, [STREAM: stream])
 }
 
+def get_additional_arches(pipecfg, stream) {
+    // stream-level override takes precedence over top-level
+    def arches = pipecfg.streams[stream].additional_arches ?: pipecfg.additional_arches
+    // apply stream-level skips
+    arches -= pipecfg.streams[stream].skip_additional_arches ?: []
+    return arches
+}
+
 // Run a closure inside a context that has access to the AWS Build
 // Upload credentials.
 def withAWSBuildUploadCredentials(Closure body) {

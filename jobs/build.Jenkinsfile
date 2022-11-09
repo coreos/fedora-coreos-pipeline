@@ -66,7 +66,7 @@ if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 def additional_arches = params.ADDITIONAL_ARCHES.split()
-additional_arches = additional_arches ?: pipecfg.additional_arches
+additional_arches = additional_arches ?: pipeutils.get_additional_arches(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 

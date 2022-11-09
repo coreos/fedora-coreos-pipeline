@@ -83,7 +83,7 @@ try { lock(resource: "bump-${params.STREAM}") { timeout(time: 120, unit: 'MINUTE
 
     def lockfile, pkgChecksum, pkgTimestamp
     def skip_tests_arches = params.SKIP_TESTS_ARCHES.split()
-    def arches = pipecfg.additional_arches.plus("x86_64")
+    def arches = pipeutils.get_additional_arches(pipecfg, params.STREAM).plus("x86_64")
     def archinfo = arches.collectEntries{[it, [:]]}
     for (architecture in archinfo.keySet()) {
         def arch = architecture
