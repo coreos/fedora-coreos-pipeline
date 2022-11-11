@@ -70,7 +70,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID) {
                     --arch=${basearch} \
                     --bucket-prefix ${c.bucket} \
                     --regions ${regions} \
-                    --credentials-file \${"POWER_IMAGE_UPLOAD_CONFIG"} \
+                    --credentials-file \${POWERVS_IMAGE_UPLOAD_CONFIG}
                 """)
             }
         }
@@ -279,8 +279,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     --cloud-object-storage ${c.cloud_object_storage_service_instance} \
                     --bucket ${bucket} \
                     --region ${c.primary_region} \
-                    --credentials-file \${"POWER_IMAGE_UPLOAD_CONFIG"} \
-                    --build ${buildID} \
+                    --credentials-file \${POWERVS_IMAGE_UPLOAD_CONFIG} \
+                    --build ${buildID}
                  """);
             }
         }
