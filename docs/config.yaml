@@ -28,6 +28,11 @@ hotfix:
   # OPTIONAL/TEMPORARY: skip all tests that require a signed kernel
   skip_secureboot_tests_hack: true
 
+# OPTIONAL/TEMPORARY: hacks-related keys
+hacks:
+  # OPTIONAL: skip upgrade kola tests
+  skip_upgrade_tests: true
+
 # OPTIONAL/TEMPORARY: whether to use `versionary` to derive version numbers
 versionary_hack: true
 
