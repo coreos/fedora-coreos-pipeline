@@ -132,12 +132,30 @@ lock(resource: "build-${params.STREAM}") {
         def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
+            if (pipecfg.hacks?.use_yumrepos_branch_workaround) {
+                // Right now the git repo that has our yum repo files isn't a
+                // single branch, but a branch per stream. So let's work with
+                // that here.
+                def yumrepos_ref = params.STREAM
+                if (yumrepos_ref == '4.13') {
+                    yumrepos_ref = 'master'
+                }
+                shwrap("""
+                cosa shell -- mkdir ./yumrepos
+                cosa shell -- git clone --depth=1 --branch=${yumrepos_ref} ${pipecfg.source_config.yumrepos} ./yumrepos
+                yumrepos=\$(cosa shell -- readlink -f ./yumrepos)
+                cosa init --force --branch ${ref} --commit=${src_config_commit} --yumrepos=\${yumrepos} ${pipecfg.source_config.url}
+                """)
+            } else {
+                def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+                shwrap("""
+                cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
+                """)
+            }
+
             // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
             def cache_img = "/srv/prod/${params.STREAM}/cache.qcow2"
-            def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
-
             shwrap("""
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
             mkdir -p \$(dirname ${cache_img})
             ln -s ${cache_img} cache/cache.qcow2
             """)

@@ -155,11 +155,26 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         stage('Init') {
-            def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
-
-            shwrap("""
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
-            """)
+            if (pipecfg.hacks?.use_yumrepos_branch_workaround) {
+                // Right now the git repo that has our yum repo files isn't a
+                // single branch, but a branch per stream. So let's work with
+                // that here.
+                def yumrepos_ref = params.STREAM
+                if (yumrepos_ref == '4.13') {
+                    yumrepos_ref = 'master'
+                }
+                shwrap("""
+                cosa shell -- mkdir ./yumrepos
+                cosa shell -- git clone --depth=1 --branch=${yumrepos_ref} ${pipecfg.source_config.yumrepos} ./yumrepos
+                yumrepos=\$(cosa shell -- readlink -f ./yumrepos)
+                cosa init --force --branch ${ref} --commit=${src_config_commit} --yumrepos=\${yumrepos} ${pipecfg.source_config.url}
+                """)
+            } else {
+                def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+                shwrap("""
+                cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
+                """)
+            }
 
         }
 
