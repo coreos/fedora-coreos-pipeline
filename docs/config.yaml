@@ -32,6 +32,8 @@ hotfix:
 hacks:
   # OPTIONAL: skip upgrade kola tests
   skip_upgrade_tests: true
+  # OPTIONAL: skip calling plume in the release job
+  skip_plume_release_task: true
 
 # OPTIONAL/TEMPORARY: whether to use `versionary` to derive version numbers
 versionary_hack: true
