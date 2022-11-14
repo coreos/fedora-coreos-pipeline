@@ -34,6 +34,8 @@ hacks:
   skip_upgrade_tests: true
   # OPTIONAL: skip calling plume in the release job
   skip_plume_release_task: true
+  # OPTIONAL: skip UEFI on older RHCOS
+  skip_uefi_tests_on_older_rhcos: true
 
 # OPTIONAL/TEMPORARY: whether to use `versionary` to derive version numbers
 versionary_hack: true
