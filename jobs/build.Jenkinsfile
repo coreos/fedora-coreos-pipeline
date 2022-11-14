@@ -355,23 +355,33 @@ lock(resource: "build-${params.STREAM}") {
 
         // Run Kola TestISO tests for metal artifacts
         if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-            stage("Kola:TestISO") {
-                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                            skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
-                // For now we want to notify ourselves when a particular workaround is observed.
-                // It won't fail the build, just give us information.
-                // https://github.com/coreos/fedora-coreos-tracker/issues/1233
-                // XXX: This relies on implementation details in kolatestIso(),
-                //      but since this is a hack and probably short lived that's OK.
-                // First check to make sure the files exist, then grep for the workaround.
-                shwrap("cosa shell -- ls tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt")
-                def grepRc = shwrapRc("""
-                     cosa shell -- grep 'tracker issue workaround engaged for .*issues/1233' \
-                        tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
-                """)
-                if (grepRc == 0) {
-                    warnError(message: 'Detected used workaround for #1233') {
-                        error('Detected used workaround for #1233')
+            if (pipecfg.hacks?.skip_uefi_tests_on_older_rhcos &&
+                (params.STREAM in ['4.6', '4.7', '4.8', '4.9'])) {
+                // UEFI tests on x86_64 seem to fail on older RHCOS. skip UEFI tests here.
+                stage("Kola:TestISO") {
+                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                                skipUEFI: true,
+                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+                }
+            } else {
+                stage("Kola:TestISO") {
+                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+                    // For now we want to notify ourselves when a particular workaround is observed.
+                    // It won't fail the build, just give us information.
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1233
+                    // XXX: This relies on implementation details in kolatestIso(),
+                    //      but since this is a hack and probably short lived that's OK.
+                    // First check to make sure the files exist, then grep for the workaround.
+                    shwrap("cosa shell -- ls tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt")
+                    def grepRc = shwrapRc("""
+                         cosa shell -- grep 'tracker issue workaround engaged for .*issues/1233' \
+                            tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
+                    """)
+                    if (grepRc == 0) {
+                        warnError(message: 'Detected used workaround for #1233') {
+                            error('Detected used workaround for #1233')
+                        }
                     }
                 }
             }
