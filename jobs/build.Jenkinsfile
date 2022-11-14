@@ -302,6 +302,7 @@ lock(resource: "build-${params.STREAM}") {
         stage("Kola") {
             def n = ncpus - 1 // remove 1 for upgrade test
             kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+                 skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
                  allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
                  skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
         }
