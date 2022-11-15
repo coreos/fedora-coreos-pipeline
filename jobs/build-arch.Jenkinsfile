@@ -355,9 +355,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         stage('Archive') {
-            shwrap("""
-            cosa compress --compressor xz
-            """)
+            def format = pipecfg.hacks?.override_compression_format
+            format = format ?: 'xz' // Default to xz
+            shwrap("cosa compress --compressor ${format}")
 
             if (uploading) {
                 // just upload as public-read for now, but see discussions in
