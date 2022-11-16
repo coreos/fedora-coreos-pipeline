@@ -17,7 +17,7 @@ properties([
     parameters([
         choice(name: 'STREAM',
                choices: pipeutils.streams_of_type(pipecfg, 'development'),
-               description: 'Fedora CoreOS development stream to bump'),
+               description: 'CoreOS development stream to bump'),
         string(name: 'SKIP_TESTS_ARCHES',
                description: 'Space-separated list of architectures to skip tests on',
                defaultValue: "",
