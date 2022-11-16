@@ -77,6 +77,6 @@ try { timeout(time: 60, unit: 'MINUTES') {
     throw e
 } finally {
     if (currentBuild.result != 'SUCCESS') {
-        pipeutils.trySlackSend(color: 'danger', message: ":fcos: :k8s: :trashfire: kola-kubernetes <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+        pipeutils.trySlackSend(color: 'danger', message: ":coreos: :k8s: kola-kubernetes <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
     }
 }

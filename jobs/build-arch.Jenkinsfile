@@ -440,10 +440,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         message = ":fcos: :sparkles: ${message} - SUCCESS"
         color = 'good';
     } else if (currentBuild.result == 'UNSTABLE') {
-        message = ":fcos: :warning: ${message} - WARNING"
+        message = ":coreos: :warning: ${message} - WARNING"
         color = 'warning';
     } else {
-        message = ":fcos: :trashfire: ${message} - FAILURE"
+        message = ":coreos: :x: ${message} - FAILURE"
         color = 'danger';
     }
 

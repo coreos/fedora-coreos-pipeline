@@ -356,6 +356,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     throw e
 } finally {
     if (currentBuild.result != 'SUCCESS') {
-        pipeutils.trySlackSend(color: 'danger', message: ":fcos: :bullettrain_front: :trashfire: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
+        pipeutils.trySlackSend(color: 'danger', message: ":coreos: :bullettrain_front: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
     }
 }}} // try-catch-finally, cosaPod and lock finish here
