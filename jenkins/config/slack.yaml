@@ -2,3 +2,5 @@ unclassified:
   slackNotifier:
     teamDomain: coreos
     tokenCredentialId: slack-api-token
+    # https://github.com/jenkinsci/slack-plugin/issues/857
+    room: ""
