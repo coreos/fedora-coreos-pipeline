@@ -10,9 +10,9 @@ properties([
     parameters([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
-             description: 'Fedora CoreOS stream to test'),
+             description: 'CoreOS stream to test'),
       string(name: 'VERSION',
-             description: 'Fedora CoreOS Build ID to test',
+             description: 'CoreOS Build ID to test',
              defaultValue: '',
              trim: true),
       string(name: 'ARCH',

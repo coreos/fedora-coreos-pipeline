@@ -16,7 +16,7 @@ properties([
     parameters([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
-             description: 'Fedora CoreOS stream to build'),
+             description: 'CoreOS stream to build'),
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
              defaultValue: '',

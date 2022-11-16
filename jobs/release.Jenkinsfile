@@ -11,9 +11,9 @@ properties([
     parameters([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
-             description: 'Fedora CoreOS stream to release'),
+             description: 'CoreOS stream to release'),
       string(name: 'VERSION',
-             description: 'Fedora CoreOS version to release',
+             description: 'CoreOS version to release',
              defaultValue: '',
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
