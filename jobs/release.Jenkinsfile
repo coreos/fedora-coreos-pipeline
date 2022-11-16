@@ -117,6 +117,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
+        // Update description based on updated set of architectures
+        build_description = "[${params.STREAM}][${basearches.join(' ')}][${params.VERSION}]"
+        currentBuild.description = "${build_description} Running"
+
         // Fetch Artifact files for pieces we still need to upload. Note that we
         // need to do this early in this job before we've run any stages that
         // modify/update meta.json because buildfetch will re-download and
