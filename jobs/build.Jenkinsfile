@@ -524,7 +524,7 @@ lock(resource: "build-${params.STREAM}") {
             // SUCCESS, but no new builds? Must've been a no-op
             return
         }
-        message = ":fcos: :sparkles: ${message} - SUCCESS"
+        message = ":coreos: :sparkles: ${message} - SUCCESS"
         color = 'good';
     } else if (currentBuild.result == 'UNSTABLE') {
         message = ":coreos: :warning: ${message} - WARNING"
