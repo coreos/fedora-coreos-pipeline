@@ -264,11 +264,14 @@ create a `slack-api-token` secret:
 
 ```
 TOKEN=<token>
+EMOJI=<:emojistring:>
 oc create secret generic slack-api-token --from-literal=text="${TOKEN}"
 oc label secret/slack-api-token \
     jenkins.io/credentials-type=secretText
 oc annotate secret/slack-api-token \
     jenkins.io/credentials-description="Slack API token"
+oc annotate secret/slack-api-token \
+    jenkins.io/emoji-prefix="${EMOJI}"
 ```
 
 You can obtain a token when creating a new instance of the Jenkins CI
