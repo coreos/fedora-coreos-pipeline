@@ -530,7 +530,7 @@ lock(resource: "build-${params.STREAM}") {
         message = ":coreos: :warning: ${message} - WARNING"
         color = 'warning';
     } else {
-        message = ":coreos: :x: ${message} - FAILURE"
+        message = ":coreos: :fire: ${message} - FAILURE"
         color = 'danger';
     }
 
