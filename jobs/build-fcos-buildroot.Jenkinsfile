@@ -175,7 +175,7 @@ try {
         currentBuild.description = "[${gitref}@${shortcommit}] ❌"
     }
     if (currentBuild.result != 'SUCCESS') {
-        message = ":coreos: build-${containername} <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
+        message = "build-${containername} <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
         pipeutils.trySlackSend(color: 'danger', message: message)
     }
 }

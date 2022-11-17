@@ -437,13 +437,13 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             // SUCCESS, but no new builds? Must've been a no-op
             return
         }
-        message = ":coreos: :sparkles: ${message} - SUCCESS"
+        message = ":sparkles: ${message} - SUCCESS"
         color = 'good';
     } else if (currentBuild.result == 'UNSTABLE') {
-        message = ":coreos: :warning: ${message} - WARNING"
+        message = ":warning: ${message} - WARNING"
         color = 'warning';
     } else {
-        message = ":coreos: :fire: ${message} - FAILURE"
+        message = ":fire: ${message} - FAILURE"
         color = 'danger';
     }
 

@@ -532,9 +532,23 @@ def AWSBuildUploadCredentialExists() {
     return utils.credentialsExist(creds)
 }
 
+// Grabs the jenkins.io/emoji-prefix annotation from the slack-api-token
+def getSlackEmojiPrefix() {
+    def emoji = shwrapCapture("""
+        oc get secret -n ${env.PROJECT_NAME} -o json slack-api-token | \
+          jq -r '.metadata.annotations["jenkins.io/emoji-prefix"]'
+    """)
+    return emoji == 'null' ? "" : emoji
+}
+
 // Emits Slack message if set up, otherwise does nothing.
 def trySlackSend(params) {
     if (utils.credentialsExist([string(credentialsId: 'slack-api-token', variable: 'UNUSED')])) {
+        // Prefix all slack messages with the emoji in the jenkins.io/emoji-prefix
+        // annotation on the slack-api-token secret. If it doesn't exist then
+        // default to just a generic CoreOS emoji.
+        def emoji = getSlackEmojiPrefix() ?: ':coreos:'
+        params.message = "${emoji} ${params.message}"
         slackSend(params)
     }
 }

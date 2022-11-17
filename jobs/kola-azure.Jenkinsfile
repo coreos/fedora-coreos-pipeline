@@ -182,7 +182,7 @@ lock(resource: "kola-azure-${params.ARCH}") {
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(color: 'danger', message: ":coreos: :azure: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            pipeutils.trySlackSend(color: 'danger', message: ":azure: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }
