@@ -39,9 +39,10 @@ currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSIO
 
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
-try { timeout(time: 60, unit: 'MINUTES') {
+timeout(time: 60, unit: 'MINUTES') {
     cosaPod(memory: "512Mi", kvm: false,
             image: params.COREOS_ASSEMBLER_IMAGE) {
+    try {
 
         stage('Fetch Metadata') {
             def commitopt = ''
@@ -71,12 +72,13 @@ try { timeout(time: 60, unit: 'MINUTES') {
         }
 
         currentBuild.result = 'SUCCESS'
+
+    } catch (e) {
+        currentBuild.result = 'FAILURE'
+        throw e
+    } finally {
+        if (currentBuild.result != 'SUCCESS') {
+            pipeutils.trySlackSend(color: 'danger', message: ":k8s: kola-kubernetes <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+        }
     }
-}} catch (e) {
-    currentBuild.result = 'FAILURE'
-    throw e
-} finally {
-    if (currentBuild.result != 'SUCCESS') {
-        pipeutils.trySlackSend(color: 'danger', message: ":k8s: kola-kubernetes <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
-    }
-}
+}} // cosaPod and timeout finish here

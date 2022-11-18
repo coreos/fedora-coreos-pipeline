@@ -48,9 +48,12 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 // Go with 1.5Gi here because we download/decompress/upload the image
 def cosa_memory_request_mb = 1536
-try { timeout(time: 75, unit: 'MINUTES') {
+
+
+timeout(time: 75, unit: 'MINUTES') {
     cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
             image: params.COREOS_ASSEMBLER_IMAGE) {
+    try {
 
         def azure_image_name, azure_image_filepath
         stage('Fetch Metadata/Image') {
@@ -171,12 +174,13 @@ try { timeout(time: 75, unit: 'MINUTES') {
         }
 
         currentBuild.result = 'SUCCESS'
-    }} // cosaPod and timeout end here
-} catch (e) {
-    currentBuild.result = 'FAILURE'
-    throw e
-} finally {
-    if (currentBuild.result != 'SUCCESS') {
-        pipeutils.trySlackSend(color: 'danger', message: ":azure: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+
+    } catch (e) {
+        currentBuild.result = 'FAILURE'
+        throw e
+    } finally {
+        if (currentBuild.result != 'SUCCESS') {
+            pipeutils.trySlackSend(color: 'danger', message: ":azure: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+        }
     }
-}
+}} // cosaPod and timeout finish here
