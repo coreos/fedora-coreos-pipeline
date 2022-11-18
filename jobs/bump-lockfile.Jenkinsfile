@@ -64,7 +64,8 @@ def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 lock(resource: "bump-${params.STREAM}") {
     timeout(time: 120, unit: 'MINUTES') { 
     cosaPod(image: cosa_img,
-            cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi") {
+            cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi",
+            serviceAccount: "jenkins") {
     try {
 
         currentBuild.description = "[${params.STREAM}] Running"

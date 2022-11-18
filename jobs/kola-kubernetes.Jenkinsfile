@@ -41,7 +41,8 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 timeout(time: 60, unit: 'MINUTES') {
     cosaPod(memory: "512Mi", kvm: false,
-            image: params.COREOS_ASSEMBLER_IMAGE) {
+            image: params.COREOS_ASSEMBLER_IMAGE,
+            serviceAccount: "jenkins") {
     try {
 
         stage('Fetch Metadata') {

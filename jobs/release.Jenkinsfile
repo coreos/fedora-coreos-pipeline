@@ -79,7 +79,8 @@ currentBuild.description = "${build_description} Waiting"
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
-    cosaPod(cpu: "1", memory: "1Gi", image: cosa_img) {
+    cosaPod(cpu: "1", memory: "1Gi", image: cosa_img,
+            serviceAccount: "jenkins") {
     try {
 
         currentBuild.description = "${build_description} Running"

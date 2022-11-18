@@ -108,7 +108,8 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
     timeout(time: 240, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
-            image: cosa_controller_img) {
+            image: cosa_controller_img,
+            serviceAccount: "jenkins") {
     try {
 
         currentBuild.description = "${build_description} Running"

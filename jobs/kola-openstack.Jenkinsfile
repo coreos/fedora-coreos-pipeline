@@ -54,7 +54,8 @@ def cosa_memory_request_mb = 1536
 lock(resource: "kola-openstack-${params.ARCH}") {
     timeout(time: 90, unit: 'MINUTES') {
     cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
-            image: params.COREOS_ASSEMBLER_IMAGE) {
+            image: params.COREOS_ASSEMBLER_IMAGE,
+            serviceAccount: "jenkins") {
     try {
 
         def openstack_image_name, openstack_image_filepath
