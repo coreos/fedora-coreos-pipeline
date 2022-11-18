@@ -101,11 +101,11 @@ currentBuild.description = "[${gitref}@${shortcommit}] Waiting"
 // Get the list of requested architectures to build for
 def basearches = params.ARCHES.split() as Set
 
-try {
-    lock(resource: "build-${containername}") {
+lock(resource: "build-${containername}") {
     timeout(time: 60, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false) {
+    try {
 
         currentBuild.description = "[${gitref}@${shortcommit}] Running"
 
@@ -164,18 +164,19 @@ try {
             }
         }
         currentBuild.result = 'SUCCESS'
+            
+    } catch (e) {
+        currentBuild.result = 'FAILURE'
+        throw e
+    } finally {
+        if (currentBuild.result == 'SUCCESS') {
+            currentBuild.description = "[${gitref}@${shortcommit}] ⚡"
+        } else {
+            currentBuild.description = "[${gitref}@${shortcommit}] ❌"
+        }
+        if (currentBuild.result != 'SUCCESS') {
+            message = "build-${containername} <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
+            pipeutils.trySlackSend(color: 'danger', message: message)
+        }
     }
-}}} catch (e) {
-    currentBuild.result = 'FAILURE'
-    throw e
-} finally {
-    if (currentBuild.result == 'SUCCESS') {
-        currentBuild.description = "[${gitref}@${shortcommit}] ⚡"
-    } else {
-        currentBuild.description = "[${gitref}@${shortcommit}] ❌"
-    }
-    if (currentBuild.result != 'SUCCESS') {
-        message = "build-${containername} <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
-        pipeutils.trySlackSend(color: 'danger', message: message)
-    }
-}
+}}} // cosaPod, timeout, and lock finish here
