@@ -39,21 +39,19 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-// Locking so we don't run multiple times on the same region. We are speeding up our testing by dividing
-// the load to different regions depending on the architecture. This allows us not to exceed our quota in 
-// a single region while still being able to execute two test runs in parallel.
+currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
+
+// Use ca-ymq-1 for everything right now since we're having trouble with
+// image uploads to ams1.
+def region = "ca-ymq-1"
+
+def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
+
+// Go with 1.5Gi here because we download/decompress/upload the image
+def cosa_memory_request_mb = 1536
+
+// Locking so we only run max of 2 runs (1 x86_64 and 1 aarch64) at any given time.
 lock(resource: "kola-openstack-${params.ARCH}") {
-
-    currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
-
-    // Use ca-ymq-1 for everything right now since we're having trouble with
-    // image uploads to ams1.
-    def region = "ca-ymq-1"
-
-    def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
-
-    // Go with 1.5Gi here because we download/decompress/upload the image
-    def cosa_memory_request_mb = 1536
     try { timeout(time: 90, unit: 'MINUTES') {
         cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 image: params.COREOS_ASSEMBLER_IMAGE) {
