@@ -52,7 +52,8 @@ def cosa_memory_request_mb = 1536
 
 timeout(time: 75, unit: 'MINUTES') {
     cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
-            image: params.COREOS_ASSEMBLER_IMAGE) {
+            image: params.COREOS_ASSEMBLER_IMAGE,
+            serviceAccount: "jenkins") {
     try {
 
         def azure_image_name, azure_image_filepath

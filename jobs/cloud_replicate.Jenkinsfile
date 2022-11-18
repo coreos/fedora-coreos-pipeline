@@ -70,7 +70,8 @@ currentBuild.description = "${build_description} Waiting"
 // two jobs run for the same stream, but that really shouldn't happen.
 // Also lock version-arch-specific locks to make sure these builds are finished.
 lock(resource: "cloud-replicate-${params.VERSION}") {
-    cosaPod(cpu: "1", memory: "512Mi", image: cosa_img) {
+    cosaPod(cpu: "1", memory: "512Mi", image: cosa_img,
+            serviceAccount: "jenkins") {
     try {
 
         currentBuild.description = "${build_description} Running"
