@@ -16,7 +16,7 @@ PROTECTED_JENKINSES = [
 
 def load_jenkins_config() {
     return readJSON(text: shwrapCapture("""
-        oc get configmap -n ${env.PROJECT_NAME} -o json jenkins-config | jq .data
+        oc get configmap -o json jenkins-config | jq .data
     """))
 }
 
@@ -535,7 +535,7 @@ def AWSBuildUploadCredentialExists() {
 // Grabs the jenkins.io/emoji-prefix annotation from the slack-api-token
 def getSlackEmojiPrefix() {
     def emoji = shwrapCapture("""
-        oc get secret -n ${env.PROJECT_NAME} -o json slack-api-token | \
+        oc get secret -o json slack-api-token | \
           jq -r '.metadata.annotations["jenkins.io/emoji-prefix"]'
     """)
     return emoji == 'null' ? "" : emoji
