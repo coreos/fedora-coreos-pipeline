@@ -103,6 +103,8 @@ s3:
   bucket: rhcos-jlebon
   # OPTIONAL: S3 bucket subkey. Supports `${STREAM}` variable.
   builds_key: "streams/${STREAM}"
+  # OPTIONAL: object ACL to use when uploading
+  acl: private
 
 # OPTIONAL: container registry-related keys
 registry_repos:

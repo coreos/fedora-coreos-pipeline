@@ -175,7 +175,7 @@ except botocore.exceptions.ClientError as e:
     ' '${src}' '${dest}'""")
 }
 
-def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
+def bump_builds_json(stream, buildid, arch, s3_stream_dir, acl) {
     // Bump the remote builds json with the specified build and
     // update the local builds.json. The workflow is:
     //
@@ -209,7 +209,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir) {
         shwrapWithAWSBuildUploadCredentials("""
         export AWS_CONFIG_FILE=\${AWS_BUILD_UPLOAD_CONFIG}
         aws s3 cp --cache-control=max-age=300    \
-            --acl=public-read builds/builds.json s3://${s3_stream_dir}/builds/builds.json
+            --acl=${acl} builds/builds.json s3://${s3_stream_dir}/builds/builds.json
         """)
     }
 }
