@@ -36,6 +36,7 @@ cosaPod() {
             if (shwrapRc("git diff --exit-code") != 0) {
                 shwrap("git reset --hard HEAD")
                 for (subdir in ["streams", "updates"]) {
+                    // NB: this metadata by definition is always public
                     shwrap("""
                         aws s3 cp --acl public-read --cache-control 'max-age=60' \
                             ${subdir}/${stream}.json s3://${pipecfg.s3.bucket}/${subdir}/${stream}.json
@@ -52,6 +53,7 @@ cosaPod() {
             // falsely emit a stream.metadata.update message when only release
             // notes changed, and also the way change detection works above
             // doesn't mesh well with freshly regenerated data.
+            // NB: this metadata by definition is always public
             shwrap("""
                 python3 -c 'import sys, yaml, json; json.dump(yaml.safe_load(sys.stdin.read()), sys.stdout)' \
                     < release-notes/${stream}.yml > release-notes/${stream}.json

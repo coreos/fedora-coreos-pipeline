@@ -127,11 +127,12 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
                 // the individual meta.json files we need to re-generate the release metadata
                 // to get the new info and upload it back to s3.
                 def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
+                def acl = pipecfg.s3.acl ?: 'public-read'
                 shwrap("""
                 cosa generate-release-meta --build-id ${params.VERSION} --workdir .
                 cosa buildupload --build=${params.VERSION} --skip-builds-json \
                     ${arch_args} s3 --aws-config-file=\${AWS_BUILD_UPLOAD_CONFIG} \
-                    --acl=public-read ${s3_stream_dir}/builds
+                    --acl=${acl} ${s3_stream_dir}/builds
                 """)
             }
         }
