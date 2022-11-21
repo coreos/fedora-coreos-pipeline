@@ -519,7 +519,7 @@ oc create configmap jenkins-casc-cfg --from-file=jenkins/config
 If working on the production pipeline, you may simply do:
 
 ```
-./deploy --official
+./deploy
 ```
 
 You may also want to provide additional switches depending on the
