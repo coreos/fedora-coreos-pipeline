@@ -18,49 +18,15 @@ import yaml
 import argparse
 import subprocess
 
-# the code supports multiple prod pipelines for easing migrations
-PROD_CLUSTERS = {
-    "https://api.ocp.fedoraproject.org:6443": "fedora-coreos-pipeline"
-}
-
 
 def main():
     args = parse_args()
-
-    if targeting_official_namespace(args) and not args.official:
-        eprint("Refusing to create resources in official namespace.")
-        eprint("Use --official to create resources there.")
-        return 1
-
     resources = process_template(args)
     update_resources(args, resources)
 
 
-def targeting_official_namespace(args):
-    ctx_name = subprocess.check_output(
-        [args.oc_cmd, 'config', 'current-context'], encoding='utf-8').strip()
-    cfg = yaml.safe_load(subprocess.check_output(
-        [args.oc_cmd, 'config', 'view'], encoding='utf-8'))
-    ctx = [c['context'] for c in cfg['contexts'] if c['name'] == ctx_name]
-    assert len(ctx) == 1, f"Found {len(ctx)} contexts named '{ctx_name}'"
-    ctx = ctx[0]
-
-    cluster_name = ctx['cluster']
-    namespace = ctx['namespace']
-    url = [c['cluster']['server'] for c in cfg['clusters']
-           if c['name'] == cluster_name]
-    assert len(url) == 1, f"Found {len(url)} clusters named '{cluster_name}'"
-    url = url[0]
-
-    if url not in PROD_CLUSTERS:
-        return False
-    return namespace == PROD_CLUSTERS[url]
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--official", action='store_true',
-                        help="Allows updating resources in official pipeline")
     parser.add_argument("--dry-run", action='store_true',
                         help="Only print what would happen")
     parser.add_argument("--pipeline", metavar='<URL>[@REF]',
