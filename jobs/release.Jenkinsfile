@@ -18,6 +18,7 @@ properties([
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
              description: "Override additional architectures (space-separated). " +
+                          "Use 'none' to only release for x86_64. " +
                           "Supported: ${pipeutils.get_supported_additional_arches().join(' ')}",
              defaultValue: "",
              trim: true),
@@ -60,8 +61,11 @@ if (params.VERSION == "") {
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
-def basearches = params.ADDITIONAL_ARCHES.split() as List
-basearches = basearches ?: pipeutils.get_additional_arches(pipecfg, params.STREAM)
+def basearches = []
+if (params.ADDITIONAL_ARCHES != "none") {
+    basearches = params.ADDITIONAL_ARCHES.split() as List
+    basearches = basearches ?: pipeutils.get_additional_arches(pipecfg, params.STREAM)
+}
 
 // we always release for x86_64
 basearches += 'x86_64'
