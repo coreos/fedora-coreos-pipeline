@@ -23,6 +23,7 @@ properties([
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
              description: "Override additional architectures (space-separated). " +
+                          "Use 'none' to only build for x86_64. " +
                           "Supported: ${pipeutils.get_supported_additional_arches().join(' ')}",
              defaultValue: "",
              trim: true),
@@ -71,8 +72,11 @@ if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
-def additional_arches = params.ADDITIONAL_ARCHES.split()
-additional_arches = additional_arches ?: pipeutils.get_additional_arches(pipecfg, params.STREAM)
+def additional_arches = []
+if (params.ADDITIONAL_ARCHES != "none") {
+    additional_arches = params.ADDITIONAL_ARCHES.split()
+    additional_arches = additional_arches ?: pipeutils.get_additional_arches(pipecfg, params.STREAM)
+}
 
 def stream_info = pipecfg.streams[params.STREAM]
 
@@ -501,7 +505,7 @@ lock(resource: "build-${params.STREAM}") {
             stage('Publish') {
                 build job: 'release', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'ADDITIONAL_ARCHES', value: additional_arches.join(" ")),
+                    string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
                     string(name: 'VERSION', value: newBuildID),
                     booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
                     booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
