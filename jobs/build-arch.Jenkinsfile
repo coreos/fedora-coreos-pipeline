@@ -356,9 +356,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         stage('Archive') {
-            def format = pipecfg.hacks?.override_compression_format
-            format = format ?: 'xz' // Default to xz
-            shwrap("cosa compress --compressor ${format}")
+            shwrap("cosa compress")
 
             if (uploading) {
                 def acl = pipecfg.s3.acl ?: 'public-read'
