@@ -422,9 +422,7 @@ lock(resource: "build-${params.STREAM}") {
         stage('Archive') {
             // lower to make sure we don't go over and account for overhead
             pipeutils.withXzMemLimit(cosa_memory_request_mb - 256) {
-                def format = pipecfg.hacks?.override_compression_format
-                format = format ?: 'xz' // Default to xz
-                shwrap("cosa compress --compressor ${format}")
+                shwrap("cosa compress")
             }
 
             if (uploading) {
