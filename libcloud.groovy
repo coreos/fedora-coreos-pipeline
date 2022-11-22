@@ -30,7 +30,10 @@ def replicate_to_clouds(pipecfg, basearch, buildID) {
     if (meta.amis) {
         replicators["☁️ 🔄:aws"] = {
             def replicated = false
-            def ids = ['aws-build-upload-config', 'aws-govcloud-image-upload-config']
+            def ids = ['aws-build-upload-config']
+            if (pipecfg.clouds?.aws?.govcloud) {
+                ids += 'aws-govcloud-image-upload-config'
+            }
             def c = pipecfg.clouds.aws
             for (id in ids) {
                 tryWithCredentials([file(variable: 'AWS_CONFIG_FILE', credentialsId: id)]) {
