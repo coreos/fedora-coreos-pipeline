@@ -598,6 +598,23 @@ value from the `manifests/pipeline.yaml` OpenShift template. This is
 currently as designed (see
 [#65](https://github.com/coreos/fedora-coreos-pipeline/issues/65)).
 
+### Triggering builds remotely
+
+We use the OpenShift Login plugin for authentication. This plugin maps
+OpenShift users to Jenkins users, including service accounts. So we can
+use the `jenkins` service account (or really, any service account with
+the `edit` role):
+
+```
+token_secret=$(oc get sa jenkins -o json | jq -r '.secrets[] | select(.name | contains("token")) | .name')
+token_data=$(oc get secret "${token_secret}" -o=jsonpath={.data.token} | base64 -d)
+curl -H "Authorization: Bearer ${token_data}" $JENKINS_URL/job/build/buildWithParameters --data STREAM=4.13
+```
+
+See the
+[OpenShift Login plugin docs](https://github.com/jenkinsci/openshift-login-plugin#non-browser-access)
+for more information.
+
 ### Nuking everything
 
 One can leverage Kubernetes labels to delete all objects
