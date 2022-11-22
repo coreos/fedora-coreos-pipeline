@@ -118,7 +118,7 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
         currentBuild.description = "${build_description} Running"
 
         for (basearch in basearches) {
-            libcloud.replicate_to_clouds(pipecfg, basearch, params.VERSION)
+            libcloud.replicate_to_clouds(pipecfg, basearch, params.VERSION, params.STREAM)
         }
 
         stage('Publish') {
