@@ -94,7 +94,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
 
     credentials = [file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "aliyun-image-upload-config")]
-    if (artifacts.contains("aliyun") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.aliyun &&
+        artifacts.contains("aliyun") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :aliyun"] = {
             withCredentials(creds) {
@@ -119,7 +121,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     }
     credentials = [file(variable: "AWS_BUILD_UPLOAD_CONFIG",
                         credentialsId: "aws-build-upload-config")]
-    if (artifacts.contains("aws") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.aws &&
+        artifacts.contains("aws") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :aws"] = {
             withCredentials(creds) {
@@ -147,7 +151,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     }
     credentials = [file(variable: "AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "aws-govcloud-image-upload-config")]
-    if (artifacts.contains("aws") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.aws?.govcloud &&
+        artifacts.contains("aws") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :aws:govcloud"] = {
             withCredentials(creds) {
@@ -177,7 +183,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                         credentialsId: 'azure-image-upload-config-auth'),
                    file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_PROFILE',
                         credentialsId: 'azure-image-upload-config-profile')]
-    if (artifacts.contains("azure") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.azure &&
+        artifacts.contains("azure") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :azure"] = {
             withCredentials(creds) {
@@ -198,7 +206,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     }
     credentials = [file(variable: "GCP_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "gcp-image-upload-config")]
-    if (artifacts.contains("gcp") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.gcp &&
+        artifacts.contains("gcp") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :gcp"] = {
             withCredentials(creds) {
@@ -248,7 +258,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     }
     credentials = [file(variable: "KUBEVIRT_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "kubevirt-image-upload-config")]
-    if (artifacts.contains("kubevirt") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.kubevirt &&
+        artifacts.contains("kubevirt") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :kubevirt"] = {
             withCredentials(creds) {
@@ -264,7 +276,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     }
     credentials = [file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "powervs-image-upload-config")]
-    if (artifacts.contains("powervs") && utils.credentialsExist(credentials)) {
+    if (pipecfg.clouds?.powervs &&
+        artifacts.contains("powervs") &&
+        utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :powervs"] = {
             withCredentials(creds) {
