@@ -1,6 +1,6 @@
 
 // Replicate artifacts in various clouds
-def replicate_to_clouds(pipecfg, basearch, buildID) {
+def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
 
     def meta = readJSON(text: shwrapCapture("cosa meta --arch=${basearch} --dump"))
     def replicators = [:]
@@ -31,7 +31,8 @@ def replicate_to_clouds(pipecfg, basearch, buildID) {
         replicators["☁️ 🔄:aws"] = {
             def replicated = false
             def ids = ['aws-build-upload-config']
-            if (pipecfg.clouds?.aws?.govcloud) {
+            if (pipecfg.clouds?.aws?.govcloud &&
+                pipecfg[stream]?.skip_govcloud_hack != true) {
                 ids += 'aws-govcloud-image-upload-config'
             }
             def c = pipecfg.clouds.aws
@@ -155,6 +156,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     credentials = [file(variable: "AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "aws-govcloud-image-upload-config")]
     if (pipecfg.clouds?.aws?.govcloud &&
+        pipecfg[stream]?.skip_govcloud_hack != true &&
         artifacts.contains("aws") &&
         utils.credentialsExist(credentials)) {
         def creds = credentials

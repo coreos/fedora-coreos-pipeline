@@ -91,6 +91,10 @@ streams:
       # OPTIONAL: additional architectures to skip building for
       skip_additional_arches:
         - s390x
+      # OPTIONAL/TEMPORARY: don't upload to govcloud even if cloud is
+      # configured. Can be dropped when RHCOS 4.9 (last release that doesn't
+      # support GovCloud) is EOL.
+      skip_govcloud_hack: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]

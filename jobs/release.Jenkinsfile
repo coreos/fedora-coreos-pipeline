@@ -191,7 +191,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
 
             if (params.CLOUD_REPLICATION) {
-                libcloud.replicate_to_clouds(pipecfg, basearch, params.VERSION)
+                libcloud.replicate_to_clouds(pipecfg, basearch, params.VERSION, params.STREAM)
             }
         }
 
