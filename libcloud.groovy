@@ -55,7 +55,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         }
         credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
         if (pipecfg.clouds?.aws?.govcloud &&
-            (pipecfg[stream]?.skip_govcloud_hack != true) &&
+            (pipecfg.streams[stream]?.skip_govcloud_hack != true) &&
             utils.credentialsExist(credentials)) {
             replicators["☁️ 🔄:aws:govcloud"] = {
                 awsReplicateClosure.call(pipecfg.clouds.aws.govcloud,
@@ -172,7 +172,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         }
         credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
         if (pipecfg.clouds?.aws?.govcloud &&
-            (pipecfg[stream]?.skip_govcloud_hack != true) &&
+            (pipecfg.streams[stream]?.skip_govcloud_hack != true) &&
             utils.credentialsExist(credentials)) {
             uploaders["☁️ ⬆️ :aws:govcloud"] = {
                 awsUploadClosure.call(pipecfg.clouds.aws.govcloud,
