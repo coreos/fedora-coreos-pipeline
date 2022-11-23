@@ -39,6 +39,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                 --log-level=INFO \
                 --build=${buildID} \
                 --arch=${basearch} \
+                --source-region=${c.primary_region} \
                 --credentials-file=\${AWS_CONFIG_FILE}
             """)
         }
