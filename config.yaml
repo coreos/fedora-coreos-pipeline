@@ -82,7 +82,7 @@ clouds:
     # we make our images public in the release job via plume
     public: false
     # Accounts to share newly created AMIs with
-    test_accounts:
+    grant_users:
       - "013116697141"
   azure:
     test_resource_group: fedora-coreos-testing
