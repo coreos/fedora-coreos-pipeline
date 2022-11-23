@@ -149,6 +149,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             def extraArgs = []
             if (c.grant_users) {
                 extraArgs += c.grant_users.collect{"--grant-user=${it}"}
+                extraArgs += c.grant_users.collect{"--grant-user-snapshot=${it}"}
             }
             if (c.public) {
                 extraArgs += "--public"
