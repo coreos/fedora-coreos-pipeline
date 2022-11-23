@@ -27,32 +27,42 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
             }
         }
     }
+
+    // For AWS we need to consider the primary AWS partition and the
+    // GovCloud partition. Define a closure here that we'll call for both.
+    def awsReplicateClosure = { config, credentialId ->
+        def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
+        withCredentials(creds) {
+            def c = config
+            shwrap("""
+            cosa aws-replicate \
+                --log-level=INFO \
+                --build=${buildID} \
+                --arch=${basearch} \
+                --credentials-file=\${AWS_CONFIG_FILE}
+            """)
+        }
+    }
     if (meta.amis) {
-        replicators["☁️ 🔄:aws"] = {
-            def replicated = false
-            def ids = ['aws-build-upload-config']
-            if (pipecfg.clouds?.aws?.govcloud &&
-                pipecfg[stream]?.skip_govcloud_hack != true) {
-                ids += 'aws-govcloud-image-upload-config'
+        credentials = [file(variable: "UNUSED", credentialsId: "aws-build-upload-config")]
+        if (pipecfg.clouds?.aws &&
+            utils.credentialsExist(credentials)) {
+            replicators["☁️ 🔄:aws"] = {
+                awsReplicateClosure.call(pipecfg.clouds.aws,
+                                         "aws-build-upload-config")
             }
-            def c = pipecfg.clouds.aws
-            for (id in ids) {
-                tryWithCredentials([file(variable: 'AWS_CONFIG_FILE', credentialsId: id)]) {
-                    shwrap("""
-                    cosa aws-replicate \
-                        --build=${buildID} \
-                        --arch=${basearch} \
-                        --credentials-file=\${AWS_CONFIG_FILE} \
-                        --log-level=INFO
-                    """)
-                    replicated = true
-                }
-            }
-            if (!replicated) {
-                error("AWS Replication asked for but no credentials exist")
+        }
+        credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
+        if (pipecfg.clouds?.aws?.govcloud &&
+            (pipecfg[stream]?.skip_govcloud_hack != true) &&
+            utils.credentialsExist(credentials)) {
+            replicators["☁️ 🔄:aws:govcloud"] = {
+                awsReplicateClosure.call(pipecfg.clouds.aws.govcloud,
+                                         "aws-govcloud-image-upload-config")
             }
         }
     }
+
     credentials = [file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "powervs-image-upload-config")]
     if (meta.powervs) {
