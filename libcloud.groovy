@@ -48,7 +48,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID) {
                 }
             }
             if (!replicated) {
-                        error("AWS Replication asked for but no credentials exist")
+                error("AWS Replication asked for but no credentials exist")
             }
         }
     }
