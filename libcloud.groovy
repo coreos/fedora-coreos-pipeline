@@ -97,7 +97,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
 def upload_to_clouds(pipecfg, basearch, buildID, stream) {
 
     // Get a list of the artifacts that are currently built.
-    def images_json = readJSON(text: shwrapCapture("cosa meta --get-value images"))
+    def images_json = readJSON(text: shwrapCapture("cosa meta --arch=${basearch} --get-value images"))
     def artifacts = images_json.keySet()
 
     // Define an uploader closure for each artifact/cloud that we
