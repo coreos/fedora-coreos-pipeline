@@ -134,7 +134,7 @@ aws_aarch64_serial_console_hack: true
 clouds:
   aws:
     # OPTIONAL: accounts to share newly created AMIs with
-    test_accounts:
+    grant_users:
       - "1234567890"
     # REQUIRED (if AWS build upload credentials provided): the region to do
     # initial image creation in.
@@ -150,7 +150,7 @@ clouds:
     # separate set of data for GovCloud uploads
     govcloud:
       # OPTIONAL: accounts to share newly created AMIs with
-      test_accounts:
+      grant_users:
         - "1234567890"
       # REQUIRED: the region to do initial image creation in.
       primary_region: us-gov-east-1

@@ -147,8 +147,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             utils.syncCredentialsIfInRemoteSession(["AWS_CONFIG_FILE"])
             def c = config
             def extraArgs = []
-            if (c.test_accounts) {
-                extraArgs += c.test_accounts.collect{"--grant-user=${it}"}
+            if (c.grant_users) {
+                extraArgs += c.grant_users.collect{"--grant-user=${it}"}
             }
             if (c.public) {
                 extraArgs += "--public"
