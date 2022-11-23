@@ -123,67 +123,53 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             }
         }
     }
-    credentials = [file(variable: "AWS_BUILD_UPLOAD_CONFIG",
-                        credentialsId: "aws-build-upload-config")]
-    if (pipecfg.clouds?.aws &&
-        artifacts.contains("aws") &&
-        utils.credentialsExist(credentials)) {
-        def creds = credentials
-        uploaders["☁️ ⬆️ :aws"] = {
-            withCredentials(creds) {
-                utils.syncCredentialsIfInRemoteSession(["AWS_BUILD_UPLOAD_CONFIG"])
-                def c = pipecfg.clouds.aws
-                def extraArgs = []
-                if (c.test_accounts) {
-                    extraArgs += c.test_accounts.collect{"--grant-user=${it}"}
-                }
-                if (c.public) {
-                    extraArgs += "--public"
-                }
-                shwrap("""
-                cosa buildextend-aws \
-                    --upload \
-                    --arch=${basearch} \
-                    --build=${buildID} \
-                    --region=${c.primary_region} \
-                    --bucket=s3://${c.bucket} \
-                    --credentials-file=\${AWS_BUILD_UPLOAD_CONFIG} \
-                    ${extraArgs.join(' ')} 
-                """)
+
+    // For AWS we need to consider the primary AWS partition and the
+    // GovCloud partition. Define a closure here that we'll call for both.
+    def awsUploadClosure = { config, credentialId ->
+        def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
+        withCredentials(creds) {
+            utils.syncCredentialsIfInRemoteSession(["AWS_CONFIG_FILE"])
+            def c = config
+            def extraArgs = []
+            if (c.test_accounts) {
+                extraArgs += c.test_accounts.collect{"--grant-user=${it}"}
+            }
+            if (c.public) {
+                extraArgs += "--public"
+            }
+            shwrap("""
+            cosa buildextend-aws \
+                --upload \
+                --arch=${basearch} \
+                --build=${buildID} \
+                --region=${c.primary_region} \
+                --bucket=s3://${c.bucket} \
+                --credentials-file=\${AWS_CONFIG_FILE} \
+                ${extraArgs.join(' ')}
+            """)
+        }
+    }
+    if (artifacts.contains("aws")) {
+        credentials = [file(variable: "UNUSED", credentialsId: "aws-build-upload-config")]
+        if (pipecfg.clouds?.aws &&
+            utils.credentialsExist(credentials)) {
+            uploaders["☁️ ⬆️ :aws"] = {
+                awsUploadClosure.call(pipecfg.clouds.aws,
+                                      "aws-build-upload-config")
+            }
+        }
+        credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
+        if (pipecfg.clouds?.aws?.govcloud &&
+            (pipecfg[stream]?.skip_govcloud_hack != true) &&
+            utils.credentialsExist(credentials)) {
+            uploaders["☁️ ⬆️ :aws:govcloud"] = {
+                awsUploadClosure.call(pipecfg.clouds.aws.govcloud,
+                                      "aws-govcloud-image-upload-config")
             }
         }
     }
-    credentials = [file(variable: "AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG",
-                        credentialsId: "aws-govcloud-image-upload-config")]
-    if (pipecfg.clouds?.aws?.govcloud &&
-        pipecfg[stream]?.skip_govcloud_hack != true &&
-        artifacts.contains("aws") &&
-        utils.credentialsExist(credentials)) {
-        def creds = credentials
-        uploaders["☁️ ⬆️ :aws:govcloud"] = {
-            withCredentials(creds) {
-                utils.syncCredentialsIfInRemoteSession(["AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG"])
-                def c = pipecfg.clouds.aws.govcloud
-                def extraArgs = []
-                if (c.test_accounts) {
-                    extraArgs += c.test_accounts.collect{"--grant-user=${it}"}
-                }
-                if (c.public) {
-                    extraArgs += "--public"
-                }
-                shwrap("""
-                cosa buildextend-aws \
-                    --upload \
-                    --arch=${basearch} \
-                    --build=${buildID} \
-                    --region=${c.primary_region} \
-                    --bucket=s3://${c.bucket} \
-                    --credentials-file=\${AWS_GOVCLOUD_IMAGE_UPLOAD_CONFIG} \
-                    ${extraArgs.join(' ')} 
-                """)
-            }
-        }
-    }
+
     credentials = [file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_AUTH',
                         credentialsId: 'azure-image-upload-config-auth'),
                    file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_PROFILE',
