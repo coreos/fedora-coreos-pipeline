@@ -32,8 +32,6 @@ hotfix:
 hacks:
   # OPTIONAL: skip upgrade kola tests
   skip_upgrade_tests: true
-  # OPTIONAL: skip calling plume in the release job
-  skip_plume_release_task: true
   # OPTIONAL: skip UEFI on older RHCOS
   skip_uefi_tests_on_older_rhcos: true
   # OPTIONAL: implement the yumrepos branch workaround
@@ -142,7 +140,8 @@ clouds:
     # REQUIRED (if AWS build upload credentials provided): the bucket+prefix
     # where image files are uploaded to then initiate an image import.
     bucket: fedora-coreos-image-uploads/ami-import
-    # OPTIONAL: boolean: whether or not to set the image/snapshot as public
+    # OPTIONAL: boolean: whether or not to set the image/snapshot as public on
+    # initial upload (AMIs of released builds are always made public)
     public: true
     # OPTIONAL: list of architectures to limit cloud testing to.
     test_architectures: [x86_64]
@@ -229,3 +228,8 @@ clouds:
       - jp-osa
       - jp-tok
       - us-south
+
+# OPTIONAL: miscellaneous options
+misc:
+  # OPTIONAL: whether to generate a release index
+  generate_release_index: true

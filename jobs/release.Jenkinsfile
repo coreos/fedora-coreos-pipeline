@@ -298,19 +298,25 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     --acl=${acl} ${s3_stream_dir}/builds
                 """)
 
-                if (!pipecfg.hacks?.skip_plume_release_task) {
-                    // Run plume to publish official builds; This will handle modifying
-                    // object ACLs, modifying AMI image attributes,
-                    // and creating/modifying the releases.json metadata index
-                    // Note here we pass the bucket instead of `s3_stream_dir` but
-                    // plume currently only actually interacts with objects under
-                    // the `s3_stream_dir` key (i.e. `pipecfg.s3.builds_key`).
-                    // We'll make this more explicit in the future.
+                def bucket_prefix = "${pipecfg.s3.bucket}/${pipecfg.s3.builds_key}"
+
+                // make AMIs public if not already the case
+                if (!pipecfg.clouds?.aws?.public) {
                     shwrap("""
-                    cosa shell -- plume release --distro fcos \
+                    cosa shell -- plume make-amis-public \
                         --version ${params.VERSION} \
                         --stream ${params.STREAM} \
-                        --bucket ${pipecfg.s3.bucket} \
+                        --bucket-prefix ${bucket_prefix} \
+                        --aws-credentials \${AWS_BUILD_UPLOAD_CONFIG}
+                    """)
+                }
+
+                if (pipecfg.misc?.generate_release_index) {
+                    shwrap("""
+                    cosa shell -- plume update-release-index \
+                        --version ${params.VERSION} \
+                        --stream ${params.STREAM} \
+                        --bucket-prefix ${bucket_prefix} \
                         --aws-credentials \${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
