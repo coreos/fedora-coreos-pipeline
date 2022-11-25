@@ -564,7 +564,7 @@ oc start-build --follow jenkins
 If a root CA cert was provided, also start a build of the Jenkins agent:
 
 ```
-oc start-build --follow jenkins-agent
+oc start-build --follow jenkins-agent-base-with-cert
 ```
 
 Once the Jenkins controller image is built, Jenkins should start up (verify

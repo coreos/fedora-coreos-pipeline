@@ -5,15 +5,15 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: jenkins-agent
+  name: jenkins-with-cert
 labels:
   app: coreos-pipeline
-  template: coreos-pipeline-jenkins-agent-template
+  template: coreos-pipeline-jenkins-with-cert-template
 objects:
   - kind: BuildConfig
     apiVersion: v1
     metadata:
-      name: jenkins-agent
+      name: jenkins-agent-base-with-cert
     spec:
       source:
         dockerfile: |
@@ -34,7 +34,7 @@ objects:
       output:
         to:
           kind: ImageStreamTag
-          name: jenkins-agent:latest
+          name: jenkins-agent-base:latest
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
       triggers:
