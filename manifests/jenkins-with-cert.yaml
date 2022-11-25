@@ -13,6 +13,41 @@ objects:
   - kind: BuildConfig
     apiVersion: v1
     metadata:
+      name: jenkins-with-cert
+    spec:
+      source:
+        dockerfile: |
+          FROM overridden
+          COPY cert/data /etc/pki/ca-trust/source/anchors/root-ca.crt
+          USER root
+          RUN update-ca-trust
+          # restore previous user ID
+          # https://github.com/openshift/jenkins/blob/7bae76f4412d28c18ed2b33aaf73306734b7f6d5/2/Dockerfile.rhel8#L107
+          USER 1001
+        secrets:
+          - destinationDir: cert
+            secret:
+              name: additional-root-ca-cert
+      strategy:
+        dockerStrategy:
+          from:
+            kind: ImageStreamTag
+            name: jenkins:2
+            namespace: openshift
+          forcePull: true
+      output:
+        to:
+          kind: ImageStreamTag
+          name: jenkins:latest
+      successfulBuildsHistoryLimit: 2
+      failedBuildsHistoryLimit: 2
+      triggers:
+        - type: ConfigChange
+        - type: ImageChange
+          imageChange: {}
+  - kind: BuildConfig
+    apiVersion: v1
+    metadata:
       name: jenkins-agent-base-with-cert
     spec:
       source:

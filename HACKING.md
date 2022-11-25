@@ -555,16 +555,18 @@ This will create:
 3. the Jenkins agent BuildConfig (if a root CA cert was provided),
 4. the jenkins-config configmap.
 
+If a root CA cert was provided, we need to build the base images that
+will bake in the cert in the controller and agent:
+
+```
+oc start-build --follow jenkins-with-cert
+oc start-build --follow jenkins-agent-base-with-cert
+```
+
 We can now start a build of the Jenkins controller:
 
 ```
 oc start-build --follow jenkins
-```
-
-If a root CA cert was provided, also start a build of the Jenkins agent:
-
-```
-oc start-build --follow jenkins-agent-base-with-cert
 ```
 
 Once the Jenkins controller image is built, Jenkins should start up (verify
