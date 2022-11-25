@@ -58,7 +58,7 @@ objects:
   - apiVersion: v1
     kind: ImageStream
     metadata:
-      name: jenkins-agent
+      name: jenkins-agent-base
     spec:
       lookupPolicy:
         # this allows e.g. the pipeline to directly reference the imagestream

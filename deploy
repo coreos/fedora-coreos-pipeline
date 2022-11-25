@@ -56,7 +56,7 @@ def process_template(args):
     if args.pipecfg:
         params.update(params_from_git_refspec(args.pipecfg, 'PIPECFG'))
     if has_additional_root_ca(args):
-        templates += ['jenkins-agent.yaml']
+        templates += ['jenkins-with-cert.yaml']
         # we want :latest to be owned by our BuildConfig, so call the base
         # image :base instead of :latest
         params['JENKINS_AGENT_BASE_TAG'] = "base"
