@@ -36,8 +36,6 @@ hacks:
   skip_plume_release_task: true
   # OPTIONAL: skip UEFI on older RHCOS
   skip_uefi_tests_on_older_rhcos: true
-  # OPTIONAL: implement the yumrepos branch workaround
-  use_yumrepos_branch_workaround: true
   # OPTIONAL: use a different compression format when archiving
   override_compression_format: gzip
 
@@ -62,6 +60,8 @@ streams:
       default: true
       # OPTIONAL: override source config ref to use for this stream
       source_config_ref: main
+      # OPTIONAL: implement the yumrepos branch workaround for this stream
+      yumrepos_branch_rhcos_hack: true
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream

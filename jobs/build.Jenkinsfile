@@ -140,7 +140,7 @@ lock(resource: "build-${params.STREAM}") {
         def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
-            if (pipecfg.hacks?.use_yumrepos_branch_workaround) {
+            if (stream_info.yumrepos_branch_rhcos_hack) {
                 // Right now the git repo that has our yum repo files isn't a
                 // single branch, but a branch per stream. So let's work with
                 // that here.
