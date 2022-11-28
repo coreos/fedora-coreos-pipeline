@@ -16,6 +16,30 @@ parameters:
     description: Tag name of base OpenShift Jenkins agent image
     value: latest
 
+# Here's what the flow looks like when no cert is required:
+#
+# ┌─────────────────────┐   ┌────────────────┐   ┌─────────────┐   ┌─────────────┐
+# │ imagestream         │   │ imagestream    │   │ buildconfig │   │ imagestream │
+# │ openshift/jenkins:2 ├──►│ jenkins:latest ├──►│ jenkins-s2i ├──►│ jenkins:2   │
+# └─────────────────────┘   └────────────────┘   └─────────────┘   └─────────────┘
+#
+# ┌─────────────────────────────────────┐   ┌───────────────────────────┐
+# │ imagestream                         │   │ imagestream               │
+# │ openshift/jenkins-agent-base:latest ├──►│ jenkins-agent-base:latest │
+# └─────────────────────────────────────┘   └───────────────────────────┘
+#
+# And with cert required (see `jenkins-with-cert.yaml`):
+#
+# ┌─────────────────────┐   ┌───────────────────┐   ┌────────────────┐   ┌─────────────┐   ┌─────────────┐
+# │ imagestream         │   │ buildconfig       │   │ imagestream    │   │ buildconfig │   │ imagestream │
+# │ openshift/jenkins:2 ├──►│ jenkins-with-cert ├──►│ jenkins:latest ├──►│ jenkins-s2i ├──►│ jenkins:2   │
+# └─────────────────────┘   └───────────────────┘   └────────────────┘   └─────────────┘   └─────────────┘
+#
+# ┌─────────────────────────────────────┐   ┌──────────────────────────────┐   ┌───────────────────────────┐
+# │ imagestream                         │   │ buildconfig                  │   │ imagestream               │
+# │ openshift/jenkins-agent-base:latest ├──►│ jenkins-agent-base-with-cert ├──►│ jenkins-agent-base:latest │
+# └─────────────────────────────────────┘   └──────────────────────────────┘   └───────────────────────────┘
+
 objects:
 
   ### JENKINS CONTROLLER ###
