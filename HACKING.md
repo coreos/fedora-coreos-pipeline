@@ -563,10 +563,10 @@ oc start-build --follow jenkins-with-cert
 oc start-build --follow jenkins-agent-base-with-cert
 ```
 
-We can now start a build of the Jenkins controller:
+We can now start an S2I build of the Jenkins controller:
 
 ```
-oc start-build --follow jenkins
+oc start-build --follow jenkins-s2i
 ```
 
 Once the Jenkins controller image is built, Jenkins should start up (verify
