@@ -36,7 +36,7 @@ objects:
   - kind: BuildConfig
     apiVersion: v1
     metadata:
-      name: jenkins
+      name: jenkins-s2i
     # Note no triggers: we don't want e.g. git pushes/config changes to restart
     # Jenkins. Let's just require manual restarts here. XXX: Should investigate
     # if there's an easy way to auto-redeploy during downtimes.
