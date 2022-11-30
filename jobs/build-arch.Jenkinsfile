@@ -276,29 +276,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
-        // A few independent tasks that can be run in parallel
-        def parallelruns = [:]
-
-        // Generate KeyLime hashes for attestation on builds
-        // This is a POC setup and will be modified over time
-        // See: https://github.com/keylime/enhancements/blob/master/16_remote_allowlist_retrieval.md
-        parallelruns['KeyLime Hash Generation'] = {
-            shwrap("""
-            cosa generate-hashlist --arch=${basearch} --release=${newBuildID} \
-                --output=builds/${newBuildID}/${basearch}/exp-hash.json
-            source="builds/${newBuildID}/${basearch}/exp-hash.json"
-            target="builds/${newBuildID}/${basearch}/exp-hash.json-CHECKSUM"
-            cosa shell -- bash -c "sha256sum \$source > \$target"
-            """)
-        }
-
         // Build QEMU image
-        parallelruns['Build QEMU'] = {
+        stage("Build QEMU") {
             shwrap("cosa buildextend-qemu")
         }
-
-        // process this batch
-        parallel parallelruns
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
         if (params.KOLA_RUN_SLEEP) {
@@ -383,7 +364,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // parallel.
         if (uploading) {
             pipeutils.tryWithMessagingCredentials() {
-                parallelruns = [:]
+                def parallelruns = [:]
                 parallelruns['Sign Images'] = {
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa sign --build=${newBuildID} --arch=${basearch} \
