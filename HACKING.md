@@ -608,8 +608,12 @@ use the `jenkins` service account (or really, any service account with
 the `edit` role):
 
 ```
-token_secret=$(oc get sa jenkins -o json | jq -r '.secrets[] | select(.name | contains("token")) | .name')
-token_data=$(oc get secret "${token_secret}" -o=jsonpath={.data.token} | base64 -d)
+jenkins_uid=$(oc get sa jenkins -o jsonpath="{.metadata.uid}")
+token_data=$(oc get secrets -o json | jq -r "[.items[] | select(
+    .type == \"kubernetes.io/service-account-token\" and
+    .metadata.annotations[\"kubernetes.io/service-account.name\"] == \"jenkins\" and
+    .metadata.annotations[\"kubernetes.io/service-account.uid\"] == \"${jenkins_uid}\"
+)] | .[0].data.token" | base64 -d)
 curl -H "Authorization: Bearer ${token_data}" $JENKINS_URL/job/build/buildWithParameters --data STREAM=4.13
 ```
 
