@@ -153,7 +153,8 @@ clouds:
       primary_region: us-gov-east-1
       # REQUIRED: the bucket+prefix where image files are uploaded to then initiate an image import.
       bucket: fedora-coreos-govcloud-image-uploads/ami-import
-      # OPTIONAL: boolean: whether or not to set the image/snapshot as public
+      # OPTIONAL: boolean: whether or not to set the image/snapshot as public on
+      # initial upload (AMIs of released builds are always made public)
       public: true
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
