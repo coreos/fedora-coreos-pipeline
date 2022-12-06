@@ -1,7 +1,10 @@
 jenkins:
   clouds:
   - kubernetes:
-      # The keys below match
+      # mitigation for
+      # https://docs.cloudbees.com/docs/cloudbees-ci-kb/latest/client-and-managed-masters/considerations-for-kubernetes-clients-connection-when-using-kubernetes-plugin
+      maxRequestsPerHost: 64
+      # The remaining keys below match
       # https://github.com/openshift/jenkins/blob/7bae76f4412d/2/contrib/jenkins/kube-slave-common.sh#L75
       # except that we don't include the templates since we don't need them.
       # We also don't include the certificate; it's automatically fetched from
@@ -9,7 +12,7 @@ jenkins:
       name: "openshift"
       addMasterProxyEnvVars: true
       containerCap: 100
-      jenkinsTunnel: "${JENKINS_JNLP_SERVICE_HOST}:${JENKINS_JNLP_SERVICE_PORT_AGENT}"
+      jenkinsTunnel: "${JENKINS_JNLP_SERVICE_HOST}:${JENKINS_JNLP_SERVICE_PORT}"
       jenkinsUrl: "http://${JENKINS_SERVICE_HOST}:${JENKINS_SERVICE_PORT}"
       namespace: "${OPENSHIFT_BUILD_NAMESPACE}"
       serverUrl: "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
