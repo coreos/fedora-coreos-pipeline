@@ -156,28 +156,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         stage('Init') {
-            if (stream_info.yumrepos_branch_rhcos_hack) {
-                // Right now the git repo that has our yum repo files isn't a
-                // single branch, but a branch per stream. So let's work with
-                // that here.
-                def yumrepos_ref = params.STREAM
-                if (yumrepos_ref == '4.13') {
-                    yumrepos_ref = 'master'
-                }
-                shwrap("""
-                cosa shell -- mkdir ./yumrepos
-                cosa shell -- git clone --depth=1 --branch=${yumrepos_ref} ${pipecfg.source_config.yumrepos} ./yumrepos
-                yumrepos=\$(cosa shell -- readlink -f ./yumrepos)
-                cosa init --force --branch ${ref} --commit=${src_config_commit} --yumrepos=\${yumrepos} ${pipecfg.source_config.url}
-                """)
-            } else {
-                def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
-                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-                shwrap("""
-                cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${variant} ${pipecfg.source_config.url}
-                """)
-            }
-
+            def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+            def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+            shwrap("""
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${variant} ${pipecfg.source_config.url}
+            """)
         }
 
         // Determine parent version/commit information

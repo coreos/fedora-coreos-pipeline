@@ -56,8 +56,6 @@ streams:
       default: true
       # OPTIONAL: override source config ref to use for this stream
       source_config_ref: main
-      # OPTIONAL: implement the yumrepos branch workaround for this stream
-      yumrepos_branch_rhcos_hack: true
       # OPTIONAL: override OS variant to use for this stream
       variant: rhcos-9.0
     stable:
