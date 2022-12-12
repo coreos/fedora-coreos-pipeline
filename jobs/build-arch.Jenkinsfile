@@ -172,8 +172,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 """)
             } else {
                 def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
                 shwrap("""
-                cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${pipecfg.source_config.url}
+                cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${variant} ${pipecfg.source_config.url}
                 """)
             }
 

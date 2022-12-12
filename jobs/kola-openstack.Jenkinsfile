@@ -41,6 +41,8 @@ properties([
 
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSION}"
 
+def stream_info = pipecfg.streams[params.STREAM]
+
 // Use ca-ymq-1 for everything right now since we're having trouble with
 // image uploads to ams1.
 def region = "ca-ymq-1"
@@ -68,8 +70,9 @@ lock(resource: "kola-openstack-${params.ARCH}") {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
                 def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
                 shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
+                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
                 cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                     --url=s3://${s3_stream_dir}/builds --artifact=openstack
                 """)

@@ -44,6 +44,8 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 echo "Waiting for bump-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
+def stream_info = pipecfg.streams[params.STREAM]
+
 def getLockfileInfo(lockfile) {
     def pkgChecksum, pkgTimestamp
     if (utils.pathExists(lockfile)) {
@@ -83,7 +85,8 @@ lock(resource: "bump-${params.STREAM}") {
         def forceTimestamp = false
         def haveChanges = false
         def src_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} ${branch} | cut -d \$'\t' -f 1")
-        shwrap("cosa init --branch ${branch} --commit=${src_config_commit} https://github.com/${repo}")
+        def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+        shwrap("cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}")
 
         def lockfile, pkgChecksum, pkgTimestamp
         def skip_tests_arches = params.SKIP_TESTS_ARCHES.split()
@@ -109,7 +112,7 @@ lock(resource: "bump-${params.STREAM}") {
                         """)
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                             shwrap("""
-                            cosa init --branch ${branch} --commit=${src_config_commit} https://github.com/${repo}
+                            cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}
                             """)
                         }
                     }
