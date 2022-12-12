@@ -544,6 +544,21 @@ def getSlackEmojiPrefix() {
 // Emits Slack message if set up, otherwise does nothing.
 def trySlackSend(params) {
     if (utils.credentialsExist([string(credentialsId: 'slack-api-token', variable: 'UNUSED')])) {
+        // If not given a color, determine what color the message should
+        // be based on the current build results.
+        if (!params.color) {
+            switch(currentBuild.result) {
+                case 'SUCCESS':
+                    params.color = 'good';
+                    break;
+                case 'UNSTABLE':
+                    params.color = 'warning';
+                    break;
+                default:
+                    params.color = 'danger';
+                    break;
+            }
+        }
         // Prefix all slack messages with the emoji in the jenkins.io/emoji-prefix
         // annotation on the slack-api-token secret. If it doesn't exist then
         // default to just a generic CoreOS emoji.

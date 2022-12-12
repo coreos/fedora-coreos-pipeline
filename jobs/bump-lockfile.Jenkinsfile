@@ -290,12 +290,8 @@ lock(resource: "bump-${params.STREAM}") {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        def color = 'danger'
-        if (currentBuild.result == 'UNSTABLE') {
-            color = 'warning'
-        }
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(color: color, message: "<${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
+            pipeutils.trySlackSend(message: "<${env.BUILD_URL}|bump-lockfile #${env.BUILD_NUMBER} (${params.STREAM})>")
         }
     }
 }}} // cosaPod, timeout, and lock finish here

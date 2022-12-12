@@ -176,7 +176,7 @@ lock(resource: "build-${containername}") {
         }
         if (currentBuild.result != 'SUCCESS') {
             message = "build-cosa <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
-            pipeutils.trySlackSend(color: 'danger', message: message)
+            pipeutils.trySlackSend(message: message)
         }
     }
 }}} // cosaPod, timeout, and lock finish here

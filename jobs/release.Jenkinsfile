@@ -375,17 +375,5 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    def color
-    switch(currentBuild.result) {
-        case 'SUCCESS':
-            color = 'good';
-            break;
-        case 'UNSTABLE':
-            color = 'warning';
-            break;
-        default:
-            color = 'danger';
-            break;
-    }
-    pipeutils.trySlackSend(color: color, message: ":bullettrain_front: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
+    pipeutils.trySlackSend(message: ":bullettrain_front: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here
