@@ -510,13 +510,10 @@ lock(resource: "build-${params.STREAM}") {
             return
         }
         message = ":sparkles: ${message} - SUCCESS"
-        color = 'good';
     } else if (currentBuild.result == 'UNSTABLE') {
         message = ":warning: ${message} - WARNING"
-        color = 'warning';
     } else {
         message = ":fire: ${message} - FAILURE"
-        color = 'danger';
     }
 
     if (newBuildID) {
@@ -524,7 +521,7 @@ lock(resource: "build-${params.STREAM}") {
     }
 
     echo message
-    pipeutils.trySlackSend(color: color, message: message)
+    pipeutils.trySlackSend(message: message)
     pipeutils.tryWithMessagingCredentials() {
         shwrap("""
         /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \

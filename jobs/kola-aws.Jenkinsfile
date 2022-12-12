@@ -137,7 +137,7 @@ timeout(time: 90, unit: 'MINUTES') {
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(color: 'danger', message: ":aws: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            pipeutils.trySlackSend(message: ":aws: kola-aws <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }} // cosaPod and timeout finish here

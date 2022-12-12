@@ -142,7 +142,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(color: 'danger', message: ":openstack: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            pipeutils.trySlackSend(message: ":openstack: kola-openstack <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }}} // cosaPod, timeout, and lock finish here
