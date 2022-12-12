@@ -58,6 +58,8 @@ streams:
       source_config_ref: main
       # OPTIONAL: implement the yumrepos branch workaround for this stream
       yumrepos_branch_rhcos_hack: true
+      # OPTIONAL: override OS variant to use for this stream
+      variant: rhcos-9.0
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream

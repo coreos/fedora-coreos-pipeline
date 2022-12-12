@@ -43,6 +43,8 @@ currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${params.VERSIO
 
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
+def stream_info = pipecfg.streams[params.STREAM]
+
 timeout(time: 30, unit: 'MINUTES') {
     cosaPod(memory: "512Mi", kvm: false,
             image: params.COREOS_ASSEMBLER_IMAGE,
@@ -57,8 +59,9 @@ timeout(time: 30, unit: 'MINUTES') {
             withCredentials([file(variable: 'AWS_CONFIG_FILE',
                                   credentialsId: 'aws-build-upload-config')]) {
                 def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
                 shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
+                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
                 cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
                 """)
