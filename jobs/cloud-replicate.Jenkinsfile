@@ -145,7 +145,5 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    if (currentBuild.result != 'SUCCESS') {
-        pipeutils.trySlackSend(message: ":cloud: :arrows_counterclockwise: cloud-replicate <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
-    }
+    pipeutils.trySlackSend(message: ":cloud: :arrows_counterclockwise: cloud-replicate <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here
