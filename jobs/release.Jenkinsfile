@@ -111,7 +111,11 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         assert builtarches.contains("x86_64"): "The x86_64 architecture was not in builtarches."
         if (!builtarches.containsAll(basearches)) {
             if (params.ALLOW_MISSING_ARCHES) {
-                echo "Some requested architectures did not successfully build! Continuing."
+                // Display a warning, but continue.
+                def message = "Some requested architectures did not successfully build!"
+                warnError(message: message) {
+                    error(message)
+                }
                 basearches = builtarches.intersect(basearches)
             } else {
                 echo "ERROR: Some requested architectures did not successfully build"
@@ -371,6 +375,17 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    def color = currentBuild.result == 'SUCCESS' ? 'good' : 'danger'
+    def color
+    switch(currentBuild.result) {
+        case 'SUCCESS':
+            color = 'good';
+            break;
+        case 'UNSTABLE':
+            color = 'warning';
+            break;
+        default:
+            color = 'danger';
+            break;
+    }
     pipeutils.trySlackSend(color: color, message: ":bullettrain_front: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here
