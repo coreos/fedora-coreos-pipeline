@@ -417,11 +417,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             // SUCCESS, but no new builds? Must've been a no-op
             return
         }
-        message = ":sparkles: ${message} - SUCCESS"
+        message = ":sparkles: ${message}"
     } else if (currentBuild.result == 'UNSTABLE') {
-        message = ":warning: ${message} - WARNING"
+        message = ":warning: ${message}"
     } else {
-        message = ":fire: ${message} - FAILURE"
+        message = ":fire: ${message}"
     }
 
     if (newBuildID) {
