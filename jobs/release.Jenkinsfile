@@ -307,13 +307,23 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
                 // make AMIs public if not already the case
                 if (!pipecfg.clouds?.aws?.public) {
-                    shwrap("""
+                    def rc = shwrapRc("""
                     cosa shell -- plume make-amis-public \
                         --version ${params.VERSION} \
                         --stream ${params.STREAM} \
                         --bucket-prefix ${bucket_prefix} \
                         --aws-credentials \${AWS_BUILD_UPLOAD_CONFIG}
                     """)
+                    // see https://github.com/coreos/coreos-assembler/pull/3277
+                    if (rc == 77) {
+                        // Display a warning, but continue.
+                        def message = "Failed to make AMIs public in some regions"
+                        warnError(message: message) {
+                            error(message)
+                        }
+                    } else if (rc != 0) {
+                        error("plume make-amis-public exited with code ${rc}")
+                    }
                 }
 
                 if (pipecfg.misc?.generate_release_index) {
