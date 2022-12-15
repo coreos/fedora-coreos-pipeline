@@ -146,7 +146,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             fetch_args += fetch_artifacts.collect{"--artifact=${it}"}
 
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            /usr/bin/time -v cosa buildfetch --build=${params.VERSION} \
+            cosa buildfetch --build=${params.VERSION} \
                 --url=s3://${s3_stream_dir}/builds    \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                 ${fetch_args.join(' ')}
