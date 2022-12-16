@@ -112,11 +112,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         assert builtarches.contains("x86_64"): "The x86_64 architecture was not in builtarches."
         if (!builtarches.containsAll(basearches)) {
             if (params.ALLOW_MISSING_ARCHES) {
-                // Display a warning, but continue.
-                def message = "Some requested architectures did not successfully build!"
-                warnError(message: message) {
-                    error(message)
-                }
+                warn("Some requested architectures did not successfully build!")
                 basearches = builtarches.intersect(basearches)
             } else {
                 echo "ERROR: Some requested architectures did not successfully build"
@@ -316,11 +312,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     """)
                     // see https://github.com/coreos/coreos-assembler/pull/3277
                     if (rc == 77) {
-                        // Display a warning, but continue.
-                        def message = "Failed to make AMIs public in some regions"
-                        warnError(message: message) {
-                            error(message)
-                        }
+                        warn("Failed to make AMIs public in some regions")
                     } else if (rc != 0) {
                         error("plume make-amis-public exited with code ${rc}")
                     }

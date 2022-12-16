@@ -382,9 +382,7 @@ lock(resource: "build-${params.STREAM}") {
                             tmp/kolaTestIso-*/kola-testiso-uefi/insecure/{iso-live-login,iso-as-disk}/console.txt
                     """)
                     if (grepRc == 0) {
-                        warnError(message: 'Detected used workaround for #1233') {
-                            error('Detected used workaround for #1233')
-                        }
+                        warn("Detected used workaround for #1233")
                     }
                 }
             }
