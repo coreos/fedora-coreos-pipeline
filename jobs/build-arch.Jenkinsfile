@@ -11,7 +11,6 @@ node {
 // Base URL through which to download artifacts
 BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
 
-
 properties([
     pipelineTriggers([]),
     parameters([
@@ -78,7 +77,7 @@ def stream_info = pipecfg.streams[params.STREAM]
 def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
 
 // If we are a mechanical stream then we can pin packages but we
-// don't maintin complete lockfiles so we can't build in strict mode.
+// don't maintain complete lockfiles so we can't build in strict mode.
 def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 
 // Note that the heavy lifting is done on a remote node via podman
@@ -114,7 +113,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         currentBuild.description = "${build_description} Running"
 
-
         // this is defined IFF we *should* and we *can* upload to S3
         def s3_stream_dir
 
@@ -129,7 +127,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         } else {
             uploading = false
         }
-
 
         // Wrap a bunch of commands now inside the context of a remote
         // session. All `cosa` commands, other than `cosa remote-session`
@@ -284,7 +281,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // Build the remaining artifacts
         stage("Build Artifacts") {
             pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
-
         }
 
         // Run Kola TestISO tests for metal artifacts
@@ -368,7 +364,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         } // end withEnv
         } // end withPodmanRemoteArchBuilder
-
 
         currentBuild.result = 'SUCCESS'
 
