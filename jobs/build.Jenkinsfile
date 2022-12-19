@@ -57,7 +57,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-def build_description = "[${params.STREAM}]"
+def build_description = "[${params.STREAM}][x86_64]"
 
 // Reload pipecfg if a hotfix build was provided. The reason we do this here
 // instead of loading the right one upfront is so that we don't modify the
@@ -65,7 +65,7 @@ def build_description = "[${params.STREAM}]"
 if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
     node {
         pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
-        build_description = "[${params.STREAM}-${pipecfg.hotfix.name}]"
+        build_description = "[${params.STREAM}-${pipecfg.hotfix.name}][x86_64]"
     }
 }
 
@@ -81,7 +81,7 @@ if (params.ADDITIONAL_ARCHES != "none") {
 def stream_info = pipecfg.streams[params.STREAM]
 
 // If we are a mechanical stream then we can pin packages but we
-// don't maintin complete lockfiles so we can't build in strict mode.
+// don't maintain complete lockfiles so we can't build in strict mode.
 def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 
 // Note the supermin VM just uses 2G. The really hungry part is xz, which
@@ -115,7 +115,6 @@ lock(resource: "build-${params.STREAM}") {
     try {
 
         basearch = shwrapCapture("cosa basearch")
-        build_description += "[${basearch}]"
         currentBuild.description = "${build_description} Running"
 
         // this is defined IFF we *should* and we *can* upload to S3
@@ -252,7 +251,6 @@ lock(resource: "build-${params.STREAM}") {
 
         newBuildID = buildID
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
-
 
         pipeutils.tryWithMessagingCredentials() {
             shwrap("""
