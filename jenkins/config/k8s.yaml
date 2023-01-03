@@ -3,7 +3,8 @@ jenkins:
   - kubernetes:
       # mitigation for
       # https://docs.cloudbees.com/docs/cloudbees-ci-kb/latest/client-and-managed-masters/considerations-for-kubernetes-clients-connection-when-using-kubernetes-plugin
-      maxRequestsPerHost: 64
+      maxRequestsPerHost: 96
+      connectTimeout: 30
       # The remaining keys below match
       # https://github.com/openshift/jenkins/blob/7bae76f4412d/2/contrib/jenkins/kube-slave-common.sh#L75
       # except that we don't include the templates since we don't need them.
