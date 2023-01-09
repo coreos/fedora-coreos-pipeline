@@ -1,6 +1,6 @@
 unclassified:
   slackNotifier:
-    teamDomain: coreos
+    teamDomain: redhat-internal
     tokenCredentialId: slack-api-token
     # https://github.com/jenkinsci/slack-plugin/issues/857
     room: ""
