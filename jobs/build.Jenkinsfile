@@ -411,7 +411,8 @@ lock(resource: "build-${params.STREAM}") {
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
                 cosa buildupload --skip-builds-json s3 \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                    --acl=${acl} ${s3_stream_dir}/builds
+                    --acl=${acl} ${s3_stream_dir}/builds \
+                    --arch=${basearch}
                 """)
             }
         }
