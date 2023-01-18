@@ -409,10 +409,9 @@ lock(resource: "build-${params.STREAM}") {
             if (uploading) {
                 def acl = pipecfg.s3.acl ?: 'public-read'
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa buildupload --skip-builds-json s3 \
+                cosa buildupload --skip-builds-json --arch=${basearch} s3 \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                    --acl=${acl} ${s3_stream_dir}/builds \
-                    --arch=${basearch}
+                    --acl=${acl} ${s3_stream_dir}/builds
                 """)
             }
         }
