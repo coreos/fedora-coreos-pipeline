@@ -179,6 +179,14 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
+        // enable --autolock if not in strict mode and cosa supports it
+        def autolock_arg = ""
+        if (strict_build_param == "") {
+            if (shwrapRc("cosa fetch --help |& grep -q autolock") == 0) {
+                autolock_arg = "--autolock ${params.VERSION}"
+            }
+        }
+
         // buildfetch previous build info
         stage('BuildFetch') {
             if (s3_stream_dir) {
@@ -214,13 +222,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // fetch from repos for the current build
         stage('Fetch') {
-            // enable --autolock if not in strict mode and cosa supports it
-            def autolock_arg = ""
-            if (strict_build_param == "") {
-                if (shwrapRc("cosa fetch --help |& grep -q autolock") == 0) {
-                    autolock_arg = "--autolock ${params.VERSION}"
-                }
-            }
             shwrap("""
             cosa fetch ${strict_build_param} ${autolock_arg}
             """)
