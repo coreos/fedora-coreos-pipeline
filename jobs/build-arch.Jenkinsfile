@@ -195,16 +195,19 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                     --url s3://${s3_stream_dir}/builds \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
-                // Also fetch the x86_64 lockfile for the build we're
-                // complementing, if any. Usually, this is the same build we
-                // just fetched above, but not necessarily.
-                pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa buildfetch --arch=x86_64 \
-                    --build ${newBuildID} \
-                    --file manifest-lock.generated.x86_64.json \
-                    --url s3://${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
-                """)
+                if (autolock_arg != "") {
+                    // Also fetch the x86_64 lockfile for the build we're
+                    // complementing so that we can use autolocking. Usually,
+                    // this is the same build we just fetched above, but not
+                    // necessarily.
+                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                    cosa buildfetch --arch=x86_64 \
+                        --build ${newBuildID} \
+                        --file manifest-lock.generated.x86_64.json \
+                        --url s3://${s3_stream_dir}/builds \
+                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+                    """)
+                }
                 if (parent_version != "") {
                     // also fetch the parent version; this is used by cosa to do the diff
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
