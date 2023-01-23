@@ -8,9 +8,6 @@ node {
 repo = "coreos/fedora-coreos-config"
 botCreds = "github-coreosbot-token-username-password"
 
-// Base URL through which to download artifacts
-BUILDS_BASE_HTTP_URL = "https://builds.coreos.fedoraproject.org/prod/streams"
-
 properties([
     // we're only triggered by bump-lockfiles
     pipelineTriggers([]),
@@ -43,6 +40,8 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 echo "Waiting for bump-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
+
+def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
@@ -125,30 +124,33 @@ lock(resource: "bump-${params.STREAM}") {
         // buildfetch here so we can see in the build output (that happens
         // later) what packages changed.
         stage("Fetch Metadata") {
-            def parallelruns = [:]
-            for (architecture in archinfo.keySet()) {
-                def arch = architecture
-                parallelruns[arch] = {
-                    if (arch == "x86_64") {
-                        shwrap("""
-                        cosa buildfetch --arch=${arch} --find-build-for-arch \
-                            --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds
-                        cosa fetch --update-lockfile --dry-run
-                        """)
-                    } else {
-                        pipeutils.withExistingCosaRemoteSession(
-                            arch: arch, session: archinfo[arch]['session']) {
+            withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                        credentialsId: 'aws-build-upload-config')]) {
+                def parallelruns = [:]
+                for (architecture in archinfo.keySet()) {
+                    def arch = architecture
+                    parallelruns[arch] = {
+                        if (arch == "x86_64") {
                             shwrap("""
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
-                                --url=${BUILDS_BASE_HTTP_URL}/${branch}/builds
+                                --url=s3://${s3_stream_dir}/builds
                             cosa fetch --update-lockfile --dry-run
-                            cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
                             """)
+                        } else {
+                            pipeutils.withExistingCosaRemoteSession(
+                                arch: arch, session: archinfo[arch]['session']) {
+                                shwrap("""
+                                cosa buildfetch --arch=${arch} --find-build-for-arch \
+                                    --url=s3://${s3_stream_dir}/builds
+                                cosa fetch --update-lockfile --dry-run
+                                cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
+                                """)
+                            }
                         }
                     }
                 }
+                parallel parallelruns
             }
-            parallel parallelruns
         }
 
         for (architecture in archinfo.keySet()) {
