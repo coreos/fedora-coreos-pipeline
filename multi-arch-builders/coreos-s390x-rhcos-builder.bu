@@ -2,6 +2,8 @@
 #
 # - Merge in the coreos-s390x-builder.ign Ignition file
 # - Enable the Secure Execution Host
+# - Create and initialize the secex-data volume
+# - Run keepalive container for secex-data volume. See: https://github.com/containers/podman/issues/17051
 #
 variant: fcos
 version: 1.4.0
@@ -13,3 +15,89 @@ kernel_arguments:
   should_exist:
     # enables Secure Execution Host
     - prot_virt=1
+systemd:
+  units:
+    - name: secex-data-volume.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Create secex-data volume
+        [Service]
+        Type=oneshot
+        ExecStart=/home/core/create-secex-data.sh
+        [Install]
+        WantedBy=multi-user.target
+storage:
+  directories:
+    - path: /home/builder/.config/systemd/user/default.target.wants
+      user:
+        name: builder
+      group:
+        name: builder
+  files:
+    - path: /home/core/create-secex-data.sh
+      mode: 0744
+      user:
+        name: core
+      group:
+        name: core
+      contents:
+        inline: |
+            #!/bin/bash
+
+            set -e
+
+            DISK_PART="/dev/disk/by-partuuid/80442b5f-01"
+            DISK_FCP="0.0.a800"
+            DISK_WWWN="0x5005076810154e60"
+            DISK_LUN="0x0000000000000000"
+            MNTP="/mnt/secex-data"
+            TARBALL="secex.tar"
+
+            if ! $(whoami | grep -q "root"); then
+                echo "This script must be run as root"
+                exit 1
+            fi
+
+            if ! $(lszdev | grep -q "${DISK_LUN}"); then
+                echo "Adding LUN to system"
+                echo "${DISK_LUN}" > /sys/bus/ccw/drivers/zfcp/${DISK_FCP}/${DISK_WWWN}/unit_add
+            fi
+
+            if ! $(mountpoint -q "${MNTP}"); then
+                echo "Mounting disk"
+                mkdir -p "${MNTP}"
+                mount "${DISK_PART}" "${MNTP}"
+            fi
+
+            echo "Copying tarball from disk to builder"
+            cp "${MNTP}/${TARBALL}" "/var/home/builder/${TARBALL}"
+            chown builder:builder "/var/home/builder/${TARBALL}"
+
+            if ! $(sudo -u builder -H /bin/bash -c "cd /var/home/builder; podman volume list" | grep -q secex-data); then
+                echo "Creating volume secex-data"
+                sudo -u builder -H /bin/bash -c "cd /var/home/builder; podman volume create --label=persistent secex-data"
+            fi
+
+            echo "Importing tarball into volume"
+            sudo -u builder -H /bin/bash -c "cd /var/home/builder; podman volume import secex-data /var/home/builder/${TARBALL}"
+    - path: /home/builder/.config/systemd/user/secex-data-keepalive.service
+      mode: 0644
+      user:
+        name: builder
+      group:
+        name: builder
+      contents:
+        inline: |
+            [Unit]
+            Description=Run keepalive container for secex-data volume. See: https://github.com/containers/podman/issues/17051
+            [Service]
+            Type=oneshot
+            ExecStart=podman run -d --replace --name secex-data-keepalive -v secex-data:/data.secex:ro registry.fedoraproject.org/fedora:36 sleep infinity
+  links:
+    - path: /home/builder/.config/systemd/user/default.target.wants/secex-data-keepalive.service
+      target: /home/builder/.config/systemd/user/secex-data-keepalive.service
+      user:
+        name: builder
+      group:
+        name: builder
