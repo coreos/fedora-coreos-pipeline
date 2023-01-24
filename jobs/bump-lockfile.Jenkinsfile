@@ -124,33 +124,30 @@ lock(resource: "bump-${params.STREAM}") {
         // buildfetch here so we can see in the build output (that happens
         // later) what packages changed.
         stage("Fetch Metadata") {
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                        credentialsId: 'aws-build-upload-config')]) {
-                def parallelruns = [:]
-                for (architecture in archinfo.keySet()) {
-                    def arch = architecture
-                    parallelruns[arch] = {
-                        if (arch == "x86_64") {
-                            shwrap("""
+            def parallelruns = [:]
+            for (architecture in archinfo.keySet()) {
+                def arch = architecture
+                parallelruns[arch] = {
+                    if (arch == "x86_64") {
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                        cosa buildfetch --arch=${arch} --find-build-for-arch \
+                            --url=s3://${s3_stream_dir}/builds
+                        cosa fetch --update-lockfile --dry-run
+                        """)
+                    } else {
+                        pipeutils.withExistingCosaRemoteSession(
+                            arch: arch, session: archinfo[arch]['session']) {
+                            pipeutils.shwrapWithAWSBuildUploadCredentials("""
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
                                 --url=s3://${s3_stream_dir}/builds
                             cosa fetch --update-lockfile --dry-run
+                            cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
                             """)
-                        } else {
-                            pipeutils.withExistingCosaRemoteSession(
-                                arch: arch, session: archinfo[arch]['session']) {
-                                shwrap("""
-                                cosa buildfetch --arch=${arch} --find-build-for-arch \
-                                    --url=s3://${s3_stream_dir}/builds
-                                cosa fetch --update-lockfile --dry-run
-                                cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
-                                """)
-                            }
                         }
                     }
                 }
-                parallel parallelruns
             }
+            parallel parallelruns
         }
 
         for (architecture in archinfo.keySet()) {
