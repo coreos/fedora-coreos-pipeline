@@ -7,6 +7,8 @@ source_config:
   ref: release-${STREAM}
   # OPTIONAL: git repo URL for yumrepos
   yumrepos: https://gitlab.example.com/sooper/seekret
+  # OPTIONAL: git repo ref for yumrepos
+  yumrepos_ref: devel
 
 # OPTIONAL: default artifacts to build per architecture
 default_artifacts:
