@@ -131,6 +131,7 @@ lock(resource: "bump-${params.STREAM}") {
                     if (arch == "x86_64") {
                         pipeutils.shwrapWithAWSBuildUploadCredentials("""
                         cosa buildfetch --arch=${arch} --find-build-for-arch \
+                            --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                             --url=s3://${s3_stream_dir}/builds
                         cosa fetch --update-lockfile --dry-run
                         """)
@@ -139,6 +140,7 @@ lock(resource: "bump-${params.STREAM}") {
                             arch: arch, session: archinfo[arch]['session']) {
                             pipeutils.shwrapWithAWSBuildUploadCredentials("""
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
+                                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                                 --url=s3://${s3_stream_dir}/builds
                             cosa fetch --update-lockfile --dry-run
                             cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
