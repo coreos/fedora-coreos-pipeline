@@ -484,7 +484,11 @@ lock(resource: "build-${params.STREAM}") {
     throw e
 } finally {
     def color
-    def message = "[${params.STREAM}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
+    def stream = params.STREAM
+    if (pipecfg.hotfix) {
+        stream += "-${pipecfg.hotfix.name}"
+    }
+    def message = "[${stream}][${basearch}] <${env.BUILD_URL}|${env.BUILD_NUMBER}>"
 
     if (currentBuild.result == 'SUCCESS') {
         if (!newBuildID) {

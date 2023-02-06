@@ -378,5 +378,9 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    pipeutils.trySlackSend(message: ":bullettrain_front: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
+    def stream = params.STREAM
+    if (pipecfg.hotfix) {
+        stream += "-${pipecfg.hotfix.name}"
+    }
+    pipeutils.trySlackSend(message: ":bullettrain_front: release <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here
