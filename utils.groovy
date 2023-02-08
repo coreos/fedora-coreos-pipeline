@@ -355,6 +355,13 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
         artifacts -= pipecfg.streams[stream].skip_artifacts?.all ?: []
         artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
     }
+    if (pipecfg.streams[stream].skip_cloud_images) {
+        // Only keep containers and live artifacts. Note that the ostree
+        // container and QEMU image are always built and not skippable
+        // artifacts.
+        artifacts = artifacts.intersect(["extensions-container", "legacy-oscontainer",
+                                         "live", "metal", "metal4k"])
+    }
     return artifacts.unique()
 }
 
