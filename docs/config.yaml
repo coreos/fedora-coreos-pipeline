@@ -59,6 +59,10 @@ streams:
       variant: rhcos-9.0
       # OPTIONAL: override whether to use a versionary for this stream
       versionary: false
+      # OPTIONAL: Whether to skip disk image generation and upload. This
+      # is equivalent to listing all live artifacts and cloud platforms in
+      # `skip_artifacts`.
+      skip_disk_images: true
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream
