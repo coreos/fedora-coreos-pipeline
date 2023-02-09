@@ -459,22 +459,8 @@ lock(resource: "build-${params.STREAM}") {
 
         // For now, we auto-release all non-production streams builds. That
         // way, we can e.g. test testing-devel AMIs easily.
-        //
-        // Since we are only running this stage for non-production (i.e. mechanical
-        // and development) builds we'll default to not doing AWS AMI replication.
-        // We'll also default to allowing failures for additonal architectures.
         if (uploading && stream_info.type != "production") {
-            stage('Publish') {
-                build job: 'release', wait: false, parameters: [
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
-                    string(name: 'VERSION', value: newBuildID),
-                    booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
-                    booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
-                    string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
-                    string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
-                ]
-            }
+            run_release_job(newBuildID)
         }
 
         currentBuild.result = 'SUCCESS'
@@ -517,3 +503,20 @@ lock(resource: "build-${params.STREAM}") {
         """)
     }
 }}}} // finally, cosaPod, timeout, and locks finish here
+
+def run_release_job(buildID) {
+    stage('Publish') {
+        // Since we are only running this stage for non-production (i.e. mechanical
+        // and development) builds we'll default to not doing AWS AMI replication.
+        // We'll also default to allowing failures for additional architectures.
+        build job: 'release', wait: false, parameters: [
+            string(name: 'STREAM', value: params.STREAM),
+            string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
+            string(name: 'VERSION', value: buildID),
+            booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
+            booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
+            string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
+            string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
+        ]
+    }
+}
