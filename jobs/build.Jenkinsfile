@@ -49,6 +49,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      booleanParam(name: 'WAIT_FOR_RELEASE_JOB',
+                   defaultValue: false,
+                   description: 'Wait for the release job and propagate errors.'),
     ] + pipeutils.add_hotfix_parameters_if_supported()),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -460,7 +463,15 @@ lock(resource: "build-${params.STREAM}") {
         // For now, we auto-release all non-production streams builds. That
         // way, we can e.g. test testing-devel AMIs easily.
         if (uploading && stream_info.type != "production") {
-            run_release_job(newBuildID)
+            // Note there's a theoretical race here between the build-arch
+            // jobs somehow not yet having taken their locks and the release
+            // job taking it. In practice, it's unlikely to occur because
+            // e.g. they have at least the duration of the Archive stage above
+            // which takes a while. If we see it happen, we'll bust out more
+            // sophisticated techniques. Also note this relies on the fact that
+            // the build job doesn't currently take a `release` lock like the
+            // build-arch jobs do. If it did, we would deadlock here.
+            run_release_job(newBuildID, params.WAIT_FOR_RELEASE_JOB)
         }
 
         currentBuild.result = 'SUCCESS'
@@ -504,12 +515,12 @@ lock(resource: "build-${params.STREAM}") {
     }
 }}}} // finally, cosaPod, timeout, and locks finish here
 
-def run_release_job(buildID) {
+def run_release_job(buildID, wait) {
     stage('Publish') {
         // Since we are only running this stage for non-production (i.e. mechanical
         // and development) builds we'll default to not doing AWS AMI replication.
         // We'll also default to allowing failures for additional architectures.
-        build job: 'release', wait: false, parameters: [
+        build job: 'release', wait: wait, parameters: [
             string(name: 'STREAM', value: params.STREAM),
             string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
             string(name: 'VERSION', value: buildID),
