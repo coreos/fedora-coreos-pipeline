@@ -186,23 +186,19 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         }
     }
 
-    credentials = [file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_AUTH',
-                        credentialsId: 'azure-image-upload-config-auth'),
-                   file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG_PROFILE',
-                        credentialsId: 'azure-image-upload-config-profile')]
+    credentials = [file(variable: 'AZURE_IMAGE_UPLOAD_CONFIG',
+                        credentialsId: 'azure-image-upload-config')]
     if (pipecfg.clouds?.azure &&
         artifacts.contains("azure") &&
         utils.credentialsExist(credentials)) {
         def creds = credentials
         uploaders["☁️ ⬆️ :azure"] = {
             withCredentials(creds) {
-                utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG_AUTH",
-                                                        "AZURE_IMAGE_UPLOAD_CONFIG_PROFILE"])
+                utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.azure
                 shwrap("""cosa buildextend-azure \
                     --upload \
-                    --auth \${AZURE_IMAGE_UPLOAD_CONFIG_AUTH} \
-                    --profile \${AZURE_IMAGE_UPLOAD_CONFIG_PROFILE} \
+                    --credentials \${AZURE_IMAGE_UPLOAD_CONFIG} \
                     --build=${buildID} \
                     --resource-group ${c.resource_group} \
                     --storage-account ${c.storage_account} \
