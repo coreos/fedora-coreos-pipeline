@@ -49,6 +49,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      booleanParam(name: 'WAIT_FOR_RELEASE_JOB',
+                   defaultValue: false,
+                   description: 'Wait for the release job and propagate errors.'),
     ] + pipeutils.add_hotfix_parameters_if_supported()),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -491,7 +494,7 @@ def run_release_job(buildID) {
         // Since we are only running this stage for non-production (i.e.
         // mechanical and development) builds we'll default to allowing failures
         // for additional architectures.
-        build job: 'release', wait: wait, parameters: [
+        build job: 'release', wait: params.WAIT_FOR_RELEASE_JOB, parameters: [
             string(name: 'STREAM', value: params.STREAM),
             string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
             string(name: 'VERSION', value: buildID),
