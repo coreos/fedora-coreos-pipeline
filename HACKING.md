@@ -187,31 +187,29 @@ NOTE: For the prod pipeline these secrets can be found in BitWarden
 
 ### [OPTIONAL] Creating Azure credentials configs
 
-If you want to run kola tests against Azure images you need to
-create a secret with an `azureProfile.json` and a file called an
-azure auth file. See the
+If you want to do image uploads or run kola tests against Azure
+images you need to create a file called `azureCreds.json`. See the
 [kola docs](https://github.com/coreos/coreos-assembler/blob/main/docs/mantle/credentials.md#azure)
 for more information on those files.
 
-Once you have the azureAuth.json and azureProfile.json for connecting to Azure,
-create the secrets in OpenShift:
+Once you have the azureCreds.json for connecting to Azure, create the secrets in OpenShift:
 
 ```
-oc create secret generic azure-kola-tests-config-profile \
-    --from-literal=filename=azureProfile.json \
-    --from-file=data=/path/to/azureProfile.json
-oc label secret/azure-kola-tests-config-profile \
+oc create secret generic azure-image-upload-config \
+    --from-literal=filename=azure_config_file \
+    --from-file=data=/path/to/upload-secret
+oc label secret/azure-image-upload-config \
     jenkins.io/credentials-type=secretFile
-oc annotate secret/azure-kola-tests-config-profile \
-    jenkins.io/credentials-description="Azure kola tests azureProfile.json"
+oc annotate secret/azure-image-upload-config \
+    jenkins.io/credentials-description="Azure image upload credentials config"
 
-oc create secret generic azure-kola-tests-config-auth \
-    --from-literal=filename=azureAuth.json \
-    --from-file=data=/path/to/azureAuth.json
-oc label secret/azure-kola-tests-config-auth \
+oc create secret generic azure-kola-tests-config \
+    --from-literal=filename=azure_config_file \
+    --from-file=data=/path/to/kola-secret
+oc label secret/azure-kola-tests-config \
     jenkins.io/credentials-type=secretFile
-oc annotate secret/azure-kola-tests-config-auth \
-    jenkins.io/credentials-description="Azure kola tests azureAuth.json"
+oc annotate secret/azure-kola-tests-config \
+    jenkins.io/credentials-description="Azure kola tests credentials config"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden
