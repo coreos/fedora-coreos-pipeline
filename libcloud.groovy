@@ -304,6 +304,9 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
     }
 
     // Run the resulting set of uploaders in parallel
-    parallel uploaders
+    // It shouldn't take more than 45 minutes.
+    timeout(time: 45, unit: 'MINUTES') {
+        parallel uploaders
+    }
 }
 return this

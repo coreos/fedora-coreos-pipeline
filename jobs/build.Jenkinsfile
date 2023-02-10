@@ -109,8 +109,20 @@ currentBuild.description = "${build_description} Waiting"
 // declare these early so we can use them in `finally` block
 def newBuildID, basearch
 
+// matches between build/build-arch job
+def timeout_mins = 240
+
+if (params.WAIT_FOR_RELEASE_JOB) {
+    // Waiting for the release job effectively means waiting for all the build-
+    // arch jobs we trigger to finish. While we do overlap in execution (by
+    // a lot when EARLY_ARCH_JOBS is set), let's just simplify and add its
+    // timeout value to ours to account for this. Add 30 minutes more for the
+    // release job itself.
+    timeout_mins += timeout_mins + 30
+}
+
 lock(resource: "build-${params.STREAM}") {
-    timeout(time: 240, unit: 'MINUTES') {
+    timeout(time: timeout_mins, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_img,
