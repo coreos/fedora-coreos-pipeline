@@ -1,4 +1,5 @@
 import org.yaml.snakeyaml.Yaml;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 
 node {
     checkout scm
@@ -518,6 +519,14 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img) {
                 string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
                 string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
             ]
+            // Wait until the locks taken by the `build-arch` jobs are taken
+            // before continuing. This closes a potential race in which once we
+            // trigger the `release` job afterwards, it could end up taking the
+            // locks before the multi-arch jobs.
+            // This really should never take more than 5 minutes. Having a
+            // timeout ensures we don't wait for a long time if we somehow
+            // missed the transition.
+            wait_until_locked_or_continue("release-${version}-${arch}", 5)
         }]}
     }
 }
@@ -536,5 +545,26 @@ def run_release_job(buildID) {
             string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
             string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
         ]
+    }
+}
+
+// XXX: generalize and put in coreos-ci-lib eventually
+def wait_until_locked_or_continue(resource, timeout_mins) {
+    try {
+        timeout(time: timeout_mins, unit: 'MINUTES') {
+            waitUntil {
+                lock(resource: resource, skipIfLocked: true) {
+                    return false
+                }
+                return true
+            }
+        }
+    } catch (FlowInterruptedException e) {
+        // If the lock was still not taken, then something went wrong. For
+        // example, the job might've failed during the initial `git clone`. The
+        // timeout is to ensure we don't wait forever and here we continue to
+        // try to at least release for the arches that did succeed. We may be
+        // able to salvage the failed arch in the next run.
+        echo "Timed out waiting for lock ${resource} to be taken. Continuing..."
     }
 }
