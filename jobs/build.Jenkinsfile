@@ -503,7 +503,7 @@ def archive_ostree(version, basearch, s3_stream_dir) {
 
 def run_multiarch_jobs(arches, src_commit, version, cosa_img) {
     stage('Fork Multi-Arch Builds') {
-        for (arch in arches) {
+        parallel arches.collectEntries{arch -> [arch, {
             // We pass in FORCE=true here since if we got this far we know
             // we want to do a build even if the code tells us that there
             // are no apparent changes since the previous commit.
@@ -518,7 +518,7 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img) {
                 string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
                 string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
             ]
-        }
+        }]}
     }
 }
 
