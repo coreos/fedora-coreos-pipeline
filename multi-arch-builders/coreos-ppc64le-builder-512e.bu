@@ -1,0 +1,41 @@
+# This butane config was especially created to be used with 512e disks,
+# and will do the following:
+#
+# - Merge in the builder-common.ign Ignition file
+# - Allow the builder user to log in with the associated ssh key
+# - Set a hostname
+# - Reprovision the root filesystem for optimal performance, see:
+#   https://github.com/coreos/coreos-installer/pull/1056#issuecomment-1334051683
+#
+variant: fcos
+version: 1.4.0
+ignition:
+  config:
+    merge:
+      - local: builder-common.ign
+passwd:
+  users:
+    - name: builder
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsZ+IH1M1TWoBXz5uRe03gmk8waNrij0sDrPgTTb/rf builder@fcos-pipeline-ppc64le
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID8cIzlrmq9NXHT320rg0J+eplyWUdAfNsDvHNBadUxx builder@rhcos-pipeline-ppc64le
+storage:
+  disks:
+    - device: /dev/disk/by-id/coreos-boot-disk
+      partitions:
+        - label: root
+          number: 4
+          size_mib: 0
+          resize: true
+  filesystems:
+    - device: /dev/disk/by-partlabel/root
+      wipe_filesystem: true
+      format: xfs
+      label: root
+      options: [-m, reflink=1]
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: coreos-ppc64le-builder
