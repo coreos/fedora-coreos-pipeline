@@ -140,14 +140,15 @@ Now we can start the instance:
 
 ```bash
 NAME="coreos-s390x-builder-$(date +%Y%m%d)"
-VPC='r038-a29e1c05-8a07-4ddc-8216-c75cbd459daa'
-ZONE='ca-tor-1' # s390x only available in Toronto in North America
+VPC='r014-3930b19e-56ae-496d-a606-21737ff11d64'
+ZONE='us-east-1'
 PROFILE='bz2-8x32'
-IMAGE='r038-369d6b9c-f0d1-4daf-bda4-252df3aa4728'
-SUBNET='02q7-1df6496a-b363-4f3b-9204-0a2b06855a2f'
+IMAGE='r014-8af40f6c-07bd-47c0-99c4-e8763b6d8a13'
+SUBNET='0757-2bcc7a5a-e0f6-4141-85ef-25dee337ae32'
+SG='r014-39a202b7-1551-47f8-b38a-7f496c881da2'
 ibmcloud is instance-create $NAME $VPC $ZONE $PROFILE $SUBNET --output json --image-id $IMAGE \
      --boot-volume '{"name": "my-boot-vol-1", "volume": {"capacity": 200, "profile": {"name": "general-purpose"}}}' \
-     --user-data @coreos-s390x-builder.ign > out.json
+     --sgs $SG --user-data @coreos-s390x-builder.ign > out.json
 ```
 
 
