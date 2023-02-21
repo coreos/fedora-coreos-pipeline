@@ -1,6 +1,6 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, uploading, libcloud
+def pipeutils, pipecfg, libcloud
 node {
     checkout scm
     pipeutils = load("utils.groovy")
@@ -126,10 +126,9 @@ lock(resource: "build-${params.STREAM}") {
 
         // Now, determine if we should do any uploads to remote s3 buckets or clouds
         // Don't upload if the user told us not to or we're debugging with KOLA_RUN_SLEEP
+        def uploading = false
         if (s3_stream_dir && (!params.NO_UPLOAD || params.KOLA_RUN_SLEEP)) {
             uploading = true
-        } else {
-            uploading = false
         }
 
         // add any additional root CA cert before we do anything that fetches
