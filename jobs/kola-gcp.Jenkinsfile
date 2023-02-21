@@ -1,6 +1,6 @@
-def pipeutils, pipecfg
 node {
     checkout scm
+    // these are script global vars
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
 }
