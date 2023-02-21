@@ -1,8 +1,8 @@
-def pipeutils
 def gitref, commit, shortcommit
 def containername = 'coreos-assembler'
 node {
     checkout scm
+    // these are script global vars
     pipeutils = load("utils.groovy")
 }
 

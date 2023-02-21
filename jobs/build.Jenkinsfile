@@ -1,8 +1,8 @@
 import org.yaml.snakeyaml.Yaml;
 
-def pipeutils, pipecfg, libcloud
 node {
     checkout scm
+    // these are script global vars
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     libcloud = load("libcloud.groovy")
