@@ -275,7 +275,10 @@ lock(resource: "build-${params.STREAM}") {
                 def rev = meta["coreos-assembler.config-gitrev"]
                 currentBuild.description = "${build_description} 🔨 ${buildID}"
                 if (uploading) {
-                    run_multiarch_jobs(missing_arches, rev, buildID, cosa_img)
+                    // Run the mArch jobs and wait. We wait here because if they fail
+                    // we don't want to bother running the release job again since the
+                    // goal is to get a complete build.
+                    run_multiarch_jobs(missing_arches, rev, buildID, cosa_img, true)
                     if (stream_info.type != "production") {
                         run_release_job(buildID)
                     }
@@ -337,7 +340,7 @@ lock(resource: "build-${params.STREAM}") {
         // If desired let's go ahead and archive+fork the multi-arch jobs
         if (params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img, false)
         }
 
         // Build the remaining artifacts
@@ -375,7 +378,7 @@ lock(resource: "build-${params.STREAM}") {
         // jobs let's go ahead and do those pieces now
         if (!params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img, false)
         }
 
         stage('Archive') {
@@ -502,13 +505,13 @@ def archive_ostree(version, basearch, s3_stream_dir) {
     }
 }
 
-def run_multiarch_jobs(arches, src_commit, version, cosa_img) {
+def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
     stage('Fork Multi-Arch Builds') {
         parallel arches.collectEntries{arch -> [arch, {
             // We pass in FORCE=true here since if we got this far we know
             // we want to do a build even if the code tells us that there
             // are no apparent changes since the previous commit.
-            build job: 'build-arch', wait: false, parameters: [
+            build job: 'build-arch', wait: wait, parameters: [
                 booleanParam(name: 'FORCE', value: true),
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
@@ -519,14 +522,16 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img) {
                 string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
                 string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
             ]
-            // Wait until the locks taken by the `build-arch` jobs are taken
-            // before continuing. This closes a potential race in which once we
-            // trigger the `release` job afterwards, it could end up taking the
-            // locks before the multi-arch jobs.
-            // This really should never take more than 5 minutes. Having a
-            // timeout ensures we don't wait for a long time if we somehow
-            // missed the transition.
-            wait_until_locked_or_continue("release-${version}-${arch}", 5)
+            if (!wait) {
+                // Wait until the locks taken by the `build-arch` jobs are taken
+                // before continuing. This closes a potential race in which once we
+                // trigger the `release` job afterwards, it could end up taking the
+                // locks before the multi-arch jobs.
+                // This really should never take more than 5 minutes. Having a
+                // timeout ensures we don't wait for a long time if we somehow
+                // missed the transition.
+                wait_until_locked_or_continue("release-${version}-${arch}", 5)
+            }
         }]}
     }
 }
