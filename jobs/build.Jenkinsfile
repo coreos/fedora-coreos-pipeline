@@ -121,6 +121,15 @@ if (params.WAIT_FOR_RELEASE_JOB) {
     timeout_mins += timeout_mins + 30
 }
 
+// Before proceeding let's make sure no jobs for this stream are currently
+// running. This includes multi-arch jobs and release jobs.
+echo "Waiting for a clear runway for ${params.STREAM}"
+def locks = additional_arches.collect{[resource: "build-${params.STREAM}-${it}"]}
+locks += [resource: "release-${params.STREAM}"]
+lock(resource: "build-${params.STREAM}", extra: locks) {
+    echo "The runway is clear for ${params.STREAM}"
+}
+
 lock(resource: "build-${params.STREAM}") {
     timeout(time: timeout_mins, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
