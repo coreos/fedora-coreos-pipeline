@@ -265,9 +265,10 @@ lock(resource: "build-${params.STREAM}") {
             // Nothing changed since the latest build. Check if it's missing
             // some arches and retrigger `build-arch` only for the missing
             // arches, and the follow-up `release` job. Match the exact src
-            // config commit that was used. Skip if not uploading since it's
-            // required for multi-arch.
-            if (uploading) {
+            // config commit that was used. But only do this if there isn't
+            // already outstanding work in progress for that build ID. Skip if
+            // not uploading since it's required for multi-arch.
+            if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
                 def builds = readJSON file: "builds/builds.json"
                 assert buildID == builds.builds[0].id
                 def missing_arches = additional_arches - builds.builds[0].arches
@@ -541,4 +542,15 @@ def run_release_job(buildID) {
             string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
         ]
     }
+}
+
+def buildid_has_work_pending(buildID, arches) {
+    def locked = true
+    // these locks match the ones in the release job 
+    def locks = arches.collect{[resource: "release-${buildID}-${it}"]}
+    lock(resource: "release-${params.STREAM}", extra: locks, skipIfLocked: true) {
+        // NB: `return` here wouldn't actually return from the function
+        locked = false
+    }
+    return locked
 }
