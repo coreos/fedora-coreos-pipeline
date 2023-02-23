@@ -265,15 +265,16 @@ lock(resource: "build-${params.STREAM}") {
             // Nothing changed since the latest build. Check if it's missing
             // some arches and retrigger `build-arch` only for the missing
             // arches, and the follow-up `release` job. Match the exact src
-            // config commit that was used.
-            def builds = readJSON file: "builds/builds.json"
-            assert buildID == builds.builds[0].id
-            def missing_arches = additional_arches - builds.builds[0].arches
-            if (missing_arches) {
-                def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
-                def rev = meta["coreos-assembler.config-gitrev"]
-                currentBuild.description = "${build_description} 🔨 ${buildID}"
-                if (uploading) {
+            // config commit that was used. Skip if not uploading since it's
+            // required for multi-arch.
+            if (uploading) {
+                def builds = readJSON file: "builds/builds.json"
+                assert buildID == builds.builds[0].id
+                def missing_arches = additional_arches - builds.builds[0].arches
+                if (missing_arches) {
+                    def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
+                    def rev = meta["coreos-assembler.config-gitrev"]
+                    currentBuild.description = "${build_description} 🔨 ${buildID}"
                     // Run the mArch jobs and wait. We wait here because if they fail
                     // we don't want to bother running the release job again since the
                     // goal is to get a complete build.
