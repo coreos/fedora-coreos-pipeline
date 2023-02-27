@@ -49,8 +49,8 @@ def region = "ca-ymq-1"
 
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
-// Go with 1.5Gi here because we download/decompress/upload the image
-def cosa_memory_request_mb = 1536
+// Go with a higher memory request here because we download/decompress/upload the image
+def cosa_memory_request_mb = 1792
 
 // Locking so we only run max of 2 runs (1 x86_64 and 1 aarch64) at any given time.
 lock(resource: "kola-openstack-${params.ARCH}") {
@@ -76,7 +76,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                 cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                     --url=s3://${s3_stream_dir}/builds --artifact=openstack
                 """)
-                pipeutils.withXzMemLimit(cosa_memory_request_mb - 256) {
+                pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
                     shwrap("cosa decompress --build=${params.VERSION} --artifact=openstack")
                 }
                 openstack_image_filepath = shwrapCapture("""

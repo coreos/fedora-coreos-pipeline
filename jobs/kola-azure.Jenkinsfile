@@ -48,8 +48,8 @@ def region = "eastus"
 
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
-// Go with 1.5Gi here because we download/decompress/upload the image
-def cosa_memory_request_mb = 1536
+// Go with a higher memory request here because we download/decompress/upload the image
+def cosa_memory_request_mb = 1792
 
 
 timeout(time: 75, unit: 'MINUTES') {
@@ -74,7 +74,7 @@ timeout(time: 75, unit: 'MINUTES') {
                 cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                     --url=s3://${s3_stream_dir}/builds --artifact=azure
                 """)
-                pipeutils.withXzMemLimit(cosa_memory_request_mb - 256) {
+                pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
                     shwrap("cosa decompress --build=${params.VERSION} --artifact=azure")
                 }
                 azure_image_filepath = shwrapCapture("""
