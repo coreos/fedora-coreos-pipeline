@@ -88,15 +88,19 @@ objects:
           # https://github.com/coreos/coreos-ci/issues/28
           # DELTA: Set the default JNLP image to our Jenkins agent imagestream.
           # https://docs.cloudbees.com/docs/cloudbees-ci-kb/latest/cloudbees-ci-on-modern-cloud-platforms/change-the-default-jnlp-image-for-kubernetes-agents-provisioning#_system_property_approach
+          # We hard set a memory limit so that we don't get the default for the
+          # limitrange in this project we happen to be in, which is likely to be
+          # too generous. The default upstream memory *request* is 256Mi, which
+          # is too little as a limit.
           - name: JENKINS_JAVA_OVERRIDES
             value: >-
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=900
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultImage=jenkins-agent-base:latest
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultCpuRequest=1
-              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultMemoryRequest=256Mi
+              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultMemoryRequest=512Mi
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultCpuLimit=1
-              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultMemoryLimit=256Mi
+              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultMemoryLimit=512Mi
           # DELTA: Increase session timeout to 24h (for docs on each field, see:
           # https://support.cloudbees.com/hc/en-us/articles/4406750806427)
           - name: JENKINS_OPTS
