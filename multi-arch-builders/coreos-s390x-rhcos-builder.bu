@@ -24,7 +24,8 @@ systemd:
         Description=Create secex-data volume
         [Service]
         Type=oneshot
-        ExecStart=/home/core/create-secex-data.sh
+        RemainAfterExit=yes
+        ExecStart=/usr/local/bin/create-secex-data.sh
         [Install]
         WantedBy=multi-user.target
 storage:
@@ -35,12 +36,12 @@ storage:
       group:
         name: builder
   files:
-    - path: /home/core/create-secex-data.sh
-      mode: 0744
+    - path: /usr/local/bin/create-secex-data.sh
+      mode: 0755
       user:
-        name: core
+        name: root
       group:
-        name: core
+        name: root
       contents:
         inline: |
             #!/bin/bash
@@ -62,6 +63,20 @@ storage:
             if ! $(lszdev | grep -q "${DISK_LUN}"); then
                 echo "Adding LUN to system"
                 echo "${DISK_LUN}" > /sys/bus/ccw/drivers/zfcp/${DISK_FCP}/${DISK_WWWN}/unit_add
+                echo "Waiting for disk to show up"
+                i=0
+                while [ ${i} -lt 5 ]; do
+                  sleep 5
+                  if [ -e "${DISK_PART}" ]; then
+                    echo "Disk is available"
+                    break
+                  fi
+                  ((i++))
+                done
+                if [ ${i} -ge 5 ]; then
+                  echo "Disk failed to show up"
+                  exit 1
+                fi
             fi
 
             if ! $(mountpoint -q "${MNTP}"); then
