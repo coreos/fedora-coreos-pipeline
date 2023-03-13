@@ -487,6 +487,29 @@ oc annotate secret/additional-root-ca-cert \
 The description can be customized. All other fields must be
 exactly as is.
 
+### [OPTIONAL] Create splunk secret
+
+The Splunk secret is actually a configuration stored in Bitwarden as
+secret. It is optional and must be used for the internal RHCOS cluster.
+Here you can see an example of the secret:
+
+```
+unclassified:
+  splunkJenkinsInstallation:
+    enabled: true
+    globalPipelineFilter: true
+    host: ***
+    port: 8088
+    splunkAppUrl: ***
+    token: ***
+    useSSL: true
+```
+To create it use:
+```
+oc create secret generic splunk-casc-cfg \
+    --from-file=splunk.yaml
+```
+
 ### Create a Jenkins instance with a persistent volume backing store
 
 ```

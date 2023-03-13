@@ -140,8 +140,11 @@ objects:
             name: ${JENKINS_SERVICE_NAME}-data
           # DELTA: mount c-as-c config map
           - name: ${JENKINS_SERVICE_NAME}-casc-cfg
-            mountPath: /var/lib/jenkins/configuration-as-code
+            mountPath: /var/lib/jenkins/configuration-as-code/base
             readOnly: true
+          # DELTA: mount c-as-c secret for Splunk
+          - name: splunk-casc-cfg
+            mountPath: /var/lib/jenkins/configuration-as-code/splunk
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         serviceAccountName: ${JENKINS_SERVICE_NAME}
@@ -153,6 +156,11 @@ objects:
         - name: ${JENKINS_SERVICE_NAME}-casc-cfg
           configMap:
             name: jenkins-casc-cfg
+        # DELTA: add a splunk secret
+        - name: splunk-casc-cfg
+          secret:
+            secretName: splunk-casc-cfg
+            optional: true
     triggers:
     - imageChangeParams:
         automatic: true
