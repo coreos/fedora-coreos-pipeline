@@ -62,7 +62,7 @@ timeout(time: 90, unit: 'MINUTES') {
                 def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
                 shwrap("""
                 cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                time -v cosa buildfetch --artifact=ostree --build=${params.VERSION} \
                     --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
                 """)
             }
