@@ -73,7 +73,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                 def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
                 shwrap("""
                 cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
+                time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                     --url=s3://${s3_stream_dir}/builds --artifact=openstack
                 """)
                 pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
