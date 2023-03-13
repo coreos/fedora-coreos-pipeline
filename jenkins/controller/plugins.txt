@@ -28,6 +28,8 @@ kubernetes-credentials-provider:1.199.v4a_1d1f5d074f
 pipeline-github:2.8-138.d766e30bb08b
 slack:625.va_eeb_b_168ffb_0
 timestamper:1.20
+splunk-devops-extend:1.9.9
+splunk-devops:1.9.9
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
