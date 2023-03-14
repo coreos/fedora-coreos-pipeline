@@ -122,11 +122,11 @@ if (params.WAIT_FOR_RELEASE_JOB) {
 }
 
 lock(resource: "build-${params.STREAM}") {
-    timeout(time: timeout_mins, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_img,
             serviceAccount: "jenkins") {
+    timeout(time: timeout_mins, unit: 'MINUTES') {
     try {
 
         basearch = shwrapCapture("cosa basearch")

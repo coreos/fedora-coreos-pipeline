@@ -102,10 +102,10 @@ currentBuild.description = "[${gitref}@${shortcommit}] Waiting"
 def basearches = params.ARCHES.split() as Set
 
 lock(resource: "build-${containername}") {
-    timeout(time: 60, unit: 'MINUTES') {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "256Mi", kvm: false,
             serviceAccount: "jenkins") {
+    timeout(time: 60, unit: 'MINUTES') {
     try {
 
         currentBuild.description = "[${gitref}@${shortcommit}] Running"

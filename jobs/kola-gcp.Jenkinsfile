@@ -45,10 +45,10 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-timeout(time: 30, unit: 'MINUTES') {
-    cosaPod(memory: "512Mi", kvm: false,
-            image: params.COREOS_ASSEMBLER_IMAGE,
-            serviceAccount: "jenkins") {
+cosaPod(memory: "512Mi", kvm: false,
+        image: params.COREOS_ASSEMBLER_IMAGE,
+        serviceAccount: "jenkins") {
+    timeout(time: 30, unit: 'MINUTES') {
     try {
 
         stage('Fetch Metadata') {
