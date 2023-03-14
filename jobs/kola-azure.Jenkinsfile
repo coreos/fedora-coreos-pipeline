@@ -52,10 +52,10 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 def cosa_memory_request_mb = 1792
 
 
-timeout(time: 75, unit: 'MINUTES') {
-    cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
-            image: params.COREOS_ASSEMBLER_IMAGE,
-            serviceAccount: "jenkins") {
+cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
+        image: params.COREOS_ASSEMBLER_IMAGE,
+        serviceAccount: "jenkins") {
+    timeout(time: 75, unit: 'MINUTES') {
     try {
 
         def azure_image_name, azure_image_filepath

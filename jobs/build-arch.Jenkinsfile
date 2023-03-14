@@ -107,11 +107,11 @@ lock(resource: "release-${params.VERSION}-${basearch}") {
 // build lock: we don't want multiple concurrent builds for the same stream and
 // arch (though this should work fine in theory)
 lock(resource: "build-${params.STREAM}-${basearch}") {
-    timeout(time: timeout_mins, unit: 'MINUTES') {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_controller_img,
             serviceAccount: "jenkins") {
+    timeout(time: timeout_mins, unit: 'MINUTES') {
     try {
 
         currentBuild.description = "${build_description} Running"
