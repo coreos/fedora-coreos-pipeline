@@ -151,7 +151,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         if (params.SRC_CONFIG_COMMIT) {
             src_config_commit = params.SRC_CONFIG_COMMIT
         } else {
-            src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
+            src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} refs/heads/${ref} | cut -d \$'\t' -f 1")
         }
 
         stage('Init') {

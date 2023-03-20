@@ -83,7 +83,7 @@ lock(resource: "bump-${params.STREAM}") {
         def branch = params.STREAM
         def forceTimestamp = false
         def haveChanges = false
-        def src_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} ${branch} | cut -d \$'\t' -f 1")
+        def src_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} refs/heads/${branch} | cut -d \$'\t' -f 1")
         def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
         shwrap("cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}")
 

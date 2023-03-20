@@ -150,7 +150,7 @@ lock(resource: "build-${params.STREAM}") {
         pipeutils.addOptionalRootCA()
 
         def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-        def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} ${ref} | cut -d \$'\t' -f 1")
+        def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} refs/heads/${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
