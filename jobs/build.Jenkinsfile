@@ -369,7 +369,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Upload to relevant clouds
         // XXX: we don't support cloud uploads yet for hotfixes
-        if (uploading && !pipecfg.hotfix) {
+        if (uploading && !pipecfg.hotfix && !stream_info.skip_cloud_uploads) {
             stage('Cloud Upload') {
                 libcloud.upload_to_clouds(pipecfg, basearch, newBuildID, params.STREAM)
             }
