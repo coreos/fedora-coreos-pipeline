@@ -233,3 +233,5 @@ clouds:
 misc:
   # OPTIONAL: whether to generate a release index
   generate_release_index: true
+  # OPTIONAL: require kernel + kernel-rt versions to match
+  check_kernel_rt_mismatch_rhcos: true
