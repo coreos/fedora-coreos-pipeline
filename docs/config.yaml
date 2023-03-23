@@ -235,3 +235,5 @@ misc:
   generate_release_index: true
   # OPTIONAL: require kernel + kernel-rt versions to match
   check_kernel_rt_mismatch_rhcos: true
+  # OPTIONAL: whether to run extended upgrade test kola job
+  run_extended_upgrade_test_fcos: true

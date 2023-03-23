@@ -249,6 +249,15 @@ def withExistingCosaRemoteSession(params = [:], Closure body) {
     }
 }
 
+// Conditionally run a closure in a remote session (iff it exists).
+def withOptionalExistingCosaRemoteSession(params = [:], Closure body) {
+    if (params['session'] == "") {
+        body()
+    } else {
+        withExistingCosaRemoteSession(params, body)
+    }
+}
+
 // Returns true if the build was triggered by a push notification.
 def triggered_by_push() {
     return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
@@ -480,6 +489,65 @@ def run_cloud_tests(pipecfg, stream, version, s3_stream_dir, basearch, commit) {
     // so there isn't much benefit in running them in parallel, but it
     // makes the UI view have less columns, which is useful.
     parallel testruns
+}
+
+// Runs followup upgrade tests based on conditions
+def run_fcos_upgrade_tests(pipecfg, stream, version, basearch, commit) {
+    def stream_info = pipecfg.streams[stream]
+
+    def min_supported_start_versions = [
+        aarch64: 34,
+        ppc64le: 40, // We haven't released on ppc64le yet
+        s390x:   36,
+        x86_64:  32,
+    ]
+
+    // Because of an x86_64 bootloader issue the oldest that is supported
+    // on x86_64 is 32.x: https://github.com/coreos/fedora-coreos-tracker/issues/1448
+    // All other arches were shipped later than 32 so a min_version of 32 works.
+    def min_version = 32 as Integer
+    // Use a maximum version that matches the current stream Fedora major version
+    def manifest = readYaml(text:shwrapCapture("cosa shell -- cat src/config/manifest.yaml"))
+    def max_version = manifest.releasever as Integer
+
+    // A list of all the start versions we want to run tests for
+    def start_versions = []
+
+    // If this is a production build we'll run a test from the
+    // earliest release of each Fedora major we've supported for this
+    // stream. Iterate over the possibilities and kick off a job for
+    // each.
+    if (stream_info.type == 'production') {
+        for (start_version in min_version..max_version) {
+            start_versions += start_version
+        }
+    }
+
+    // If this is a non-production build we'll run a single test from
+    // a start version determined by a modulo of the number of builds
+    // for this stream. This prevents running the full matrix for each
+    // development build, but gradually covers the full matrix over a
+    // period of time.
+    if (stream_info.type in ['development', 'mechanical']) {
+        def builds = readJSON(text: shwrapCapture("cosa shell -- cat builds/builds.json"))
+        def offset = builds.builds.size() % (max_version - min_version + 1)
+        def start_version = min_version + offset
+        start_versions += start_version
+    }
+
+    for (start_version in start_versions) {
+        // Define a set of parameters that are common to all test.
+        def params = [string(name: 'STREAM', value: stream),
+                      string(name: 'TARGET_VERSION', value: version),
+                      string(name: 'ARCH', value: basearch),
+                      string(name: 'SRC_CONFIG_COMMIT', value: commit)]
+        if (start_version >= min_supported_start_versions[basearch]) {
+            params += string(name: 'START_VERSION', value: start_version as String)
+            build job: 'kola-upgrade', wait: false, parameters: params
+        } else {
+            echo "Skipping ${start_version} upgrade test for ${basearch}"
+        }
+    }
 }
 
 // Run closure, ensuring that any xz process started inside will not go over a
