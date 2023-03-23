@@ -379,6 +379,12 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 pipeutils.run_cloud_tests(pipecfg, params.STREAM, newBuildID,
                                           s3_stream_dir, basearch, src_config_commit)
             }
+            if (pipecfg.misc?.run_extended_upgrade_test_fcos) {
+                stage('Upgrade Tests') {
+                    pipeutils.run_fcos_upgrade_tests(pipecfg, params.STREAM,
+                                                     newBuildID, basearch, src_config_commit)
+                }
+            }
         }
 
         stage('Destroy Remote') {

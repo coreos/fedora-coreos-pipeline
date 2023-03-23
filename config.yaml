@@ -101,3 +101,4 @@ clouds:
 
 misc:
   generate_release_index: true
+  run_extended_upgrade_test_fcos: true
