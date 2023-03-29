@@ -69,7 +69,6 @@ default_artifacts:
     - exoscale
     - gcp
     - ibmcloud
-    - kubevirt
     - nutanix
     - virtualbox
     - vmware
