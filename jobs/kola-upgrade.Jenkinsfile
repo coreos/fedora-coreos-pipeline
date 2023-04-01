@@ -87,7 +87,7 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
         // version, the empty string (implies earliest available), or two digits
         // (implies earliest available based on the Fedora major).
         if (start_version.length() > 2) {
-            if (release in deadends) {
+            if (start_version in deadends) {
                 error("Specified start_version is a deadend release")
             }
         } else {
@@ -95,7 +95,7 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
             def releases = readJSON file: "releases.json"
             for (release in releases["releases"]) {
                 def has_arch = release["commits"].find{ commit -> commit["architecture"] == params.ARCH }
-                if (release in deadends || has_arch == null) {
+                if (release["version"] in deadends || has_arch == null) {
                     continue // This release has been disqualified
                 }
                 if (start_version.length() == 2) {
