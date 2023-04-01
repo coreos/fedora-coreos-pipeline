@@ -102,13 +102,21 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
         } else {
             shwrap("curl -LO https://builds.coreos.fedoraproject.org/prod/streams/${start_stream}/releases.json")
             def releases = readJSON file: "releases.json"
+            def newest_version = releases["releases"][-1]["version"]
             for (release in releases["releases"]) {
                 def has_arch = release["commits"].find{ commit -> commit["architecture"] == params.ARCH }
                 if (release["version"] in deadends || has_arch == null) {
                     continue // This release has been disqualified
                 }
                 if (start_version.length() == 2) {
-                    if ((release["version"][0..1] as Integer) > (start_version as Integer)) {
+                    if (release["version"] == newest_version) {
+                        // We've reached the latest build in the stream. This can happen
+                        // when we're testing i.e. rawhide and it's moved on to FN+1, but
+                        // `next` hasn't. Just use the newest build in `start_stream` in
+                        // that case.
+                        start_version = newest_version
+                        break
+                    } else if ((release["version"][0..1] as Integer) > (start_version as Integer)) {
                         echo "There wasn't a release for this architecture for Fedora ${start_version}.. Skipping"
                         return
                     } else if (release["version"][0..1] == start_version) {
