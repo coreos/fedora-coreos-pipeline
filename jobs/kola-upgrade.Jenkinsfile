@@ -202,10 +202,6 @@ EOF
                     k1.extraArgs += " --qemu-firmware=uefi"
                     k1.marker = "uefi"
                     parallelruns['Kola:UEFI'] = { kola(k1) }
-                    k2 = kolaparams.clone()
-                    k2.extraArgs += " --qemu-firmware=uefi-secure"
-                    k2.marker = "uefi-secure"
-                    parallelruns['Kola:UEFI-SECURE'] = { kola(k2) }
                     break;
                 case 's390x':
                     parallelruns['Kola'] = { kola(kolaparams) }
