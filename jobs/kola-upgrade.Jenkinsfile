@@ -82,6 +82,15 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
     timeout(time: 90, unit: 'MINUTES') {
     try {
 
+        // Determine the target version. If no params.TARGET_VERSION was
+        // specified then it will be the latest in the params.STREAM.
+        if (target_version == '') {
+            target_version = shwrapCapture("""
+            curl -L https://builds.coreos.fedoraproject.org/prod/streams/${params.STREAM}/builds/builds.json | \
+                jq -r .builds[0].id
+            """)
+        }
+        echo "Selected ${target_version} as the target version to test"
         // Determine the start version based on the provided params.START_VERSION
         // and the releases.json for this stream. The user can provide a full
         // version, the empty string (implies earliest available), or two digits
@@ -143,12 +152,6 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                 cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_version} --arch=${params.ARCH}
                 cosa decompress --build=${start_version}
                 """)
-
-                // If no target version was specified the target will be the latest build
-                if (target_version == '') {
-                    target_version = shwrapCapture("cosa shell -- jq -r .builds[0].id builds/builds.json")
-                    currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
-                }
             }
 
             // A few independent tasks that can be run in parallel
