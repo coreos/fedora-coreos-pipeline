@@ -72,7 +72,7 @@ currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version
 def cosa_memory_request_mb = 1024
 if (params.ARCH == 'x86_64') {
     // local (qemu+x86_64) testing will require more memory
-    cosa_memory_request_mb = 3072
+    cosa_memory_request_mb = 3584
 }
 
 lock(resource: "kola-upgrade-${params.ARCH}") {
@@ -200,6 +200,12 @@ EOF
                         // https://github.com/coreos/fedora-coreos-tracker/issues/1452
                         k2 = kolaparams.clone()
                         k2.extraArgs += " --qemu-firmware=uefi-secure"
+                        if ((start_version[0..1] as Integer) <= 37) {
+                            // workaround a bug where grub would fail to allocate memory
+                            // when start_version is <= 37.20230110.2.0
+                            // https://github.com/coreos/fedora-coreos-tracker/issues/1456
+                            k2.extraArgs += " --qemu-memory=1536"
+                        }
                         k2.marker = "uefi-secure"
                         parallelruns['Kola:UEFI-SECURE'] = { kola(k2) }
                     }
