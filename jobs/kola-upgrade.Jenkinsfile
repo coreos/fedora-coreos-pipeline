@@ -195,9 +195,14 @@ EOF
                     k1.extraArgs += " --qemu-firmware=uefi"
                     k1.marker = "uefi"
                     parallelruns['Kola:UEFI'] = { kola(k1) }
-                    if ((start_version[0..1] as Integer) >= 34) {
-                        // SecureBoot doesn't work on < 34 with latest qemu
-                        // https://github.com/coreos/fedora-coreos-tracker/issues/1452
+                    // SecureBoot doesn't work on older FCOS builds with latest qemu
+                    // so we must run it conditionally.
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1452
+                    def secureboot_start_version = 34
+                    if (start_stream == 'next') {
+                        secureboot_start_version = 35
+                    }
+                    if ((start_version[0..1] as Integer) >= secureboot_start_version) {
                         k2 = kolaparams.clone()
                         k2.extraArgs += " --qemu-firmware=uefi-secure"
                         if ((start_version[0..1] as Integer) <= 37) {
