@@ -56,6 +56,7 @@ default_artifacts:
   aarch64:
     - aws
     - azure
+    - gcp
   ppc64le:
     - powervs
   s390x:
