@@ -75,9 +75,9 @@ cosaPod(memory: "512Mi", kvm: false,
             kola(cosaDir: env.WORKSPACE, parallel: 5,
                  build: params.VERSION, arch: params.ARCH,
                  extraArgs: params.KOLA_TESTS,
-                 platformArgs: """-p=gce \
-                    --gce-json-key=\${GCP_KOLA_TESTS_CONFIG} \
-                    --gce-project=${gcp_project}""")
+                 platformArgs: """-p=gcp \
+                    --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                    --gcp-project=${gcp_project}""")
         }
 
         currentBuild.result = 'SUCCESS'
