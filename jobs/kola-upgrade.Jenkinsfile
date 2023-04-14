@@ -91,13 +91,6 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
             """)
         }
         echo "Selected ${target_version} as the target version to test"
-        // EXCEPTION: If the prod stream we'll use for the upgrade test will be `next`
-        // then we need to start at 33 because the earliest 32 versions in `next`
-        // didn't support Ignition spec 3.1.0; we need Ignition version 2.3.0.
-        // See https://github.com/coreos/coreos-assembler/pull/3416
-        if (start_stream == 'next' && start_version == '32') {
-            start_version = '32.20200517.1.0'
-        }
         // Determine the start version based on the provided params.START_VERSION
         // and the releases.json for this stream. The user can provide a full
         // version, the empty string (implies earliest available), or two digits
