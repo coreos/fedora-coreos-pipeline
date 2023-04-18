@@ -246,10 +246,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             // tags
                             tag_suffix += "-hotfix-${pipecfg.hotfix.name}"
                         }
-                        def extra_args = basearches.collect{"--arch ${it}"}
-                        if (registry_repos.v2s2) {
-                            extra_args += "--v2s2"
-                        }
+                        def v2s2_arg = registry_repos.v2s2 ? "--v2s2" : ""
                         def tag_args = ["--tag=${params.STREAM}${tag_suffix}"]
                         if (registry_repos.add_build_tag) {
                             tag_args += "--tag=${params.VERSION}${tag_suffix}"
@@ -259,7 +256,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                         cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
                             --repo=${repo} ${tag_args.join(' ')} \
                             --artifact=${artifact} --metajsonname=${metajsonname} \
-                            --build=${params.VERSION} ${extra_args.join(' ')}
+                            --build=${params.VERSION} ${v2s2_arg}
                         """)
 
                         def old_repo = registry_repos["${configname}_old"]
