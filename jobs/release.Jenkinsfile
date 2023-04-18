@@ -207,6 +207,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         // OCP ART doesn't actually care what the tag name is (it's just to stop GC), we
         // hardcode it.
         def push_containers = ['oscontainer': ['ostree', 'base-oscontainer', ''],
+                               'kubevirt': ['kubevirt', 'kubevirt', ''],
                                'extensions': ['extensions-container', 'extensions-container', '-extensions'],
                                'legacy_oscontainer': ['legacy-oscontainer', 'oscontainer', '-legacy']]
 

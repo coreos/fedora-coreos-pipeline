@@ -122,6 +122,8 @@ registry_repos:
   legacy_oscontainer_old: registry.ci.openshift.org/rhcos/rhel-coreos
   # OPTIONAL: repo to which to push the extensions container
   extensions: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
+  # OPTIONAL: repo to which to push kubevirt containerdisk container
+  kubevirt: quay.io/fedora/fedora-coreos-kubevirt
   # OPTIONAL: whether to also tag images with build ID
   add_build_tag: true
   # OPTIONAL: whether to push in v2s2 format rather than OCI
