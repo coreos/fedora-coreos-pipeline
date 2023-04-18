@@ -43,6 +43,7 @@ s3:
 
 registry_repos:
   oscontainer: quay.io/fedora/fedora-coreos
+  kubevirt: quay.io/fedora/fedora-coreos-kubevirt
 
 versionary_hack: true
 
