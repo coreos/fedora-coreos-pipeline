@@ -259,24 +259,6 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             }
         }
     }
-    credentials = [file(variable: "KUBEVIRT_IMAGE_UPLOAD_CONFIG",
-                        credentialsId: "kubevirt-image-upload-config")]
-    if (pipecfg.clouds?.kubevirt &&
-        artifacts.contains("kubevirt") &&
-        utils.credentialsExist(credentials)) {
-        def creds = credentials
-        uploaders["☁️ ⬆️ :kubevirt"] = {
-            withCredentials(creds) {
-                utils.syncCredentialsIfInRemoteSession(["KUBEVIRT_IMAGE_UPLOAD_CONFIG"])
-                def c = pipecfg.clouds.kubevirt
-                shwrap("""coreos-assembler buildextend-kubevirt \
-                             --upload \
-                             --name ${c.name} \
-                             --repository ${c.repository}
-                """)
-            }
-        }
-    }
     credentials = [file(variable: "POWERVS_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "powervs-image-upload-config")]
     if (pipecfg.clouds?.powervs &&
