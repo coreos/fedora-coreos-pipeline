@@ -224,7 +224,9 @@ lock(resource: "bump-${params.STREAM}") {
                             // compressed one
                             shwrap("cosa compress --artifact=metal")
                         }
-                        kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
+                        stage("${arch}:kola:testiso") {
+                            kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
+                        }
                     }
                     if (arch == "x86_64") {
                         buildAndTest()
