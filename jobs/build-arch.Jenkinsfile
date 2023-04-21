@@ -310,7 +310,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         if (shwrapCapture("cosa meta --get-value images.qemu-secex") != "None") {
             stage("Kola:Secex") {
                 kola(cosaDir: env.WORKSPACE, arch: basearch, skipUpgrade: true,
-                     extraArgs: "--qemu-secex --tag secex --qemu-secex-hostkey /data.secex/hostkeys/HKD-*.crt")
+                     extraArgs: "--qemu-secex --tag secex --qemu-secex-hostkey /data.secex/hostkeys/secex-hostkey.crt")
             }
         }
 
