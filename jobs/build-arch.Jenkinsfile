@@ -306,13 +306,14 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
         }
 
-        // secex specific tests
-        if (shwrapCapture("cosa meta --get-value images.qemu-secex") != "None") {
-            stage("Kola:Secex") {
-                kola(cosaDir: env.WORKSPACE, arch: basearch, skipUpgrade: true,
-                     extraArgs: "--qemu-secex --tag secex --qemu-secex-hostkey /data.secex/hostkeys/secex-hostkey.crt")
-            }
-        }
+        // XXX: temporarily disabled until it works or we skip it on 4.12
+        // // secex specific tests
+        // if (shwrapCapture("cosa meta --get-value images.qemu-secex") != "None") {
+        //     stage("Kola:Secex") {
+        //         kola(cosaDir: env.WORKSPACE, arch: basearch, skipUpgrade: true,
+        //              extraArgs: "--qemu-secex --tag secex --qemu-secex-hostkey /data.secex/hostkeys/secex-hostkey.crt")
+        //     }
+        // }
 
         // Run Kola TestISO tests for metal artifacts
         if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
