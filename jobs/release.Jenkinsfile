@@ -196,7 +196,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
-        def registry_repos = pipeutils.get_registry_repos(pipecfg, params.STREAM)
+        def registry_repos = pipeutils.get_registry_repos(
+                                pipecfg, params.STREAM, params.VERSION)
 
         // [config.yaml name -> [meta.json artifact name, meta.json toplevel name, tag suffix]]
         // The config.yaml name is the name used in the `registry_repos` object. The
@@ -206,10 +207,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         // could be made configurable in the future. For now since FCOS doesn't need it and
         // OCP ART doesn't actually care what the tag name is (it's just to stop GC), we
         // hardcode it.
-        def push_containers = ['oscontainer': ['ostree', 'base-oscontainer', ''],
-                               'kubevirt': ['kubevirt', 'kubevirt', ''],
-                               'extensions': ['extensions-container', 'extensions-container', '-extensions'],
-                               'legacy_oscontainer': ['legacy-oscontainer', 'oscontainer', '-legacy']]
+        def push_containers = ['oscontainer': ['ostree', 'base-oscontainer'],
+                               'kubevirt': ['kubevirt', 'kubevirt'],
+                               'extensions': ['extensions-container', 'extensions-container'],
+                               'legacy_oscontainer': ['legacy-oscontainer', 'oscontainer']]
 
         // XXX: hack: on releases that don't support pushing the
         // base-oscontainer, remove it from the list.
@@ -239,19 +240,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
-                        def repo = registry_repos[configname]
-                        def (artifact, metajsonname, tag_suffix) = val
-                        if (pipecfg.hotfix) {
-                            // this is a hotfix build; include the hotfix name
-                            // in the tag suffix so we don't clobber official
-                            // tags
-                            tag_suffix += "-hotfix-${pipecfg.hotfix.name}"
-                        }
+                        def repo = registry_repos[configname]['repo']
+                        def (artifact, metajsonname) = val
+                        def tag_args = registry_repos[configname].tags.collect{"--tag=$it"}
                         def v2s2_arg = registry_repos.v2s2 ? "--v2s2" : ""
-                        def tag_args = ["--tag=${params.STREAM}${tag_suffix}"]
-                        if (registry_repos.add_build_tag) {
-                            tag_args += "--tag=${params.VERSION}${tag_suffix}"
-                        }
                         shwrap("""
                         export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
                         cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
@@ -260,7 +252,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             --build=${params.VERSION} ${v2s2_arg}
                         """)
 
-                        def old_repo = registry_repos["${configname}_old"]
+                        def old_repo = registry_repos."${configname}_old"?.repo
                         if (old_repo) {
                             // a separate credential for the old location is optional; we support it
                             // being merged as part of oscontainer-push-registry-secret
