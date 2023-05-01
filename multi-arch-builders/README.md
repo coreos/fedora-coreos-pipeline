@@ -136,16 +136,30 @@ cat coreos-s390x-builder.bu | butane --pretty --strict --files-dir=. > coreos-s3
 podman cp coreos-s390x-builder.ign ibmcloud:/root/coreos-s390x-builder.ign
 ```
 
+We've occasionally seen some failures and/or capacity issues so we'll
+document here variables for `us-east-1` and `ca-tor-1`:
+
+```bash
+IMAGE='r038-28097bd5-500b-45f1-8d48-99b3d51e3b60'
+ZONE='ca-tor-1'
+VPC='r038-992efef6-1b41-4b58-8a3f-0112c6b770ca'
+SUBNET='02q7-bef3b4b8-095b-4f90-a0e3-7e4aad0a509a'
+SG='r038-24bc65f4-f8a5-4d70-a1cf-657b623257cc'
+```
+
+```bash
+IMAGE='r014-8af40f6c-07bd-47c0-99c4-e8763b6d8a13'
+ZONE='us-east-1'
+VPC='r014-3930b19e-56ae-496d-a606-21737ff11d64'
+SUBNET='0757-2bcc7a5a-e0f6-4141-85ef-25dee337ae32'
+SG='r014-39a202b7-1551-47f8-b38a-7f496c881da2'
+```
+
 Now we can start the instance:
 
 ```bash
 NAME="coreos-s390x-builder-$(date +%Y%m%d)"
-VPC='r014-3930b19e-56ae-496d-a606-21737ff11d64'
-ZONE='us-east-1'
 PROFILE='bz2-8x32'
-IMAGE='r014-8af40f6c-07bd-47c0-99c4-e8763b6d8a13'
-SUBNET='0757-2bcc7a5a-e0f6-4141-85ef-25dee337ae32'
-SG='r014-39a202b7-1551-47f8-b38a-7f496c881da2'
 ibmcloud is instance-create $NAME $VPC $ZONE $PROFILE $SUBNET --output json --image-id $IMAGE \
      --boot-volume '{"name": "my-boot-vol-1", "volume": {"capacity": 200, "profile": {"name": "general-purpose"}}}' \
      --sgs $SG --user-data @coreos-s390x-builder.ign > out.json
