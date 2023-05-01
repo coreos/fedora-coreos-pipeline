@@ -24,7 +24,7 @@ cat coreos-aarch64-builder.bu | butane --pretty --strict --files-dir=. > coreos-
 Bring the instance up with appropriate details:
 
 ```bash
-NAME='coreos-aarch64-builder'
+NAME="coreos-aarch64-builder-$(date +%Y%m%d)"
 AMI=''
 TYPE='a1.metal'
 DISK='200'
@@ -223,7 +223,7 @@ cat coreos-x86_64-builder.bu | butane --pretty --strict --files-dir=. > coreos-x
 Bring the instance up with appropriate details:
 
 ```bash
-NAME='coreos-x86_64-builder'
+NAME="coreos-x86_64-builder-$(date +%Y%m%d)"
 AMI=''
 TYPE='c6a.xlarge'
 DISK='100'
