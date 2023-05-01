@@ -72,8 +72,10 @@ streams:
           - vmware
       # OPTIONAL: stream-specific container repos to push to
       additional_registry_repos:
-        oscontainer_old: registry.ci.openshift.org/rhcos-devel/machine-os-oci-content
-        legacy_oscontainer_old: registry.ci.openshift.org/rhcos-devel/machine-os-content
+        oscontainer_old:
+          repo: registry.ci.openshift.org/rhcos-devel/machine-os-oci-content
+        legacy_oscontainer_old:
+          repo: registry.ci.openshift.org/rhcos-devel/machine-os-content
       # OPTIONAL: override default coreos-assembler image to build with
       cosa_img: quay.io/coreos-assembler/coreos-assembler:stable
       # OPTIONAL/TEMPORARY: Override default coreos-assembler image to use for
@@ -112,20 +114,31 @@ s3:
 
 # OPTIONAL: container registry-related keys
 registry_repos:
-  # OPTIONAL: repo to which to push oscontainer
-  oscontainer: quay.io/fedora/fedora-coreos
+  # OPTIONAL: repo and tags to which to push oscontainer
+  oscontainer:
+    # REQUIRED: repo name
+    repo: quay.io/fedora/fedora-coreos
+    # REQUIRED: list of tags to create/overwrite when pushing
+    #           STREAM and VERSION are supported for templating
+    tags: ["${STREAM}"]
   # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
-  oscontainer_old: quay.io/coreos-assembler/fcos
-  # OPTIONAL: repo to which to push legacy oscontainer
-  legacy_oscontainer: quay.io/openshift-release-dev/rhel-coreos-dev
-  # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
-  legacy_oscontainer_old: registry.ci.openshift.org/rhcos/rhel-coreos
-  # OPTIONAL: repo to which to push the extensions container
-  extensions: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
-  # OPTIONAL: repo to which to push kubevirt containerdisk container
-  kubevirt: quay.io/fedora/fedora-coreos-kubevirt
-  # OPTIONAL: whether to also tag images with build ID
-  add_build_tag: true
+  oscontainer_old:
+    repo: quay.io/coreos-assembler/fcos
+  # OPTIONAL: repo and tags to which to push legacy oscontainer
+  legacy_oscontainer:
+    repo: quay.io/openshift-release-dev/rhel-coreos-dev
+    tags: ["${STREAM}-legacy", "${VERSION}-legacy"]
+  # OPTIONAL/TEMPORARY: additional repo to which to push legacy oscontainer
+  legacy_oscontainer_old:
+    repo: registry.ci.openshift.org/rhcos/rhel-coreos
+  # OPTIONAL: repo and tags to which to push the extensions container
+  extensions:
+    repo: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
+    tags: ["${STREAM}-extensions", "${VERSION}-extensions"]
+  # OPTIONAL: repo and tags to which to push kubevirt containerdisk container
+  kubevirt:
+    repo: quay.io/fedora/fedora-coreos-kubevirt
+    tags: ["${STREAM}"]
   # OPTIONAL: whether to push in v2s2 format rather than OCI
   v2s2: true
 

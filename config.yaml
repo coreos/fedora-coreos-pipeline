@@ -42,8 +42,12 @@ s3:
   acl: public-read
 
 registry_repos:
-  oscontainer: quay.io/fedora/fedora-coreos
-  kubevirt: quay.io/fedora/fedora-coreos-kubevirt
+  oscontainer:
+    repo: quay.io/fedora/fedora-coreos
+    tags: ["${STREAM}"]
+  kubevirt:
+    repo: quay.io/fedora/fedora-coreos-kubevirt
+    tags: ["${STREAM}"]
 
 versionary_hack: true
 
