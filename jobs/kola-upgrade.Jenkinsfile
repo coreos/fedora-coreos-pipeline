@@ -183,7 +183,7 @@ EOF
                 arch: params.ARCH,
                 build: start_version,
                 cosaDir: env.WORKSPACE,
-                extraArgs: "--tag extended-upgrade --allow-rerun-success --append-butane tmp/target_stream.bu",
+                extraArgs: "--tag extended-upgrade --allow-rerun-success tags=all --append-butane tmp/target_stream.bu",
                 skipBasicScenarios: true,
                 skipUpgrade: true,
             ]
