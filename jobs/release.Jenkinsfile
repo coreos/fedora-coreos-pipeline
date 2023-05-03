@@ -132,21 +132,21 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         // modify/update meta.json because buildfetch will re-download and
         // overwrite meta.json.
         stage('Fetch Artifacts') {
-            // We need to fetch a few artifacts if they were built. This assumes if
-            // it was built for one platform it was built for all.
-            def fetch_artifacts = ['ostree', 'extensions-container', 'legacy-oscontainer']
-            def meta = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=x86_64 --dump"))
-            fetch_artifacts.retainAll(meta.images.keySet())
-
-            def fetch_args = basearches.collect{"--arch=${it}"}
-            fetch_args += fetch_artifacts.collect{"--artifact=${it}"}
-
-            pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            time -v cosa buildfetch --build=${params.VERSION} \
-                --url=s3://${s3_stream_dir}/builds    \
-                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                ${fetch_args.join(' ')}
-            """)
+            for (basearch in basearches) {
+                // We need to fetch a few artifacts if they were built.
+                def fetch_artifacts = ['ostree', 'kubevirt', 'extensions-container', 'legacy-oscontainer']
+                // remove from the list any artifacts that weren't built
+                def meta = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=${basearch} --dump"))
+                fetch_artifacts.retainAll(meta.images.keySet())
+                // fetch the artifacts for this architecture
+                def fetch_args = fetch_artifacts.collect{"--artifact=${it}"}
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                time -v cosa buildfetch --build=${params.VERSION} \
+                    --url=s3://${s3_stream_dir}/builds    \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                    --arch=${basearch} ${fetch_args.join(' ')}
+                """)
+            }
         }
 
         for (basearch in basearches) {
