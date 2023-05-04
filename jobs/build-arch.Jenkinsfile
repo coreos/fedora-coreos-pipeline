@@ -306,8 +306,12 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
         }
 
-        // secex specific tests
-        if (shwrapCapture("cosa meta --get-value images.qemu-secex") != "None") {
+        // secex specific tests. 
+        // Secure Execution support is available since 4.12 (as TechPreview).
+        // Starting with 4.13 'qemu-secex' supports IgnitionProtection and has its own kola-tests.
+        // Backport is not planned, so here we check for the 'ignition-gpg-key' to avoid 
+        // testing 'qemu-secex' on 4.12
+        if (shwrapCapture("cosa meta --get-value images.ignition-gpg-key") != "None") {
             stage("Kola:Secex") {
                 kola(cosaDir: env.WORKSPACE, arch: basearch, skipUpgrade: true,
                      extraArgs: "--qemu-secex --tag secex --qemu-secex-hostkey /data.secex/hostkeys/secex-hostkey.crt")
