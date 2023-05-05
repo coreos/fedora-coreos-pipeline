@@ -117,9 +117,9 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                 kola(cosaDir: env.WORKSPACE, parallel: 5,
                      build: params.VERSION, arch: params.ARCH,
                      extraArgs: params.KOLA_TESTS,
+                     rerunSuccessArgs: "tags=all",
                      skipUpgrade: true,
                      platformArgs: """-p=openstack                               \
-                         --allow-rerun-success tags=all                          \
                          --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
                          --openstack-flavor=v3-starter-4                         \
                          --openstack-network=private                             \
