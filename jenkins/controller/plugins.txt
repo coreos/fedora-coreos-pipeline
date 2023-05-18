@@ -12,7 +12,7 @@
 
 # The plugins we list here are in addition to the ones that are
 # delivered with the jenkins image delivered by OpenShift, which
-# are defined here [1] in bundle-plugins.txt. That list is a depsovled
+# are defined here [1] in bundle-plugins.txt. That list is a depsolved
 # version of the base-plugins.txt [2]. The relationship between these
 # two files is described here [3]. Note that the plugins/versions that
 # get pulled in OpenShift is from an OpenShift release and might not
@@ -31,6 +31,7 @@ timestamper:1.20
 splunk-devops-extend:1.9.9
 splunk-devops:1.9.9
 antisamy-markup-formatter:162.v0e6ec0fcfcf6
+jms-messaging:1.1.27
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
