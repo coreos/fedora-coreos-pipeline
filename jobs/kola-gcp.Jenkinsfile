@@ -72,12 +72,40 @@ cosaPod(memory: "512Mi", kvm: false,
                               credentialsId: 'gcp-kola-tests-config')]) {
             // pick up the project to use from the config
             def gcp_project = shwrapCapture("jq -r .project_id \${GCP_KOLA_TESTS_CONFIG}")
-            kola(cosaDir: env.WORKSPACE, parallel: 5,
-                 build: params.VERSION, arch: params.ARCH,
-                 extraArgs: params.KOLA_TESTS,
-                 platformArgs: """-p=gcp \
-                    --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
-                    --gcp-project=${gcp_project}""")
+            def parallelruns = [:]
+
+            parallelruns['Kola:Full'] = {
+                kola(cosaDir: env.WORKSPACE, parallel: 5,
+                    build: params.VERSION, arch: params.ARCH,
+                    extraArgs: params.KOLA_TESTS,
+                    platformArgs: """-p=gcp \
+                        --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                        --gcp-project=${gcp_project}""")
+            }
+            parallelruns['Kola:Confidential'] = {
+                def tests = params.KOLA_TESTS
+                if (tests == "") {
+                    tests = "basic"
+                }
+                // https://github.com/coreos/fedora-coreos-tracker/issues/1202
+                def confidential_tests = tests
+                if (confidential_tests == "basic") {
+                    confidential_tests = "basic ext.config.platforms.gcp.nvme-symlink"
+                }
+                kola(cosaDir: env.WORKSPACE,
+                    build: params.VERSION, arch: params.ARCH,
+                    extraArgs: confidential_tests,
+                    skipUpgrade: true,
+                    marker: "confidential",
+                    platformArgs: """-p=gcp \
+                        --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                        --gcp-project=${gcp_project} \
+                        --gcp-machinetype n2d-standard-2 \
+                        --gcp-confidential-vm""")
+            }
+            
+            // process this batch
+            parallel parallelruns
         }
 
         currentBuild.result = 'SUCCESS'
