@@ -517,7 +517,7 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, basearch, commit) {
 
     def min_supported_start_versions = [
         aarch64: 34,
-        ppc64le: 40, // We haven't released on ppc64le yet
+        ppc64le: 38,
         s390x:   36,
         x86_64:  32,
     ]
