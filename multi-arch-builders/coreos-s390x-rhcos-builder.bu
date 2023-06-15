@@ -29,12 +29,6 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 storage:
-  directories:
-    - path: /home/builder/.config/systemd/user/default.target.wants
-      user:
-        name: builder
-      group:
-        name: builder
   files:
     - path: /usr/local/bin/create-secex-data.sh
       mode: 0755
@@ -96,23 +90,3 @@ storage:
 
             echo "Importing tarball into volume"
             sudo -u builder -H /bin/bash -c "cd /var/home/builder; podman volume import secex-data /var/home/builder/${TARBALL}"
-    - path: /home/builder/.config/systemd/user/secex-data-keepalive.service
-      mode: 0644
-      user:
-        name: builder
-      group:
-        name: builder
-      contents:
-        inline: |
-            [Unit]
-            Description=Run keepalive container for secex-data volume. See: https://github.com/containers/podman/issues/17051
-            [Service]
-            Type=oneshot
-            ExecStart=podman run -d --replace --name secex-data-keepalive -v secex-data:/data.secex:ro registry.fedoraproject.org/fedora:36 sleep infinity
-  links:
-    - path: /home/builder/.config/systemd/user/default.target.wants/secex-data-keepalive.service
-      target: /home/builder/.config/systemd/user/secex-data-keepalive.service
-      user:
-        name: builder
-      group:
-        name: builder
