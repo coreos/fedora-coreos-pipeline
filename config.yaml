@@ -6,14 +6,8 @@ streams:
         - ppc64le
     testing:
       type: production
-      skip_additional_arches:
-        # https://github.com/coreos/fedora-coreos-tracker/issues/1247#issuecomment-1261286872
-        - ppc64le
     next:
       type: production
-      skip_additional_arches:
-        # https://github.com/coreos/fedora-coreos-tracker/issues/1247#issuecomment-1261286872
-        - ppc64le
     testing-devel:
       type: development
       default: true
@@ -21,16 +15,8 @@ streams:
       # type: development # do not touch; line managed by `next-devel/manage.py`
     rawhide:
       type: mechanical
-      skip_artifacts:
-        all:
-          # https://github.com/coreos/fedora-coreos-tracker/issues/1429
-          - hashlist-experimental
-    branched:
-      type: mechanical
-      skip_artifacts:
-        all:
-          # https://github.com/coreos/fedora-coreos-tracker/issues/1429
-          - hashlist-experimental
+    # branched:
+    #   type: mechanical
     # bodhi-updates:
     #   type: mechanical
     # bodhi-updates-testing:
@@ -50,7 +36,12 @@ s3:
   acl: public-read
 
 #registry_repos:
-#  oscontainer: quay.io/fedora/fedora-coreos
+#  oscontainer:
+#    repo: quay.io/fedora/fedora-coreos
+#    tags: ["${STREAM}"]
+#  kubevirt:
+#    repo: quay.io/fedora/fedora-coreos-kubevirt
+#    tags: ["${STREAM}"]
 
 versionary_hack: true
 
