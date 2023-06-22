@@ -471,12 +471,12 @@ lock(resource: "build-${params.STREAM}") {
         // Now that the metadata is uploaded go ahead and kick off some followup tests.
         if (uploading) {
             stage('Cloud Tests') {
-                pipeutils.run_cloud_tests(pipecfg, params.STREAM, newBuildID,
+                pipeutils.run_cloud_tests(pipecfg, params.STREAM, newBuildID, cosa_img,
                                           s3_stream_dir, basearch, src_config_commit)
             }
             if (pipecfg.misc?.run_extended_upgrade_test_fcos) {
                 stage('Upgrade Tests') {
-                    pipeutils.run_fcos_upgrade_tests(pipecfg, params.STREAM,
+                    pipeutils.run_fcos_upgrade_tests(pipecfg, params.STREAM, cosa_img,
                                                      newBuildID, basearch, src_config_commit)
                 }
             }
