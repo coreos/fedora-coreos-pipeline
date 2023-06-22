@@ -509,6 +509,25 @@ To create it use:
 oc create secret generic splunk-casc-cfg \
     --from-file=splunk.yaml
 ```
+### [OPTIONAL] Create brew secrets (if uploading to Brew)
+
+Brew requires a couple of secrets in order to work. All of them are
+stored in Bitwarden.  We need the certificate (brew-ca), the keytab
+(brew-keytab), the koji configuration (koji-conf) and the kerberos
+configuration (krb5-conf). Make sure to meet the secret names, these
+names are used in the brew job.
+
+To create it use:
+```
+oc create secret generic brew-ca \
+    --from-file=ca.crt
+oc create secret generic brew-keytab \
+    --from-file=brew.keytab
+oc create secret generic koji-conf \
+    --from-file=koji.conf
+oc create secret generic krb5-conf \
+    --from-file=krb5.conf
+```
 
 ### Create a Jenkins instance with a persistent volume backing store
 

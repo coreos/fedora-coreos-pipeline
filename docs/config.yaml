@@ -112,6 +112,15 @@ s3:
   # OPTIONAL: object ACL to use when uploading
   acl: private
 
+# OPTIONAL: Brew profile and principal to which to upload build metadata to Brew.
+brew:
+  # REQUIRED: Profile name
+  profile: brew-stage
+  # REQUIRED: Principal name
+  principal: rhcos-build/servername
+  # REQUIRED: tag
+  tag: candidate
+
 # OPTIONAL: container registry-related keys
 registry_repos:
   # OPTIONAL: repo and tags to which to push oscontainer
