@@ -100,7 +100,6 @@ cosaPod(memory: "512Mi", kvm: false,
                     platformArgs: """-p=gcp \
                         --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                         --gcp-project=${gcp_project} \
-                        --gcp-machinetype n2d-standard-2 \
                         --gcp-confidential-vm""")
             }
             
