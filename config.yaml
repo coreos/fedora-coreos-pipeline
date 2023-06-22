@@ -90,7 +90,9 @@ clouds:
   gcp:
     bucket: fedora-coreos-devel-image-uploads/image-import
     description: "Fedora, Fedora CoreOS Devel ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
-    family: "fedora-coreos-devel-${STREAM}"
+    family:
+      x86_64: "fedora-coreos-devel-${STREAM}"
+      aarch64: "fedora-coreos-devel-${STREAM}-arm64"
     public: true
     licenses:
       - "fedora-coreos-${STREAM}"
