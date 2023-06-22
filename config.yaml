@@ -79,7 +79,8 @@ clouds:
       aarch64: "fedora-coreos-devel-${STREAM}-arm64"
     public: true
     licenses:
-      - "fedora-coreos-${STREAM}"
+      # No "fedora-coreos-${STREAM}" licenses exist in the devel account
+      # - "fedora-coreos-${STREAM}"
       - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
   openstack:
     test_architectures: [x86_64, aarch64]
