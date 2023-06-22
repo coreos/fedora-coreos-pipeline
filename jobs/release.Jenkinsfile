@@ -238,6 +238,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         if (push_containers) {
             stage("Push Containers") {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
+                    if (!registry_repos?."${configname}"?.'repo') {
+                        echo "No registry repo config for ${configname}. Skipping"
+                        return
+                    }
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
                         def repo = registry_repos[configname]['repo']
