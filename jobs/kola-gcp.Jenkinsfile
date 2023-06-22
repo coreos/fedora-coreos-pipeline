@@ -82,25 +82,27 @@ cosaPod(memory: "512Mi", kvm: false,
                         --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                         --gcp-project=${gcp_project}""")
             }
-            parallelruns['Kola:Confidential'] = {
-                def tests = params.KOLA_TESTS
-                if (tests == "") {
-                    tests = "basic"
+            if (params.ARCH == "x86_64") {
+                parallelruns['Kola:Confidential'] = {
+                    def tests = params.KOLA_TESTS
+                    if (tests == "") {
+                        tests = "basic"
+                    }
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1202
+                    def confidential_tests = tests
+                    if (confidential_tests == "basic") {
+                        confidential_tests = "basic ext.config.platforms.gcp.nvme-symlink"
+                    }
+                    kola(cosaDir: env.WORKSPACE,
+                        build: params.VERSION, arch: params.ARCH,
+                        extraArgs: confidential_tests,
+                        skipUpgrade: true,
+                        marker: "confidential",
+                        platformArgs: """-p=gcp \
+                            --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                            --gcp-project=${gcp_project} \
+                            --gcp-confidential-vm""")
                 }
-                // https://github.com/coreos/fedora-coreos-tracker/issues/1202
-                def confidential_tests = tests
-                if (confidential_tests == "basic") {
-                    confidential_tests = "basic ext.config.platforms.gcp.nvme-symlink"
-                }
-                kola(cosaDir: env.WORKSPACE,
-                    build: params.VERSION, arch: params.ARCH,
-                    extraArgs: confidential_tests,
-                    skipUpgrade: true,
-                    marker: "confidential",
-                    platformArgs: """-p=gcp \
-                        --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
-                        --gcp-project=${gcp_project} \
-                        --gcp-confidential-vm""")
             }
             
             // process this batch

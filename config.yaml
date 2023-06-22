@@ -55,6 +55,7 @@ default_artifacts:
   aarch64:
     - aws
     - azure
+    - gcp
   ppc64le:
     - powervs
   s390x:
@@ -91,7 +92,9 @@ clouds:
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import
     description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
-    family: "fedora-coreos-${STREAM}"
+    family:
+      x86_64: "fedora-coreos-${STREAM}"
+      aarch64: "fedora-coreos-${STREAM}-arm64"
     public: true
     licenses:
       - "fedora-coreos-${STREAM}"

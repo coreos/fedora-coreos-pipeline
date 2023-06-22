@@ -214,9 +214,12 @@ clouds:
     description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
     # OPTIONAL: boolean: whether or not to set the image as public
     public: true
-    # OPTIONAL: create the image in the specified image family. It will be created in
-    # the deprecated state. It can then be undeprecated in the release job.
-    family: "fedora-coreos-${STREAM}"
+    # OPTIONAL: create the image in the specified image family. The image family
+    # is different for each architecture. It will be created in the deprecated
+    # state and can then be undeprecated in the release job.
+    family:
+      x86_64: "fedora-coreos-${STREAM}"
+      aarch64: "fedora-coreos-${STREAM}-arm64"
     # OPTIONAL: licenses to add to the image on creation. The given string can have ${STREAM}
     # substituted with the actual stream at runtime.
     licenses:

@@ -218,11 +218,11 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 utils.syncCredentialsIfInRemoteSession(["GCP_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.gcp
                 def extraArgs = []
-                if (c.family) {
+                if (c.family?."${basearch}") {
                     // If there is an image family then we set it on image creation
                     // and also start the image in a deprecated state, which will be
                     // un-deprecated in the release job.
-                    extraArgs += "--family=" + utils.substituteStr(c.family, [STREAM: stream])
+                    extraArgs += "--family=" + utils.substituteStr(c.family."${basearch}", [STREAM: stream])
                     extraArgs += "--deprecated"
                 }
                 // Apply image description if provided
@@ -250,6 +250,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 cosa buildextend-gcp \
                     --log-level=INFO \
                     --build=${buildID} \
+                    --arch=${basearch} \
                     --upload \
                     --project=\${gcp_project} \
                     --bucket gs://${c.bucket} \
