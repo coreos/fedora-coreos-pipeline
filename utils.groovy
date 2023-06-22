@@ -460,12 +460,13 @@ def cloud_testing_enabled_for_arch(pipecfg, cloud, basearch) {
 
 
 // Runs followup cloud tests based on conditions
-def run_cloud_tests(pipecfg, stream, version, s3_stream_dir, basearch, commit) {
+def run_cloud_tests(pipecfg, stream, version, cosa, s3_stream_dir, basearch, commit) {
     def testruns = [:]
     // Define a set of parameters that are common to all test.
     def params = [string(name: 'STREAM', value: stream),
                   string(name: 'VERSION', value: version),
                   string(name: 'ARCH', value: basearch),
+                  string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa),
                   string(name: 'SRC_CONFIG_COMMIT', value: commit)]
 
     // Kick off the Kola AWS job if we have an uploaded image, credentials, and testing is enabled.
@@ -512,7 +513,7 @@ def run_cloud_tests(pipecfg, stream, version, s3_stream_dir, basearch, commit) {
 }
 
 // Runs followup upgrade tests based on conditions
-def run_fcos_upgrade_tests(pipecfg, stream, version, basearch, commit) {
+def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
     def stream_info = pipecfg.streams[stream]
 
     def min_supported_start_versions = [
@@ -560,6 +561,7 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, basearch, commit) {
         def params = [string(name: 'STREAM', value: stream),
                       string(name: 'TARGET_VERSION', value: version),
                       string(name: 'ARCH', value: basearch),
+                      string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa),
                       string(name: 'SRC_CONFIG_COMMIT', value: commit)]
         if (start_version >= min_supported_start_versions[basearch]) {
             params += string(name: 'START_VERSION', value: start_version as String)
