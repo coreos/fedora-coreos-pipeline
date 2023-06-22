@@ -106,6 +106,14 @@ cosaPod(memory: "512Mi", kvm: false,
             
             // process this batch
             parallel parallelruns
+
+            stage('Garbage Collection') {
+                shwrap("""
+                ore gcloud gc --debug        \
+                    --project=${gcp_project} \
+                    --json-key=\${GCP_KOLA_TESTS_CONFIG}
+                """)
+            }
         }
 
         currentBuild.result = 'SUCCESS'
