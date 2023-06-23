@@ -460,7 +460,7 @@ def cloud_testing_enabled_for_arch(pipecfg, cloud, basearch) {
 
 
 // Runs followup cloud tests based on conditions
-def run_cloud_tests(pipecfg, stream, version, cosa, s3_stream_dir, basearch, commit) {
+def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     def testruns = [:]
     // Define a set of parameters that are common to all test.
     def params = [string(name: 'STREAM', value: stream),
