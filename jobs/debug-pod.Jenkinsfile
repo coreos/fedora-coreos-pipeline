@@ -42,6 +42,9 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+// We'll just always use latest for the controller image here.
+def cosa_controller_img = "quay.io/coreos-assembler/coreos-assembler:main"
+
 // Note that the heavy lifting is done on a remote node via podman
 // --remote so we shouldn't need much memory or CPU.
 def cosa_memory_request_mb = 512
@@ -53,8 +56,8 @@ podName += UUID.randomUUID().toString().substring(0, 8)
 
 cosaPod(cpu: "${ncpus}",
         memory: "${cosa_memory_request_mb}Mi",
-        image: cosa_img,
-        serviceAccount: "jenkins" ,
+        image: cosa_controller_img,
+        serviceAccount: "jenkins",
         name : podName) {
     timeout(time: params.TIMEOUT as Integer, unit: 'HOURS') {
     try {
