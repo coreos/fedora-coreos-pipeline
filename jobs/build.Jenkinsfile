@@ -476,8 +476,8 @@ lock(resource: "build-${params.STREAM}") {
             }
             if (pipecfg.misc?.run_extended_upgrade_test_fcos) {
                 stage('Upgrade Tests') {
-                    pipeutils.run_fcos_upgrade_tests(pipecfg, params.STREAM, cosa_img,
-                                                     newBuildID, basearch, src_config_commit)
+                    pipeutils.run_fcos_upgrade_tests(pipecfg, params.STREAM, newBuildID,
+                                                     cosa_img, basearch, src_config_commit)
                 }
             }
         }
