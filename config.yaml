@@ -1,9 +1,6 @@
 streams:
     stable:
       type: production
-      skip_additional_arches:
-        # https://github.com/coreos/fedora-coreos-tracker/issues/1247#issuecomment-1261286872
-        - ppc64le
     testing:
       type: production
     next:
