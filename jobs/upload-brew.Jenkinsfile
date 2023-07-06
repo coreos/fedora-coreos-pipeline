@@ -129,7 +129,7 @@ lock(resource: "upload-brew") {
         def message = "[${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})"
         echo message
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: ":beer: brew-upload <${env.BUILD_URL}|#${env.BUILD_NUMBER}> ${message}")
+            pipeutils.trySlackSend(message: ":beer: brew-upload :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}> ${message}")
         }
     }
 }}} // timeout, cosaPod, and lock finish here

@@ -174,7 +174,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: ":azure: kola-azure <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            pipeutils.trySlackSend(message: ":azure: kola-azure :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }} // cosaPod and timeout finish here
