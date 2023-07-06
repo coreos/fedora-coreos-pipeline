@@ -176,7 +176,7 @@ lock(resource: "build-${containername}") {
             currentBuild.description = "[${gitref}@${shortcommit}] ❌"
         }
         if (currentBuild.result != 'SUCCESS') {
-            message = "build-${containername} <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
+            message = "build-${containername} :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}> [${gitref}@${shortcommit}]"
             pipeutils.trySlackSend(color: 'danger', message: message)
         }
     }

@@ -256,7 +256,7 @@ EOF
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: "kola-upgrade <${env.BUILD_URL}|#${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${start_version}->${target_version})")
+            pipeutils.trySlackSend(message: "kola-upgrade :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${start_version}->${target_version})")
         }
     }
 }}} // lock, cosaPod and timeout finish here
