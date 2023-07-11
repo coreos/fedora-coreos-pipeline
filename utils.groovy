@@ -480,20 +480,14 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
       //testruns['Kola:Kubernetes'] = { build job: 'kola-kubernetes', wait: false, parameters: params }
     }
 
-    // Snooze kola-azure tests on rawhide stream for a month while we wait on a fix
-    // for: https://github.com/coreos/fedora-coreos-tracker/issues/1515
-    def now = Calendar.instance
-    def month = now.get(Calendar.MONTH)
-    if (stream != "rawhide" || (month != Calendar.JUNE && month != Calendar.JULY)) {
-        // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
-        if (shwrapCapture("cosa meta --build=${version} --get-value images.azure") != "None" &&
-            cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
-            utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
-                                         credentialsId: 'azure-kola-tests-config-auth'),
-                                    file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
-                                         credentialsId: 'azure-kola-tests-config-profile')])) {
-            testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
-        }
+    // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
+    if (shwrapCapture("cosa meta --build=${version} --get-value images.azure") != "None" &&
+        cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
+        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
+                                     credentialsId: 'azure-kola-tests-config-auth'),
+                                file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
+                                     credentialsId: 'azure-kola-tests-config-profile')])) {
+        testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
     }
 
     // Kick off the Kola GCP job if we have an uploaded image, credentials, and testing is enabled.
