@@ -65,6 +65,7 @@ default_artifacts:
     - digitalocean
     - exoscale
     - gcp
+    - hyperv
     - ibmcloud
     - kubevirt
     - nutanix
