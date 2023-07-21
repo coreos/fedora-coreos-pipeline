@@ -241,7 +241,7 @@ parameters:
   displayName: Memory Limit
   name: MEMORY_LIMIT
   # DELTA: changed from 1Gi
-  value: 6Gi
+  value: 8Gi
 - description: Volume space available for data, e.g. 512Mi, 2Gi.
   displayName: Volume Capacity
   name: VOLUME_CAPACITY
