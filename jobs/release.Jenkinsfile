@@ -6,6 +6,9 @@ node {
     libcloud = load("libcloud.groovy")
 }
 
+def brew_principal = pipecfg.brew.principal
+def brew_profile = pipecfg.brew.profile
+
 properties([
     pipelineTriggers([]),
     parameters([
@@ -84,7 +87,10 @@ currentBuild.description = "${build_description} Waiting"
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
     cosaPod(cpu: "1", memory: "1Gi", image: cosa_img,
-            serviceAccount: "jenkins") {
+            serviceAccount: "jenkins",
+            secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
+                      "koji-conf:koji.conf:/etc/koji.conf",
+                      "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
     try {
 
         currentBuild.description = "${build_description} Running"
@@ -101,7 +107,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
-                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                --file "coreos-assembler-config-git.json"
             """)
         }
 
@@ -279,6 +286,55 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
+        if (brew_profile) {
+            stage('Brew Upload') {
+                def tag = pipecfg.streams[params.STREAM].brew_tag
+                for (arch in basearches) {
+                    def state = false
+                    // The koji/brew NVR is constructed like so:
+                    // Name = "rhcos-$arch", like `rhcos-x86_64`
+                    // Version = Everything before `-` in RHCOS version
+                    // Release = Everything after `-` in RHCOS version
+                    //
+                    // Example: RHCOS Build ID: 414.92.202307170903-0 for x86_64
+                    //   Name = rhcos-x86_64
+                    //   Version = 414.92.202307170903
+                    //   Release = 0
+                    //   NVR = rhcos-x86_64-414.92.202307170903-0
+                    def nvr = "rhcos-${arch}-${params.VERSION}"
+                    state = shwrapCapture("""
+                    coreos-assembler koji-upload search \
+                        --nvr ${nvr} \
+                        --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                        --owner ${brew_principal} \
+                        --profile ${brew_profile} \
+                        --build ${params.VERSION}
+                    """)
+                    // Check if no Brew upload was done yet
+                    // State 1 means brew build complete
+                    // See for more build state info:
+                    // https://pagure.io/koji/blob/master/f/www/kojiweb/builds.chtml#_27
+                    // https://pagure.io/koji/blob/master/f/tests/test_cli/test_import.py#_73
+                    if (state != "1") {
+                        shwrap("""
+                            coreos-assembler koji-upload \
+                                upload --reserve-id \
+                                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                                --build ${params.VERSION} \
+                                --retry-attempts 6 \
+                                --buildroot builds \
+                                --owner ${brew_principal} \
+                                --profile ${brew_profile} \
+                                --tag ${tag} \
+                                --arch ${arch}
+                         """)
+                    }
+                    else {
+                        echo("Skipping Brew Upload. Brew build ${nvr} found")
+                    }
+                }
+            }
+        }
         stage('Publish') {
             pipeutils.withAWSBuildUploadCredentials() {
                 // Since some of the earlier operations (like AWS replication) only modify
