@@ -1,0 +1,12 @@
+# This butane config will do the following:
+#
+# - Merge in the coreos-ppc64le-builder.ign Ignition file
+# - Merge in the builder-splunk.ign Ignition file
+#
+variant: fcos
+version: 1.4.0
+ignition:
+  config:
+    merge:
+      - local: coreos-ppc64le-builder.ign
+      - local: builder-splunk.ign
