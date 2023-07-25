@@ -6,8 +6,8 @@ node {
     libcloud = load("libcloud.groovy")
 }
 
-def brew_principal = pipecfg.brew.principal
-def brew_profile = pipecfg.brew.profile
+def brew_principal = pipecfg.brew?.principal
+def brew_profile = pipecfg.brew?.profile
 
 properties([
     pipelineTriggers([]),
