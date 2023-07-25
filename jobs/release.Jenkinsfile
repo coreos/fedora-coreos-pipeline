@@ -86,11 +86,18 @@ currentBuild.description = "${build_description} Waiting"
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
-    cosaPod(cpu: "1", memory: "1Gi", image: cosa_img,
+    // We should probably try to change this behavior in the coreos-ci-lib
+    // So we won't need to handle the secret case here.
+    def cosaPodDefinition =  [cpu: "1", memory: "1Gi", image: cosa_img,
+            serviceAccount: "jenkins"]
+    if (brew_profile) {
+        cosaPodDefinition = [cpu: "1", memory: "1Gi", image: cosa_img,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
-                      "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
+                      "krb5-conf:krb5.conf:/etc/krb5.conf"]]
+    }
+    cosaPod(cosaPodDefinition) {
     try {
 
         currentBuild.description = "${build_description} Running"
