@@ -3,7 +3,6 @@
 # - Merge in the coreos-s390x-builder.ign Ignition file
 # - Enable the Secure Execution Host
 # - Create and initialize the secex-data volume
-# - Run keepalive container for secex-data volume. See: https://github.com/containers/podman/issues/17051
 #
 variant: fcos
 version: 1.4.0
