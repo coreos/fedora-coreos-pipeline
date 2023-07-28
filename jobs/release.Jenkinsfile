@@ -439,5 +439,5 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
     if (pipecfg.hotfix) {
         stream += "-${pipecfg.hotfix.name}"
     }
-    pipeutils.trySlackSend(message: ":bullettrain_front: release :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
+    pipeutils.trySlackSend(message: ":bullettrain_front: release #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here

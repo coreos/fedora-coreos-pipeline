@@ -124,7 +124,7 @@ cosaPod(memory: "512Mi", kvm: false,
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: ":gcp: kola-gcp :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
+            pipeutils.trySlackSend(message: ":gcp: kola-gcp #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }} // cosaPod and timeout finish here
