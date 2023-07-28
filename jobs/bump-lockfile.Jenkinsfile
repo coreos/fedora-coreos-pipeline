@@ -297,7 +297,7 @@ lock(resource: "bump-${params.STREAM}") {
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: ":jenkins:<${env.BUILD_URL}|bump-lockfile ${env.BUILD_NUMBER} (${params.STREAM})> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}>")
+            pipeutils.trySlackSend(message: "bump-lockfile #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> (${params.STREAM})> <${env.RUN_DISPLAY_URL}|:ocean:>")
         }
     }
 }}} // cosaPod, timeout, and lock finish here

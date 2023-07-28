@@ -499,7 +499,7 @@ lock(resource: "build-${params.STREAM}") {
     if (pipecfg.hotfix) {
         stream += "-${pipecfg.hotfix.name}"
     }
-    def message = "[${stream}][${basearch}] :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> :ocean:<${env.RUN_DISPLAY_URL}|${env.BUILD_NUMBER}>"
+    def message = "[${stream}][${basearch}] #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
 
     if (currentBuild.result == 'SUCCESS') {
         if (!newBuildID) {

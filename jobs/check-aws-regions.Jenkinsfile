@@ -24,9 +24,9 @@ cosaPod(serviceAccount: "jenkins"){
                            credentialsId: 'aws-build-upload-config')]) {
         disabled_regions = shwrapCapture("ore aws list-regions --disabled")
     }
-    if (disabled_regions != "None") {
+    if (disabled_regions != "") {
         warn("Disabled AWS regions detected: ${disabled_regions}")
-        pipeutils.trySlackSend(message: ":aws: aws-regions-disabled :jenkins:<${env.BUILD_URL}|${env.BUILD_NUMBER}> ${disabled_regions}")
+        pipeutils.trySlackSend(message: ":aws: check-aws-regions #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> detected disabled regions: ${disabled_regions}")
         return
     }    
 }
