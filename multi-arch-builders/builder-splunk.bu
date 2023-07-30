@@ -1,0 +1,134 @@
+# This butane config will do the following:
+#
+# - create a splunk user
+# - build and start a splunk forwarder container to send journald logs to splunk
+#
+# See the rhcos multiarch builder splunk documentation in the CoreOS Team Operations GitLab repo.
+# The following env variables need to be set before creating the ignition config:
+#
+# - ${SPLUNK_HOSTNAME}
+# - ${ITPAAS_SPLUNK_REPO}
+# - ${SPLUNK_SIDECAR_REPO}
+#
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: splunk
+      groups:
+        - systemd-journal
+storage:
+  directories:
+    - path: /home/splunk/.config
+      user:
+        name: splunk
+      group:
+        name: splunk
+    - path: /home/splunk/.config/systemd
+      user:
+        name: splunk
+      group:
+        name: splunk
+    - path: /home/splunk/.config/systemd/user
+      user:
+        name: splunk
+      group:
+        name: splunk
+    - path: /home/splunk/.config/systemd/user/default.target.wants
+      user:
+        name: splunk
+      group:
+        name: splunk
+    - path: /home/splunk/.config/containers
+      user:
+        name: splunk
+      group:
+        name: splunk
+    - path: /home/splunk/.config/containers/systemd
+      user:
+        name: splunk
+      group:
+        name: splunk
+  files:
+    - path: /var/lib/systemd/linger/splunk
+      mode: 0644
+    - path: /home/splunk/.config/containers/systemd/splunk.container
+      mode: 0644
+      user:
+        name: splunk
+      group:
+        name: splunk
+      contents:
+        inline: |
+          [Unit]
+          Description=Start the splunk container to send journald logs to splunk
+          After=build-splunk.service
+          [Container]
+          ContainerName=rhcos-multiarch-splunk
+          Image=localhost/splunkforwarder-rhcos:latest
+          # set the user to root to run the splunk process
+          # as the splunk user on the host
+          User=root
+          Volume=/var/log/journal:/var/log/journal:ro
+          Volume=/run/log/journal:/run/log/journal:ro
+          Volume=/etc/machine-id:/etc/machine-id:ro
+          # It's unclear why this is needed, but we need to
+          # use the container host's network to properly establish
+          # a connection with the splunk server
+          Network=host
+          # It's unclear why this is needed, but we need to use
+          # `--ipc=host` to use the container host's IPC namespace
+          # to properly establish a connection with the splunk server
+          # use `--group-add keep-groups` to pass the systemd-journal group
+          # to access the journald logs inside the container
+          # user `--hostname=${SPLUNK_HOSTNAME}` to set a custom hostname
+          # to accurately index the journald logs in splunk.
+          PodmanArgs=--ipc=host --group-add keep-groups --hostname=${SPLUNK_HOSTNAME}
+          [Install]
+          WantedBy=default.target
+    - path: /home/splunk/.config/systemd/user/build-splunk.service
+      mode: 0644
+      user:
+        name: splunk
+      group:
+        name: splunk
+      contents:
+        inline: |
+          [Unit]
+          Description=Build the splunk container
+          [Service]
+          # Give time for the build to complete
+          TimeoutStartSec=10m
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStartPre=nm-online --timeout=30
+          # use `--arch=x86_64` because the RPM doesnt exist for aarch64.
+          # ppc64le and s390x RPMs are not compatible with journald input as mentioned
+          # in the splunk journald documentation for version 8.2.6
+          # https://docs.splunk.com/Documentation/Splunk/8.2.6/Data/CollecteventsfromJournalD
+          # The --arch=x86_64 works here because we have `qemu-user-static-x86`
+          # installed on non-x86_64 FCOS streams.
+          ExecStart=-podman build --pull-always --cache-ttl=480h --arch=x86_64 -t localhost/splunkforwarder:latest ${ITPAAS_SPLUNK_REPO}
+          ExecStart=-podman build --build-arg project=rhcos-multiarch-builders --cache-ttl=480h --from localhost/splunkforwarder:latest -t localhost/splunkforwarder-rhcos ${SPLUNK_SIDECAR_REPO}
+          ExecStartPost=-podman image prune --force --filter until=720h
+          [Install]
+          WantedBy=default.target
+    # Add in Red Hat Root CA Certificates so we can podman build from a
+    # git repo that relies on TLS from one of these CAs. These files will be
+    # processed by coreos-update-ca-trust.service on first boot.
+    # See https://certs.corp.redhat.com/ for more information.
+    - path: /etc/pki/ca-trust/source/anchors/2015-IT-Root-CA.pem
+      mode: 0644
+      contents:
+        source: https://certs.corp.redhat.com/certs/2015-IT-Root-CA.pem
+    - path: /etc/pki/ca-trust/source/anchors/2022-IT-Root-CA.pem
+      mode: 0644
+      contents:
+        source: https://certs.corp.redhat.com/certs/2022-IT-Root-CA.pem
+  links:
+    - path: /home/splunk/.config/systemd/user/default.target.wants/build-splunk.service
+      user:
+        name: splunk
+      group:
+        name: splunk
+      target: /home/splunk/.config/systemd/user/build-splunk.service

@@ -1,6 +1,7 @@
 # This butane config will do the following:
 #
 # - Merge in the coreos-s390x-builder.ign Ignition file
+# - Merge in the builder-splunk.ign Ignition file
 # - Enable the Secure Execution Host
 # - Create and initialize the secex-data volume
 #
@@ -10,6 +11,7 @@ ignition:
   config:
     merge:
       - local: coreos-s390x-builder.ign
+      - local: builder-splunk.ign
 kernel_arguments:
   should_exist:
     # enables Secure Execution Host
