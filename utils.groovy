@@ -498,18 +498,12 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
         testruns['Kola:GCP'] = { build job: 'kola-gcp', wait: false, parameters: params }
     }
 
-    // snooze kola-openstack tests on all streams for the month of July.
-    // See: https://github.com/coreos/fedora-coreos-pipeline/issues/889
-    def now = Calendar.instance
-    def month = now.get(Calendar.MONTH)
-    if (month != Calendar.JULY) {
-        // Kick off the Kola OpenStack job if we have an artifact, credentials, and testing is enabled.
-        if (shwrapCapture("cosa meta --build=${version} --get-value images.openstack") != "None" &&
-            cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
-            utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                         credentialsId: 'openstack-kola-tests-config')])) {
-            testruns['Kola:OpenStack'] = { build job: 'kola-openstack', wait: false, parameters: params }
-        }
+    // Kick off the Kola OpenStack job if we have an artifact, credentials, and testing is enabled.
+    if (shwrapCapture("cosa meta --build=${version} --get-value images.openstack") != "None" &&
+        cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
+        utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
+                                     credentialsId: 'openstack-kola-tests-config')])) {
+        testruns['Kola:OpenStack'] = { build job: 'kola-openstack', wait: false, parameters: params }
     }
 
     // Now run the kickoff jobs in parallel. These take little time
