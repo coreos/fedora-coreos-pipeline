@@ -337,7 +337,17 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                          """)
                     }
                     else {
-                        echo("Skipping Brew Upload. Brew build ${nvr} found")
+                        echo("Skipping Brew Upload. Brew build ${nvr} found.")
+                        echo("Validating tag ${tag}.")
+                        shwrap("""
+                            coreos-assembler koji-upload ensure-tag \
+                                --nvr ${nvr} \
+                                --build ${params.VERSION} \
+                                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                                --owner ${brew_principal} \
+                                --profile ${brew_profile} \
+                                --tag ${tag}
+                        """)
                     }
                 }
             }
