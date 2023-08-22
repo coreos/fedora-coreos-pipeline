@@ -50,6 +50,7 @@ default_artifacts:
     - openstack
     - hashlist-experimental
   aarch64:
+    - applehv
     - aws
     - azure
     - gcp
@@ -60,6 +61,7 @@ default_artifacts:
     - ibmcloud
   x86_64:
     - aliyun
+    - applehv
     - aws
     - azure
     - azurestack
