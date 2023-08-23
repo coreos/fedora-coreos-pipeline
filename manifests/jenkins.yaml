@@ -84,6 +84,8 @@ objects:
           - name: CASC_JENKINS_CONFIG
             value: /var/lib/jenkins/configuration-as-code
           # DELTA:
+          #   - Tell Jenkins to use UTF-8 so emojis in log outputs work
+          #     https://stackoverflow.com/questions/27960996/jenkins-console-output-characters
           #   - Increase heartbeat interval so durable-task-plugin waits a
           #     bit longer for scripts to start before failing the build.
           #     https://github.com/coreos/coreos-ci/issues/28
@@ -95,6 +97,7 @@ objects:
           #     is too little as a limit.
           - name: JENKINS_JAVA_OVERRIDES
             value: >-
+              -Dfile.encoding=UTF-8
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=900
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultImage=jenkins-agent-base:latest
