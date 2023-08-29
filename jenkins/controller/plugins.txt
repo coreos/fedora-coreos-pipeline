@@ -30,6 +30,7 @@ slack:625.va_eeb_b_168ffb_0
 timestamper:1.20
 splunk-devops-extend:1.9.9
 splunk-devops:1.9.9
+antisamy-markup-formatter:162.v0e6ec0fcfcf6
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
