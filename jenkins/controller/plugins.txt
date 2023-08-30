@@ -30,20 +30,8 @@ slack:625.va_eeb_b_168ffb_0
 timestamper:1.20
 splunk-devops-extend:1.9.9
 splunk-devops:1.9.9
+antisamy-markup-formatter:162.v0e6ec0fcfcf6
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
 #
-# NOTE: 20221004 had to fast-track token-macro to 293.v283932a_0a_b_49
-# because the old version was preventing another plugin from starting. I
-# imagine this most recent change upstream [1] hasn't landed in an OpenShift
-# release yet.
-# [1] https://github.com/openshift/jenkins/commit/17001022a47849b5b6abb255bfcc64b87e4ad7a2
-#
-# NOTE: 20221004 had to fast-track kubernetes plugin (from bundle-plugins.txt)
-# to 1.31.2 because of https://issues.jenkins.io/browse/JENKINS-67483. 1.31.2 is
-# still 6+ months out of date. jlebon filed https://github.com/openshift/jenkins/issues/1493
-# to try to get the team to use a newer version.
-#
-token-macro:293.v283932a_0a_b_49
-kubernetes:1.31.2
