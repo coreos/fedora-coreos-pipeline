@@ -57,6 +57,8 @@ objects:
             namespace: openshift
           referencePolicy:
             type: Source
+          importPolicy:
+            scheduled: true
   - kind: BuildConfig
     apiVersion: v1
     metadata:
@@ -103,3 +105,5 @@ objects:
             namespace: openshift
           referencePolicy:
             type: Source
+          importPolicy:
+            scheduled: true
