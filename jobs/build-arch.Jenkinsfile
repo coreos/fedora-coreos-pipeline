@@ -335,8 +335,8 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         stage('Archive') {
-            // Limit to 2G to be good neighbours and reduce chances of getting OOMkilled.
-            // shwrap("cosa shell -- env XZ_DEFAULTS=--memlimit=2G cosa compress")
+            // Limit to 4G to be good neighbours and reduce chances of getting OOMkilled.
+            shwrap("cosa shell -- env XZ_DEFAULTS=--memlimit=4G cosa compress")
 
             if (uploading) {
                 def acl = pipecfg.s3.acl ?: 'public-read'
