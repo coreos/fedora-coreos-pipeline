@@ -221,10 +221,10 @@ lock(resource: "bump-lockfile") {
                         stage("${arch}:Build Live") {
                             shwrap("cosa buildextend-live --fast")
                             // Test metal4k with an uncompressed image and
-                            // metal with a compressed one. Limit to 2G to be
+                            // metal with a compressed one. Limit to 4G to be
                             // good neighbours and reduce chances of getting
                             // OOMkilled.
-                            shwrap("cosa shell -- env XZ_DEFAULTS=--memlimit=2G cosa compress --artifact=metal")
+                            shwrap("cosa shell -- env XZ_DEFAULTS=--memlimit=4G cosa compress --artifact=metal")
                         }
                         stage("${arch}:kola:testiso") {
                             kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
