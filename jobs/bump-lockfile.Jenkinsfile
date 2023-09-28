@@ -66,7 +66,7 @@ lock(resource: "bump-lockfile") {
     cosaPod(image: cosa_img,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi",
             serviceAccount: "jenkins") {
-    timeout(time: 150, unit: 'MINUTES') {
+    timeout(time: 180, unit: 'MINUTES') {
     try {
 
         currentBuild.description = "[${params.STREAM}] Running"
