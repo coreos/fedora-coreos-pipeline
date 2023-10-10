@@ -42,7 +42,7 @@ properties([
     parameters([
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
-             defaultValue: "x86_64",
+             defaultValue: "x86_64" + " " + pipeutils.get_supported_additional_arches().join(" "),
              trim: true),
       string(name: 'CONFIG_GIT_URL',
              description: 'Override the src/config git repo to use',
