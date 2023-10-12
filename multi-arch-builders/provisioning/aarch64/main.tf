@@ -40,11 +40,55 @@ check "health_check_distro" {
   }
 }
 
-# Get ignition created for the multiarch builder
-resource "null_resource" "butane" {
-  provisioner "local-exec" {
-    command = "bash -x ./butane.sh" 
+
+# Variables used for splunk deployment, which is only
+# for RHCOS builders. Define them in the environment with:
+# export TF_VAR_splunk_hostname=...
+# export TF_VAR_splunk_sidecar_repo=...
+# export TF_VAR_itpaas_splunk_repo=...
+variable "splunk_hostname" {
+ type    = string
+ default = ""
+}
+variable "splunk_sidecar_repo" {
+ type    = string
+ default = ""
+}
+variable "itpaas_splunk_repo" {
+ type    = string
+ default = ""
+}
+# Check that if we are deploying a RHCOS builder the splunk
+# variables have been defined.
+check "health_check_rhcos_splunk_vars" {
+  assert {
+    condition = !(var.distro == "rhcos" && anytrue([
+                        var.splunk_hostname == "",
+                        var.splunk_sidecar_repo == "",
+                        var.itpaas_splunk_repo == ""
+                    ]))
+    error_message = "Must define splunk env vars for RCHOS builders"
   }
+}
+
+
+locals {
+    fcos_snippets = [
+      file("../../coreos-aarch64-builder.bu"),
+    ]
+    rhcos_snippets = [
+      file("../../coreos-aarch64-builder.bu"),
+      templatefile("../../builder-splunk.bu", {
+        SPLUNK_HOSTNAME = var.splunk_hostname
+        SPLUNK_SIDECAR_REPO = var.splunk_sidecar_repo
+        ITPAAS_SPLUNK_REPO = var.itpaas_splunk_repo
+      })
+    ]
+}
+data "ct_config" "butane" {
+  strict = true
+  content = file("../../builder-common.bu")
+  snippets = var.distro == "rhcos" ? local.rhcos_snippets : local.fcos_snippets
 }
 
 data "aws_region" "aws_region" {}
@@ -83,7 +127,7 @@ resource "aws_instance" "coreos-aarch64-builder" {
     Name = "${var.project}-${formatdate("YYYYMMDD", timestamp())}"
   }
   ami           = local.ami 
-  user_data     = file("coreos-aarch64-builder.ign")
+  user_data     = data.ct_config.butane.rendered
   instance_type = "m6g.metal"
   vpc_security_group_ids = [aws_security_group.sg.id] 
   subnet_id              = local.aws_subnet_id
