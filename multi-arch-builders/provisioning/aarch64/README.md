@@ -35,6 +35,15 @@ Make sure your AMI user has access to this policies:
 }
 ```
 
+### TF vars via environment variables
+
+If you'd like to override the target distro (defaults to `fcos`) you
+can:
+
+```
+export TF_VAR_distro=rhcos
+```
+
 ## Running tofu
 ```bash
    # To begin using it, run 'init' within this directory.

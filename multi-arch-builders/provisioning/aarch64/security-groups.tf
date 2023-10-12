@@ -1,8 +1,8 @@
 resource "aws_security_group" "sg" {
   name        = "${var.project}-security-group"
   description = "Allow SSH inbound traffic only"
-  vpc_id      = var.aws_vpc_prod
- 
+  vpc_id      = local.aws_vpc_id
+
   ingress {
     description = "SSH access"
     from_port   = 22
