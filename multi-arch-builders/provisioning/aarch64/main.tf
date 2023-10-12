@@ -19,6 +19,12 @@ provider "aws" {}
 provider "ct" {}
 provider "http" {}
 
+variable "project" {
+ type    = string
+ default = "coreos-aarch64-builder"
+}
+
+
 # Get ignition created for the multiarch builder
 resource "null_resource" "butane" {
   provisioner "local-exec" {
@@ -41,9 +47,9 @@ locals {
   ami = lookup(jsondecode(data.http.stream_metadata.body).architectures.aarch64.images.aws.regions, data.aws_region.aws_region.name).image
 }
 
-resource "aws_instance" "coreos-multiarch-builder-aarch64" {
+resource "aws_instance" "coreos-aarch64-builder" {
   tags = {
-    Name = "coreos-aarch64-builder-${formatdate("YYYYMMDD", timestamp())}"
+    Name = "${var.project}-${formatdate("YYYYMMDD", timestamp())}"
   }
   ami           = local.ami 
   user_data     = file("coreos-aarch64-builder.ign")
@@ -57,5 +63,5 @@ resource "aws_instance" "coreos-multiarch-builder-aarch64" {
 }
 
 output "instance_ip_addr" {
-  value = aws_instance.coreos-multiarch-builder-aarch64.private_ip
+  value = aws_instance.coreos-aarch64-builder.private_ip
 } 
