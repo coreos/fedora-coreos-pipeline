@@ -135,8 +135,9 @@ resource "aws_instance" "coreos-aarch64-builder" {
       volume_size = "200"
       volume_type = "gp3"
   }
+  associate_public_ip_address = var.distro == "fcos" ? "true" : "false"
 }
 
 output "instance_ip_addr" {
-  value = aws_instance.coreos-aarch64-builder.private_ip
+  value = var.distro == "rhcos" ? aws_instance.coreos-aarch64-builder.private_ip : aws_instance.coreos-aarch64-builder.public_ip
 } 
