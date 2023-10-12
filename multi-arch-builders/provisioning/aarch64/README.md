@@ -44,6 +44,14 @@ can:
 export TF_VAR_distro=rhcos
 ```
 
+If you are deploying RHCOS you'll need to define variables for splunk configuration:
+
+```
+export TF_VAR_splunk_hostname=...
+export TF_VAR_splunk_sidecar_repo=...
+export TF_VAR_itpaas_splunk_repo=...
+```
+
 ## Running tofu
 ```bash
    # To begin using it, run 'init' within this directory.
