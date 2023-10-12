@@ -44,5 +44,5 @@ Make sure your AMI user has access to this policies:
    # If you plan to make changes to the code as modules/plugins, go ahead and run it:
    tofu init -upgrade
    # To destroy it run:
-   tofu destroy -target aws_instance.coreos-multiarch-builder-aarch64 
+   tofu destroy -target aws_instance.coreos-aarch64-builder
 ```
