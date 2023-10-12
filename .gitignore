@@ -1,1 +1,3 @@
-fcos-aarch64-builder.ign
+*.ign
+.terraform*
+terraform.tfstate*
