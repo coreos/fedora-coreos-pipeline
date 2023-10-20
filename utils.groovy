@@ -123,6 +123,9 @@ def get_source_config_ref_for_stream(pipecfg, stream) {
     }
 }
 
+def get_use_osbuild_for_stream(pipecfg, stream) {
+    return pipecfg.streams[stream].use_osbuild ? '1' : ''
+}
 
 // Parse and handle the result of Kola
 boolean checkKolaSuccess(file) {
