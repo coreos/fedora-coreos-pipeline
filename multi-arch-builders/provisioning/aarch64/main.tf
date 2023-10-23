@@ -117,7 +117,7 @@ variable "rhcos_aws_subnet_internal" {
 # If we are RHCOS we'll be using an already existing VPC/subnet rather
 # than the newly created one.
 locals {
-  aws_vpc_id = var.distro == "rhcos" ? var.rhcos_aws_vpc_prod : aws_vpc.vpc.id
+  aws_vpc_id = var.distro == "rhcos" ? var.rhcos_aws_vpc_prod : aws_vpc.vpc[0].id
   aws_subnet_id = var.distro == "rhcos" ? var.rhcos_aws_subnet_internal : aws_subnet.private_subnets[0].id
 }
 
