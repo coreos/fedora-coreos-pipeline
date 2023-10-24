@@ -15,6 +15,7 @@ streams:
       # type: development # do not touch; line managed by `next-devel/manage.py`
     rawhide:
       type: mechanical
+      use_osbuild: true
     # branched:
     #   type: mechanical
     # bodhi-updates:
