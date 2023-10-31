@@ -97,6 +97,8 @@ streams:
       skip_govcloud_hack: true
       # OPTIONAL/TEMPORARY: don't upload images to clouds
       skip_cloud_uploads: true
+      # Use newly added support for building images using OSBuild
+      use_osbuild: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]

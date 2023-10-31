@@ -45,6 +45,9 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+// Determine if we should use osbuild for image building
+def use_osbuild = pipeutils.get_use_osbuild_for_stream(pipecfg, params.STREAM)
+
 def getLockfileInfo(lockfile) {
     def pkgChecksum, pkgTimestamp
     if (utils.pathExists(lockfile)) {
@@ -209,7 +212,7 @@ lock(resource: "bump-lockfile") {
                             shwrap("cosa fetch --strict")
                         }
                         stage("${arch}:Build") {
-                            shwrap("cosa build --force --strict")
+                            shwrap("cosa shell -- env COSA_USE_OSBUILD=${use_osbuild} cosa build --force --strict")
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,

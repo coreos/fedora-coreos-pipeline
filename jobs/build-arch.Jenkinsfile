@@ -76,6 +76,9 @@ def stream_info = pipecfg.streams[params.STREAM]
 
 def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
 
+// Determine if we should use osbuild for image building
+def use_osbuild = pipeutils.get_use_osbuild_for_stream(pipecfg, params.STREAM)
+
 // If we are a mechanical stream then we can pin packages but we
 // don't maintain complete lockfiles so we can't build in strict mode.
 def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
@@ -282,7 +285,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Build QEMU image
         stage("Build QEMU") {
-            shwrap("cosa buildextend-qemu")
+            shwrap("cosa shell -- env COSA_USE_OSBUILD=${use_osbuild} cosa buildextend-qemu")
         }
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
