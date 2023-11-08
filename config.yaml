@@ -53,6 +53,7 @@ default_artifacts:
     - aws
     - azure
     - gcp
+    - hyperv
   ppc64le:
     - powervs
   s390x:
