@@ -369,7 +369,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 def bucket_prefix = "${pipecfg.s3.bucket}/${pipecfg.s3.builds_key}"
 
                 // make AMIs public if not already the case
-                if (!pipecfg.clouds?.aws?.public) {
+                if (pipecfg.clouds?.aws?.public) {
                     def rc = shwrapRc("""
                     cosa shell -- plume make-amis-public \
                         --version ${params.VERSION} \
