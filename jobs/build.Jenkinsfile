@@ -381,7 +381,7 @@ lock(resource: "build-${params.STREAM}") {
             // NOTE: This approach only checks the legacy extensions and not the new extensions
             // container. This check can be removed for 9.3+ builds when we drop the legacy
             // oscontainer as the versions will be matched using `match-base-evr` in `extensions.yaml`.
-            if (pipecfg.misc?.check_kernel_rt_mismatch_rhcos) {
+            if (stream_info.check_kernel_rt_mismatch_rhcos) {
                 echo("Verifying kernel + kernel-rt versions match")
                 def build_meta = [readJSON(file: "builds/latest/${basearch}/commitmeta.json"), readJSON(file: "builds/latest/${basearch}/meta.json")]
                 def kernel_version = build_meta[0]['ostree.linux'].split('.el')[0]

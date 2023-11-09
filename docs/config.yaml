@@ -99,6 +99,8 @@ streams:
       skip_cloud_uploads: true
       # Use newly added support for building images using OSBuild
       use_osbuild: true
+      # OPTIONAL: require kernel + kernel-rt versions to match
+      check_kernel_rt_mismatch_rhcos: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
@@ -262,7 +264,5 @@ clouds:
 misc:
   # OPTIONAL: whether to generate a release index
   generate_release_index: true
-  # OPTIONAL: require kernel + kernel-rt versions to match
-  check_kernel_rt_mismatch_rhcos: true
   # OPTIONAL: whether to run extended upgrade test kola job
   run_extended_upgrade_test_fcos: true
