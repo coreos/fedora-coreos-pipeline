@@ -97,6 +97,8 @@ streams:
       skip_govcloud_hack: true
       # OPTIONAL/TEMPORARY: don't upload images to clouds
       skip_cloud_uploads: true
+      # OPTIONAL: dont perform Brew uploads
+      skip_brew_upload: true
       # Use newly added support for building images using OSBuild
       use_osbuild: true
 

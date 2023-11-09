@@ -293,7 +293,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
-        if (brew_profile) {
+        if (brew_profile && !stream_info.skip_brew_upload) {
             stage('Brew Upload') {
                 def tag = pipecfg.streams[params.STREAM].brew_tag
                 for (arch in basearches) {
