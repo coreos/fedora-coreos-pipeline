@@ -77,7 +77,6 @@ cosaPod(memory: "512Mi", kvm: false,
                 kola(cosaDir: env.WORKSPACE, parallel: 5,
                      build: params.VERSION, arch: params.ARCH,
                      extraArgs: params.KOLA_TESTS,
-                     skipBasicScenarios: true,
                      platformArgs: '-p=aws --aws-region=us-east-1')
             }
 

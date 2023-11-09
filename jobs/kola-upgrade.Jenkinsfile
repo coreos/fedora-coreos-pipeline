@@ -184,7 +184,6 @@ EOF
                 build: start_version,
                 cosaDir: env.WORKSPACE,
                 extraArgs: "--tag extended-upgrade --append-butane tmp/target_stream.bu",
-                skipBasicScenarios: true,
                 skipUpgrade: true,
             ]
             def k1, k2, k3
