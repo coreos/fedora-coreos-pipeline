@@ -6,10 +6,6 @@
 #
 variant: fcos
 version: 1.4.0
-ignition:
-  config:
-    merge:
-      - local: builder-common.ign
 passwd:
   users:
     - name: builder
@@ -23,3 +19,19 @@ storage:
       overwrite: true
       contents:
         inline: coreos-ppc64le-builder
+     # It is a workaround due the IP/Route issue in PowerVs
+     # See more in the ppc64le README
+     - path: /etc/NetworkManager/system-connections/env2.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=en
+          type=ethernet
+          interface-name=env2
+          [ipv4]
+          address1=10.130.1.149/25,10.130.1.129
+          dns=127.0.0.53;
+          dns-search=
+          may-fail=false
+          method=manual
