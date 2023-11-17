@@ -24,10 +24,10 @@
 basic-branch-build-strategies:81.v05e333931c7d
 generic-webhook-trigger:1.88.0
 github-oauth:597.ve0c3480fcb_d0
-kubernetes-credentials-provider:1.258.v95949f923a_a_e
+kubernetes-credentials-provider:1.225.v14f9e6b_28f53
 pipeline-github:2.8-155.8eab375ac9f8
 slack:684.v833089650554
-timestamper:1.26
+timestamper:1.25
 splunk-devops-extend:1.10.1
 splunk-devops:1.10.1
 antisamy-markup-formatter:162.v0e6ec0fcfcf6
