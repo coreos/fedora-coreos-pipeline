@@ -1,9 +1,6 @@
 streams:
   stable:
     type: production
-    skip_artifacts:
-      all:
-        - applehv
   testing:
     type: production
   next:
