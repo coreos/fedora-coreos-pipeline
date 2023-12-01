@@ -100,7 +100,7 @@ objects:
               -Dfile.encoding=UTF-8
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=900
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true
-              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultImage=jenkins-agent-base:latest
+              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultImage=image-registry.openshift-image-registry.svc:5000/${AGENT_NAMESPACE}/jenkins-agent-base:latest
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultCpuRequest=1
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultMemoryRequest=512Mi
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultCpuLimit=1
@@ -255,6 +255,11 @@ parameters:
 - description: The OpenShift Namespace where the Jenkins ImageStream resides.
   displayName: Jenkins ImageStream Namespace
   name: NAMESPACE
+  value: openshift
+# DELTA: add separate agent namespace parameter
+- description: The OpenShift Namespace where the Jenkins Agent ImageStream resides.
+  displayName: Jenkins Agent ImageStream Namespace
+  name: AGENT_NAMESPACE
   value: openshift
 - description: Whether to perform memory intensive, possibly slow, synchronization
     with the Jenkins Update Center on start.  If true, the Jenkins core update monitor

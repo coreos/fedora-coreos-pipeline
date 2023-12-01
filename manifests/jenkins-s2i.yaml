@@ -12,21 +12,24 @@ parameters:
   - description: Git branch/tag reference for Jenkins S2I
     name: JENKINS_S2I_REF
     value: main
-  - name: JENKINS_BASE_TAG
-    description: Tag name of base OpenShift Jenkins agent image
-    value: latest
+  - description: Source imagestream
+    name: JENKINS_S2I_SRC_IMAGESTREAM_NAME
+    value: jenkins:2
+  - description: Namespace of source imagestream
+    name: JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE
+    value: openshift
 
 # Here's what the flow looks like when no cert is required:
 #
-# ┌─────────────────────┐   ┌────────────────┐   ┌─────────────┐   ┌─────────────┐
-# │ imagestream         │   │ imagestream    │   │ buildconfig │   │ imagestream │
-# │ openshift/jenkins:2 ├──►│ jenkins:latest ├──►│ jenkins-s2i ├──►│ jenkins:2   │
-# └─────────────────────┘   └────────────────┘   └─────────────┘   └─────────────┘
+# ┌─────────────────────┐   ┌─────────────┐   ┌─────────────┐
+# │ imagestream         │   │ buildconfig │   │ imagestream │
+# │ openshift/jenkins:2 ├──►│ jenkins-s2i ├──►│ jenkins:2   │
+# └─────────────────────┘   └─────────────┘   └─────────────┘
 #
-# ┌─────────────────────────────────────┐   ┌───────────────────────────┐
-# │ imagestream                         │   │ imagestream               │
-# │ openshift/jenkins-agent-base:latest ├──►│ jenkins-agent-base:latest │
-# └─────────────────────────────────────┘   └───────────────────────────┘
+# ┌─────────────────────────────────────┐
+# │ imagestream                         │
+# │ openshift/jenkins-agent-base:latest │
+# └─────────────────────────────────────┘
 #
 # And with cert required (see `jenkins-with-cert.yaml`):
 #
@@ -48,17 +51,6 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins
-    spec:
-      tags:
-        - name: ${JENKINS_BASE_TAG}
-          from:
-            kind: ImageStreamTag
-            name: jenkins:2
-            namespace: openshift
-          referencePolicy:
-            type: Source
-          importPolicy:
-            scheduled: true
   - kind: BuildConfig
     apiVersion: v1
     metadata:
@@ -78,7 +70,8 @@ objects:
         sourceStrategy:
           from:
             kind: ImageStreamTag
-            name: jenkins:latest
+            name: ${JENKINS_S2I_SRC_IMAGESTREAM_NAME}
+            namespace: ${JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE}
           forcePull: true
       output:
         to:
@@ -93,17 +86,3 @@ objects:
     kind: ImageStream
     metadata:
       name: jenkins-agent-base
-    spec:
-      lookupPolicy:
-        # this allows e.g. the pipeline to directly reference the imagestream
-        local: true
-      tags:
-        - name: ${JENKINS_BASE_TAG}
-          from:
-            kind: ImageStreamTag
-            name: jenkins-agent-base:latest
-            namespace: openshift
-          referencePolicy:
-            type: Source
-          importPolicy:
-            scheduled: true

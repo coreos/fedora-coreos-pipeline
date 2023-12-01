@@ -57,9 +57,8 @@ def process_template(args):
         params.update(params_from_git_refspec(args.pipecfg, 'PIPECFG'))
     if has_additional_root_ca(args):
         templates += ['jenkins-with-cert.yaml']
-        # we want :latest to be owned by our BuildConfig, so call the base
-        # image :base instead of :latest
-        params['JENKINS_BASE_TAG'] = "base"
+        params['JENKINS_S2I_SRC_IMAGESTREAM_NAME'] = "jenkins:latest"
+        params['JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE'] = get_current_namespace(args)
 
     print("Parameters:")
     for k, v in params.items():
@@ -90,6 +89,11 @@ def has_additional_root_ca(args):
     secrets = subprocess.check_output([args.oc_cmd, 'get', 'secrets', '-o=name'],
                                       encoding='utf-8').splitlines()
     return 'secret/additional-root-ca-cert' in secrets
+
+
+def get_current_namespace(args):
+    return subprocess.check_output([args.oc_cmd, 'project', '--short=true'],
+                                   encoding='utf-8').strip()
 
 
 def update_resources(args, resources):
