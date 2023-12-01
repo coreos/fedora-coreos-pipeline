@@ -548,6 +548,13 @@ using a development cluster, it normally isn't, and you can drop it. For
 the Fedora prod cluster, use `ocs-storagecluster-ceph-rbd` as shown
 above.
 
+If using an additional root CA certificate, then you will also need to
+specify the `AGENT_NAMESPACE` parameter to yours, e.g.:
+
+```
+  --param=AGENT_NAMESPACE=fedora-coreos-pipeline \
+```
+
 Now, create the Jenkins configmap:
 
 ```
