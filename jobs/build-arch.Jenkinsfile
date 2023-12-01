@@ -75,6 +75,7 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 def stream_info = pipecfg.streams[params.STREAM]
 
 def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
+def ppc64le_no_kvm = pipecfg.hacks?.use_ppc64le_no_kvm ?: 0
 
 // Determine if we should use osbuild for image building
 def use_osbuild = pipeutils.get_use_osbuild_for_stream(pipecfg, params.STREAM)
@@ -142,7 +143,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
+        cosa remote-session create --env COSA_NO_KVM=${ppc64le_no_kvm} --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
