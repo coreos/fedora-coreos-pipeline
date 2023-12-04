@@ -300,7 +300,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             def n = 4 // VMs are 2G each and arch builders have approx 32G
             // XXX: only run the basic test if this hack is enabled; temporary
             // measure for ppc64le move in RHCOS pipeline
-            if (pipecfg.hacks?.ppc64le_kola_minimal) {
+            if (pipecfg.hacks?.ppc64le_kola_minimal && basearch == "ppc64le") {
                 kola(cosaDir: env.WORKSPACE, arch: basearch,
                      skipUpgrade: true, extraArgs: 'basic')
             } else {
@@ -332,7 +332,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
             // XXX: only run the basic test if this hack is enabled; temporary
             // measure for ppc64le move in RHCOS pipeline
-            if (pipecfg.hacks?.ppc64le_kola_minimal) {
+            if (pipecfg.hacks?.ppc64le_kola_minimal && basearch == "ppc64le") {
                 stage("Kola:TestISO") {
                     kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
                                 extraArgs: "iso-live-login.ppcfw")
