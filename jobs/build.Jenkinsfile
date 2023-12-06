@@ -114,6 +114,11 @@ def newBuildID, basearch
 
 // matches between build/build-arch job
 def timeout_mins = 240
+if (pipecfg.hacks?.ppc64le_kola_minimal) {
+    // XXX: extend the timeout for ppc64le; temporary measure for ppc64le move
+    // in RHCOS pipeline
+    timeout_mins = 300
+}
 
 if (params.WAIT_FOR_RELEASE_JOB) {
     // Waiting for the release job effectively means waiting for all the build-
