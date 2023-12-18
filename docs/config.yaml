@@ -36,8 +36,6 @@ hacks:
   skip_upgrade_tests: true
   # OPTIONAL: skip UEFI on older RHCOS
   skip_uefi_tests_on_older_rhcos: true
-  # OPTIONAL/TEMPORARY: run less tests on ppc64le
-  ppc64le_kola_minimal: true
 
 # OPTIONAL/TEMPORARY: whether to use `versionary` to derive version numbers
 versionary_hack: true

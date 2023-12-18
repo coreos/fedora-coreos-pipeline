@@ -101,11 +101,6 @@ def basearch = params.ARCH
 
 // matches between build/build-arch job
 def timeout_mins = 240
-if (pipecfg.hacks?.ppc64le_kola_minimal && basearch == "ppc64le") {
-    // XXX: extend the timeout for ppc64le; temporary measure for ppc64le move
-    // in RHCOS pipeline
-    timeout_mins = 300
-}
 
 // release lock: we want to block the release job until we're done.
 // ideally we'd lock this from the main pipeline and have lock ownership
@@ -115,10 +110,6 @@ lock(resource: "release-${params.VERSION}-${basearch}") {
 // build lock: we don't want multiple concurrent builds for the same stream and
 // arch (though this should work fine in theory)
 lock(resource: "build-${params.STREAM}-${basearch}") {
-// XXX: only run one ppc64le build at a time; temporary measure for ppc64le move
-// in RHCOS pipeline
-pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
-                          basearch == "ppc64le", [resource: "build-${basearch}"]) {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_controller_img,
@@ -151,7 +142,7 @@ pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration ${timeout_mins}m --workdir ${env.WORKSPACE}
+        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
@@ -307,17 +298,10 @@ pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
         // Run Kola Tests
         stage("Kola") {
             def n = 4 // VMs are 2G each and arch builders have approx 32G
-            // XXX: only run the basic test if this hack is enabled; temporary
-            // measure for ppc64le move in RHCOS pipeline
-            if (pipecfg.hacks?.ppc64le_kola_minimal && basearch == "ppc64le") {
-                kola(cosaDir: env.WORKSPACE, arch: basearch,
-                     skipUpgrade: true, extraArgs: 'basic')
-            } else {
-                kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
-                     skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
-                     allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
-                     skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
-            }
+            kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+                 skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
+                 allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
+                 skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
         }
 
         // Build the remaining artifacts
@@ -339,13 +323,9 @@ pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
 
         // Run Kola TestISO tests for metal artifacts
         if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-            // XXX: don't run any testiso tests if this hack is enabled;
-            // temporary measure for ppc64le move in RHCOS pipeline
-            if (!pipecfg.hacks?.ppc64le_kola_minimal || basearch != "ppc64le") {
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
-                }
+            stage("Kola:TestISO") {
+                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                            skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
             }
         }
 
@@ -469,4 +449,4 @@ pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
             --state FINISHED --result ${currentBuild.result}
         """)
     }
-}}}}}} // finally, cosaPod, timeout, and locks finish here
+}}}}} // finally, cosaPod, timeout, and locks finish here

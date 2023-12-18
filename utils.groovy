@@ -277,17 +277,6 @@ def tryWithOrWithoutCredentials(creds, Closure body) {
     }
 }
 
-// Runs closure within lock if cond is true.
-def conditionalLock(cond, locks, Closure body) {
-    if (cond) {
-        lock(locks) {
-            body()
-        }
-    } else {
-        body()
-    }
-}
-
 // Runs closure if the fedmsg credentials exist, otherwise gracefully return.
 def tryWithMessagingCredentials(Closure body) {
     // Here we need to use `dockerCert`, which was renamed to
