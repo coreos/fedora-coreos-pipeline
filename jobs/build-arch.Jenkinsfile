@@ -298,17 +298,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // Run Kola Tests
         stage("Kola") {
             def n = 4 // VMs are 2G each and arch builders have approx 32G
-            // XXX: only run the basic test if this hack is enabled; temporary
-            // measure for ppc64le move in RHCOS pipeline
-            if (pipecfg.hacks?.ppc64le_kola_minimal) {
-                kola(cosaDir: env.WORKSPACE, arch: basearch,
-                     skipUpgrade: true, extraArgs: 'basic')
-            } else {
-                kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
-                     skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
-                     allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
-                     skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
-            }
+            kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+                 skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
+                 allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
+                 skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
         }
 
         // Build the remaining artifacts
@@ -330,18 +323,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Run Kola TestISO tests for metal artifacts
         if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-            // XXX: only run the basic test if this hack is enabled; temporary
-            // measure for ppc64le move in RHCOS pipeline
-            if (pipecfg.hacks?.ppc64le_kola_minimal) {
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                                extraArgs: "iso-live-login.ppcfw")
-                }
-            } else {
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
-                }
+            stage("Kola:TestISO") {
+                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                            skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
             }
         }
 
