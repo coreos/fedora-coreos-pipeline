@@ -101,11 +101,6 @@ def basearch = params.ARCH
 
 // matches between build/build-arch job
 def timeout_mins = 240
-if (pipecfg.hacks?.ppc64le_kola_minimal && basearch == "ppc64le") {
-    // XXX: extend the timeout for ppc64le; temporary measure for ppc64le move
-    // in RHCOS pipeline
-    timeout_mins = 300
-}
 
 // release lock: we want to block the release job until we're done.
 // ideally we'd lock this from the main pipeline and have lock ownership
@@ -147,7 +142,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration ${timeout_mins}m --workdir ${env.WORKSPACE}
+        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
