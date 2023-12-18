@@ -115,10 +115,6 @@ lock(resource: "release-${params.VERSION}-${basearch}") {
 // build lock: we don't want multiple concurrent builds for the same stream and
 // arch (though this should work fine in theory)
 lock(resource: "build-${params.STREAM}-${basearch}") {
-// XXX: only run one ppc64le build at a time; temporary measure for ppc64le move
-// in RHCOS pipeline
-pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
-                          basearch == "ppc64le", [resource: "build-${basearch}"]) {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_controller_img,
@@ -469,4 +465,4 @@ pipeutils.conditionalLock(pipecfg.hacks?.ppc64le_kola_minimal &&
             --state FINISHED --result ${currentBuild.result}
         """)
     }
-}}}}}} // finally, cosaPod, timeout, and locks finish here
+}}}}} // finally, cosaPod, timeout, and locks finish here
