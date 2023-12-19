@@ -100,7 +100,7 @@ def newBuildID = params.VERSION
 def basearch = params.ARCH
 
 // matches between build/build-arch job
-def timeout_mins = 240
+def timeout_mins = 300
 
 // release lock: we want to block the release job until we're done.
 // ideally we'd lock this from the main pipeline and have lock ownership
@@ -138,11 +138,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // commands, should get intercepted and executed on the remote.
         // We set environment variables that describe our remote host
         // that `podman --remote` will transparently pick up and use.
-        // We set the session to time out after 4h. This essentially
+        // We set the session to time out after 5h. This essentially
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
+        cosa remote-session create --image ${cosa_img} --expiration 5h --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
