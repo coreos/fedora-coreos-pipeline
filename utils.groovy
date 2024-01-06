@@ -486,10 +486,8 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
     if (shwrapCapture("cosa meta --build=${version} --get-value images.azure") != "None" &&
         cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
-        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG_AUTH',
-                                     credentialsId: 'azure-kola-tests-config-auth'),
-                                file(variable: 'AZURE_KOLA_TESTS_CONFIG_PROFILE',
-                                     credentialsId: 'azure-kola-tests-config-profile')])) {
+        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
+                                     credentialsId: 'azure-kola-tests-config')])) {
         testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
     }
 
