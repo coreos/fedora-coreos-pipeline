@@ -8,8 +8,8 @@ node {
 
 properties([
     pipelineTriggers([
-        // check once a day
-        pollSCM('H H * * *')
+        // trigger once a day
+        cron('H H * * *')
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '20',
