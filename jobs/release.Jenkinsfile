@@ -397,12 +397,11 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
 
             pipeutils.tryWithMessagingCredentials() {
-                for (basearch in basearches) {
-                    shwrap("""
-                    /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                        stream.release --build ${params.VERSION} --basearch ${basearch} --stream ${params.STREAM}
-                    """)
-                }
+                def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
+                shwrap("""
+                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                    stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+                """)
             }
         }
 
