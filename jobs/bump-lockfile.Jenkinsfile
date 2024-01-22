@@ -64,12 +64,13 @@ def getLockfileInfo(lockfile) {
 // Keep in sync with build.Jenkinsfile
 def cosa_memory_request_mb = 10.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
+def timeout_mins = 240
 
 lock(resource: "bump-lockfile") {
     cosaPod(image: cosa_img,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi",
             serviceAccount: "jenkins") {
-    timeout(time: 240, unit: 'MINUTES') {
+    timeout(time: timeout_mins, unit: 'MINUTES') {
     try {
 
         currentBuild.description = "[${params.STREAM}] Running"
@@ -110,7 +111,7 @@ lock(resource: "bump-lockfile") {
                 if (arch != "x86_64") {
                     pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                         archinfo[arch]['session'] = shwrapCapture("""
-                        cosa remote-session create --image ${cosa_img} --expiration 4h --workdir ${env.WORKSPACE}
+                        cosa remote-session create --image ${cosa_img} --expiration ${timeout_mins}m --workdir ${env.WORKSPACE}
                         """)
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                             shwrap("""
