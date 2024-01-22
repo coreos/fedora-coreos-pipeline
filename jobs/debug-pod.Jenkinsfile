@@ -42,6 +42,9 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+// Grab any environment variables we should set
+def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
+
 // We'll just always use latest for the controller image here.
 def cosa_controller_img = "quay.io/coreos-assembler/coreos-assembler:main"
 
@@ -57,6 +60,7 @@ podName += UUID.randomUUID().toString().substring(0, 8)
 cosaPod(cpu: "${ncpus}",
         memory: "${cosa_memory_request_mb}Mi",
         image: cosa_controller_img,
+        env: container_env,
         serviceAccount: "jenkins",
         name : podName) {
     timeout(time: params.TIMEOUT as Integer, unit: 'HOURS') {
@@ -73,6 +77,7 @@ cosaPod(cpu: "${ncpus}",
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: params.ARCH) {
         def session = pipeutils.createCosaRemoteSession(
+            env: container_env,
             expiration: "${params.TIMEOUT}h",
             image: cosa_img,
             workdir: WORKSPACE,

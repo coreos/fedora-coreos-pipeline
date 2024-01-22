@@ -45,8 +45,8 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-// Determine if we should use osbuild for image building
-def use_osbuild = pipeutils.get_use_osbuild_for_stream(pipecfg, params.STREAM)
+// Grab any environment variables we should set
+def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
 def getLockfileInfo(lockfile) {
     def pkgChecksum, pkgTimestamp
@@ -67,7 +67,7 @@ def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 def timeout_mins = 240
 
 lock(resource: "bump-lockfile") {
-    cosaPod(image: cosa_img,
+    cosaPod(image: cosa_img, env: container_env,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi",
             serviceAccount: "jenkins") {
     timeout(time: timeout_mins, unit: 'MINUTES') {
@@ -111,6 +111,7 @@ lock(resource: "bump-lockfile") {
                 if (arch != "x86_64") {
                     pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                         archinfo[arch]['session'] = pipeutils.createCosaRemoteSession(
+                            env: container_env,
                             expiration: "${timeout_mins}m",
                             image: cosa_img,
                             workdir: WORKSPACE,
