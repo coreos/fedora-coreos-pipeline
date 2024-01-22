@@ -217,6 +217,25 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir, acl) {
     }
 }
 
+// Create a COSA remote session, which is usually used to
+// build on a different architecture.
+//
+// Available parameters:
+//    expiration: string that represents a golang duration for how
+//                long the container should last (i.e. 4h, 30m)
+//    image: string that represents the container image to pull
+//    workdir: string that represents the in container working directory
+def createCosaRemoteSession(params = [:]) {
+    def expiration = params['expiration']
+    def image = params['image']
+    def workdir = params['workdir']
+    def session = shwrapCapture("""
+    cosa remote-session create --image ${image} \
+        --expiration ${expiration} --workdir ${workdir}
+    """)
+    return session
+}
+
 // Run in a podman remote context on a builder of the given
 // architecture.
 //
