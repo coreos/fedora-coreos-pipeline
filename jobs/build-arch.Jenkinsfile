@@ -142,7 +142,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
         def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration 5h --workdir ${env.WORKSPACE}
+        cosa remote-session create --image ${cosa_img} --expiration ${timeout_mins}m --workdir ${env.WORKSPACE}
         """)
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
