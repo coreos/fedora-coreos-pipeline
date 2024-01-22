@@ -1,27 +1,27 @@
 streams:
-    stable:
-      type: production
-      skip_additional_arches:
-        # https://github.com/coreos/fedora-coreos-tracker/issues/1247#issuecomment-1261286872
-        - ppc64le
-    testing:
-      type: production
-    next:
-      type: production
-    testing-devel:
-      type: development
-      default: true
-    # next-devel:         # do not touch; line managed by `next-devel/manage.py`
-      # type: development # do not touch; line managed by `next-devel/manage.py`
-    rawhide:
-      type: mechanical
-      use_osbuild: true
-    # branched:
-    #   type: mechanical
-    # bodhi-updates:
-    #   type: mechanical
-    # bodhi-updates-testing:
-    #   type: mechanical
+  stable:
+    type: production
+    skip_additional_arches:
+      # https://github.com/coreos/fedora-coreos-tracker/issues/1247#issuecomment-1261286872
+      - ppc64le
+  testing:
+    type: production
+  next:
+    type: production
+  testing-devel:
+    type: development
+    default: true
+  # next-devel:         # do not touch; line managed by `next-devel/manage.py`
+    # type: development # do not touch; line managed by `next-devel/manage.py`
+  rawhide:
+    type: mechanical
+    use_osbuild: true
+  # branched:
+  #   type: mechanical
+  # bodhi-updates:
+  #   type: mechanical
+  # bodhi-updates-testing:
+  #   type: mechanical
 
 additional_arches: [aarch64, ppc64le, s390x]
 
