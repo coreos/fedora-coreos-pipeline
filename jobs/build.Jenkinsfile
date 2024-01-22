@@ -83,8 +83,8 @@ if (params.ADDITIONAL_ARCHES != "none") {
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-// Determine if we should use osbuild for image building
-def use_osbuild = pipeutils.get_use_osbuild_for_stream(pipecfg, params.STREAM)
+// Grab any environment variables we should set
+def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
 // If we are a mechanical stream then we can pin packages but we
 // don't maintain complete lockfiles so we can't build in strict mode.
@@ -153,6 +153,7 @@ lock(resource: "build-${params.STREAM}") {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
             image: cosa_img,
+            env: container_env,
             serviceAccount: "jenkins") {
     timeout(time: timeout_mins, unit: 'MINUTES') {
     try {
@@ -352,7 +353,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Build QEMU image
         stage("Build QEMU") {
-            shwrap("cosa shell -- env COSA_USE_OSBUILD=${use_osbuild} cosa buildextend-qemu")
+            shwrap("cosa buildextend-qemu")
         }
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.

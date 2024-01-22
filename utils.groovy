@@ -123,8 +123,18 @@ def get_source_config_ref_for_stream(pipecfg, stream) {
     }
 }
 
-def get_use_osbuild_for_stream(pipecfg, stream) {
-    return pipecfg.streams[stream].use_osbuild ? '1' : ''
+def get_env_vars_for_stream(pipecfg, stream) {
+    def x = [:]
+    // Grab the globally configured env vars first
+    if (pipecfg.env) {
+        x.putAll(pipecfg.env)
+    }
+    // Values in stream specific env vars override
+    // the global ones.
+    if (pipecfg.streams[stream].env) {
+        x.putAll(pipecfg.streams[stream].env)
+    }
+    return x
 }
 
 // Parse and handle the result of Kola
@@ -221,6 +231,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir, acl) {
 // build on a different architecture.
 //
 // Available parameters:
+//    env: (optional) map of key/val pairs of environment variables to set
 //    expiration: string that represents a golang duration for how
 //                long the container should last (i.e. 4h, 30m)
 //    image: string that represents the container image to pull
@@ -229,9 +240,13 @@ def createCosaRemoteSession(params = [:]) {
     def expiration = params['expiration']
     def image = params['image']
     def workdir = params['workdir']
+    def envArgs = []
+    if (params['env']) {
+        envArgs = params['env'].collect { k, v -> "--env ${k}=${v}" }
+    }
     def session = shwrapCapture("""
     cosa remote-session create --image ${image} \
-        --expiration ${expiration} --workdir ${workdir}
+        ${envArgs.join(" ")} --expiration ${expiration} --workdir ${workdir}
     """)
     return session
 }

@@ -99,13 +99,19 @@ streams:
       skip_cloud_uploads: true
       # OPTIONAL: dont perform Brew uploads
       skip_brew_upload: true
-      # Use newly added support for building images using OSBuild
-      use_osbuild: true
+      # Set the COSA_USE_OSBUILD environment variable to force use of OSBuild
+      # for image building.
+      env:
+        COSA_USE_OSBUILD: true
       # OPTIONAL: require kernel + kernel-rt versions to match
       check_kernel_rt_mismatch_rhcos: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
+
+# OPTIONAL: environment variables to set inside the COSA container
+env:
+  VAR: value
 
 # OPTIONAL: S3 bucket and key to which to upload build artifacts. For reference,
 # the builds.json file will be located at
