@@ -110,9 +110,11 @@ lock(resource: "bump-lockfile") {
             parallel archinfo.keySet().collectEntries{arch -> [arch, {
                 if (arch != "x86_64") {
                     pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                        archinfo[arch]['session'] = shwrapCapture("""
-                        cosa remote-session create --image ${cosa_img} --expiration ${timeout_mins}m --workdir ${env.WORKSPACE}
-                        """)
+                        archinfo[arch]['session'] = pipeutils.createCosaRemoteSession(
+                            expiration: "${timeout_mins}m",
+                            image: cosa_img,
+                            workdir: WORKSPACE,
+                        )
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                             shwrap("""
                             cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}

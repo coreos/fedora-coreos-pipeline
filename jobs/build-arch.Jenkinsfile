@@ -141,9 +141,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // We set the session to time out after 5h. This essentially
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: basearch) {
-        def session = shwrapCapture("""
-        cosa remote-session create --image ${cosa_img} --expiration ${timeout_mins}m --workdir ${env.WORKSPACE}
-        """)
+        def session = pipeutils.createCosaRemoteSession(
+            expiration: "${timeout_mins}m",
+            image: cosa_img,
+            workdir: WORKSPACE,
+        )
         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
 
         // add any additional root CA cert before we do anything that fetches
