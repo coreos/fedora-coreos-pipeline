@@ -227,7 +227,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir, acl) {
     }
 }
 
-// Create a COSA remote session, which is usually used to
+// Make a COSA remote session, which is usually used to
 // build on a different architecture.
 //
 // Available parameters:
@@ -236,7 +236,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir, acl) {
 //                long the container should last (i.e. 4h, 30m)
 //    image: string that represents the container image to pull
 //    workdir: string that represents the in container working directory
-def createCosaRemoteSession(params = [:]) {
+def makeCosaRemoteSession(params = [:]) {
     def expiration = params['expiration']
     def image = params['image']
     def workdir = params['workdir']
