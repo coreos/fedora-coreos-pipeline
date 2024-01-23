@@ -110,7 +110,7 @@ lock(resource: "bump-lockfile") {
             parallel archinfo.keySet().collectEntries{arch -> [arch, {
                 if (arch != "x86_64") {
                     pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                        archinfo[arch]['session'] = pipeutils.createCosaRemoteSession(
+                        archinfo[arch]['session'] = pipeutils.makeCosaRemoteSession(
                             env: container_env,
                             expiration: "${timeout_mins}m",
                             image: cosa_img,

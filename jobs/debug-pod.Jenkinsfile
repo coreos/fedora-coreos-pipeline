@@ -76,7 +76,7 @@ cosaPod(cpu: "${ncpus}",
         // We set the session to time out after 4h. This essentially
         // performs garbage collection on the remote if we fail to clean up.
         pipeutils.withPodmanRemoteArchBuilder(arch: params.ARCH) {
-        def session = pipeutils.createCosaRemoteSession(
+        def session = pipeutils.makeCosaRemoteSession(
             env: container_env,
             expiration: "${params.TIMEOUT}h",
             image: cosa_img,
