@@ -23,3 +23,7 @@ storage:
       overwrite: true
       contents:
         inline: coreos-ppc64le-builder
+systemd:
+  units:
+    - name: zincati.service
+      enabled: false

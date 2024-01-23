@@ -10,3 +10,7 @@ ignition:
     merge:
       - local: coreos-ppc64le-builder.ign
       - local: builder-splunk.ign
+systemd:
+  units:
+    - name: zincati.service
+      enabled: false
