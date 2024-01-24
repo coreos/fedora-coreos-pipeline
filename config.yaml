@@ -48,16 +48,16 @@ versionary_hack: true
 
 default_artifacts:
   all:
-#   - metal
-#   - metal4k
-#   - live
-#   - openstack
-    - hashlist-experimental
+    - metal
+    - metal4k
+    - live
+    - openstack
+#   - hashlist-experimental
   aarch64:
 #   - applehv
-#   - aws
+    - aws
 #   - azure
-    - gcp
+#   - gcp
 #   - hyperv
   ppc64le:
     - powervs
@@ -66,12 +66,12 @@ default_artifacts:
   x86_64:
 #   - aliyun
 #   - applehv
-#   - aws
-#   - azure
+    - aws
+    - azure
 #   - azurestack
 #   - digitalocean
 #   - exoscale
-    - gcp
+#   - gcp
 #   - hyperv
 #   - ibmcloud
 #   - kubevirt
