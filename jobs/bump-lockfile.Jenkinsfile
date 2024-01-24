@@ -216,7 +216,7 @@ lock(resource: "bump-lockfile") {
                             shwrap("cosa fetch --strict")
                         }
                         stage("${arch}:Build") {
-                            shwrap("cosa shell -- env COSA_USE_OSBUILD=${use_osbuild} cosa build --force --strict")
+                            shwrap("cosa build --force --strict")
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
