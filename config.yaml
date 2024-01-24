@@ -51,23 +51,23 @@ default_artifacts:
     - metal
     - metal4k
     - live
-    - openstack
+#   - openstack
 #   - hashlist-experimental
-  aarch64:
+# aarch64:
 #   - applehv
-    - aws
+#   - aws
 #   - azure
 #   - gcp
 #   - hyperv
-  ppc64le:
-    - powervs
-  s390x:
-    - ibmcloud
-  x86_64:
+# ppc64le:
+#   - powervs
+# s390x:
+#   - ibmcloud
+# x86_64:
 #   - aliyun
 #   - applehv
-    - aws
-    - azure
+#   - aws
+#   - azure
 #   - azurestack
 #   - digitalocean
 #   - exoscale
