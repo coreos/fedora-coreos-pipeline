@@ -12,6 +12,10 @@ streams:
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
+    # Set the COSA_USE_OSBUILD environment variable to force use of OSBuild
+    # for image building rawhide images. https://github.com/coreos/fedora-coreos-tracker/issues/1653
+    env:
+      COSA_USE_OSBUILD: true
   # branched:
   #   type: mechanical
   # bodhi-updates:
