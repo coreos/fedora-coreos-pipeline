@@ -64,6 +64,9 @@ streams:
       type: production
       # OPTIONAL: override cosa image to use for this stream
       cosa_image: "quay.io/jlebon/coreos-assembler:stable"
+      # OPTIONAL: Whether to skip cloud image generation and upload. This is
+      # equivalent to listing all cloud platforms in `skip_artifacts`.
+      skip_cloud_images: true
       # OPTIONAL: skip some of the default artifacts for this stream
       skip_artifacts:
         aarch64:
