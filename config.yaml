@@ -12,6 +12,10 @@ streams:
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
+    # for testing https://github.com/coreos/fedora-coreos-tracker/issues/1594
+    additional_artifacts:
+      aarch64:
+        - vmware
     # Set the COSA_USE_OSBUILD environment variable to force use of OSBuild
     # for image building rawhide images. https://github.com/coreos/fedora-coreos-tracker/issues/1653
     env:
