@@ -64,6 +64,10 @@ streams:
       type: production
       # OPTIONAL: override cosa image to use for this stream
       cosa_image: "quay.io/jlebon/coreos-assembler:stable"
+      # OPTIONAL: additional artifacts to build for this stream
+      additional_artifacts:
+        aarch64:
+          - vmware
       # OPTIONAL: skip some of the default artifacts for this stream
       skip_artifacts:
         aarch64:
