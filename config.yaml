@@ -44,8 +44,6 @@ registry_repos:
     repo: quay.io/fedora/fedora-coreos-kubevirt
     tags: ["${STREAM}"]
 
-versionary_hack: true
-
 default_artifacts:
   all:
     - metal
@@ -108,5 +106,6 @@ clouds:
     test_architectures: [x86_64, aarch64]
 
 misc:
+  versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true

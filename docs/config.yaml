@@ -37,9 +37,6 @@ hacks:
   # OPTIONAL: skip UEFI on older RHCOS
   skip_uefi_tests_on_older_rhcos: true
 
-# OPTIONAL/TEMPORARY: whether to use `versionary` to derive version numbers
-versionary_hack: true
-
 # OPTIONAL: coreos-assembler image to build with. Supports ${STREAM} variable.
 # If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
 cosa_img: quay.io/jlebon/coreos-assembler:pr3139-${STREAM}
@@ -60,6 +57,8 @@ streams:
       source_config_ref: main
       # OPTIONAL: override OS variant to use for this stream
       variant: rhcos-9.0
+      # OPTIONAL: override whether to use a versionary for this stream
+      versionary: false
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream
@@ -270,6 +269,8 @@ clouds:
 
 # OPTIONAL: miscellaneous options
 misc:
+  # OPTIONAL: whether to use a versionary to derive version numbers
+  versionary: true
   # OPTIONAL: whether to generate a release index
   generate_release_index: true
   # OPTIONAL: whether to run extended upgrade test kola job

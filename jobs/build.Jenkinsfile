@@ -250,13 +250,6 @@ lock(resource: "build-${params.STREAM}") {
             prevBuildID = shwrapCapture("readlink builds/latest")
         }
 
-        def new_version = ""
-        if (params.VERSION) {
-            new_version = params.VERSION
-        } else if (pipecfg.versionary_hack) {
-            new_version = shwrapCapture("/usr/lib/coreos-assembler/fcos-versionary")
-        }
-
         def overrides_fetch_param = ""
 
         // fetch from repos for the current build
@@ -274,10 +267,22 @@ lock(resource: "build-${params.STREAM}") {
             if (parent_version != "") {
                 parent_arg = "--parent-build ${parent_version}"
             }
-            def version = new_version ? "--version ${new_version}" : ""
+            def version_arg = ""
+            if (params.VERSION) {
+                version_arg = "--version ${params.VERSION}"
+            } else {
+                def use_versionary = pipecfg.misc?.versionary
+                if (stream_info.containsKey('versionary')) {
+                    // stream override always wins
+                    use_versionary = stream_info.versionary
+                }
+                if (use_versionary) {
+                    version_arg = "--versionary"
+                }
+            }
             def force = params.FORCE ? "--force" : ""
             shwrap("""
-            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
+            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
             """)
 
             // Insert the parent info into meta.json so we can display it in
