@@ -18,10 +18,10 @@ streams:
     type: mechanical
     env:
       COSA_USE_OSBUILD: true
-  branched:
-    type: mechanical
-    env:
-      COSA_USE_OSBUILD: true
+  #branched:
+  #  type: mechanical
+  #  env:
+  #    COSA_USE_OSBUILD: true
   # bodhi-updates:
   #   type: mechanical
   # bodhi-updates-testing:
