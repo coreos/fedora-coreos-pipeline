@@ -266,7 +266,7 @@ lock(resource: "build-podman-os") {
                 }
             }]}
         }
-        withCredentials([file(credentialsId: 'ravanelli-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+        withCredentials([file(credentialsId: 'podman-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
             stage("Push Manifest") {
                 def manifest = "${params.CONTAINER_REGISTRY_STAGING_REPO}:5.1-${shortcommit}"
                 def cmds = "/usr/bin/buildah manifest create ${manifest}"
@@ -295,7 +295,7 @@ lock(resource: "build-podman-os") {
             }
         }
         if (params.MANIFEST_RELEASE) {
-            withCredentials([file(credentialsId: 'ravanelli-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+            withCredentials([file(credentialsId: 'podman-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
                stage("Release Manifest") {
                     // Release the manifest and container images
                     shwrap("""
