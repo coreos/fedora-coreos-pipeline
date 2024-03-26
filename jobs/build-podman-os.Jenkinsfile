@@ -306,18 +306,23 @@ lock(resource: "build-podman-os") {
                 }
             }
         }
-        stage('Delete Intermediate Tags') {
-            shwrap("""
-                export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                skopeo delete --authfile=\$REGISTRY_SECRET \
-                docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:5.1-${shortcommit}
-            """)
-            parallel archinfo.keySet().collectEntries{arch -> [arch, {
-                shwrap(""" 
-                    skopeo delete --authfile=\$REGISTRY_SECRET \
-                    docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}
-                """)
-            }]}
+        withCredentials([file(credentialsId: 'podman-push-registry-secret', variable: 'REGISTRY_SECRET')]) {            
+            stage('Delete Intermediate Tags') {
+                if (params.MANIFEST_RELEASE) {
+                    shwrap("""
+                        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+                        skopeo delete --authfile=\$REGISTRY_SECRET \
+                        docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:5.1-${shortcommit}
+                    """)
+                }
+                parallel archinfo.keySet().collectEntries{arch -> [arch, {
+                    shwrap("""
+                        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+                        skopeo delete --authfile=\$REGISTRY_SECRET \
+                        docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}
+                    """)
+                }]}
+            }
         }
         // Destroy the remote sessions. We don't need them anymore
         stage("Destroy Remotes") {
