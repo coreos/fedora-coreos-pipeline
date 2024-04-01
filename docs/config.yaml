@@ -81,11 +81,6 @@ streams:
           repo: registry.ci.openshift.org/rhcos-devel/machine-os-content
       # OPTIONAL: override default coreos-assembler image to build with
       cosa_img: quay.io/coreos-assembler/coreos-assembler:stable
-      # OPTIONAL/TEMPORARY: Override default coreos-assembler image to use for
-      # the controller pod in the build-arch job. This is only useful when
-      # building with a cosa too old to support `cosa remote-session`, which
-      # should only be the case for RHCOS 4.11 and older.
-      cosa_controller_img_hack: quay.io/coreos-assembler/coreos-assembler:latest
       # OPTIONAL: override additional architectures to build for
       additional_arches:
         - s390x
