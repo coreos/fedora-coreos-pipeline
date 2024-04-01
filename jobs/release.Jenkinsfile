@@ -269,25 +269,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                             --artifact=${artifact} --metajsonname=${metajsonname} \
                             --build=${params.VERSION} ${v2s2_arg}
                         """)
-
-                        def old_repo = registry_repos."${configname}_old"?.repo
-                        if (old_repo) {
-                            // a separate credential for the old location is optional; we support it
-                            // being merged as part of oscontainer-push-registry-secret
-                            pipeutils.tryWithOrWithoutCredentials([file(variable: 'OLD_REGISTRY_SECRET',
-                                                                        credentialsId: 'oscontainer-push-old-registry-secret')]) {
-                                def authArg = "--authfile=\${REGISTRY_SECRET}"
-                                if (env.OLD_REGISTRY_SECRET) {
-                                    authArg += " --dest-authfile=\${OLD_REGISTRY_SECRET}"
-                                }
-                                shwrap("""
-                                export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                                cosa copy-container ${authArg} ${tag_args.join(' ')} \
-                                    --manifest-list-to-arch-tag=auto \
-                                    ${repo} ${old_repo}
-                                """)
-                            }
-                        }
                     }
                 }]}
             }
