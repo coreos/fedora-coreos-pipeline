@@ -73,12 +73,6 @@ streams:
           - openstack
         x86_64:
           - vmware
-      # OPTIONAL: stream-specific container repos to push to
-      additional_registry_repos:
-        oscontainer_old:
-          repo: registry.ci.openshift.org/rhcos-devel/machine-os-oci-content
-        legacy_oscontainer_old:
-          repo: registry.ci.openshift.org/rhcos-devel/machine-os-content
       # OPTIONAL: override default coreos-assembler image to build with
       cosa_img: quay.io/coreos-assembler/coreos-assembler:stable
       # OPTIONAL: override additional architectures to build for
@@ -136,16 +130,10 @@ registry_repos:
     # REQUIRED: list of tags to create/overwrite when pushing
     #           STREAM and VERSION are supported for templating
     tags: ["${STREAM}"]
-  # OPTIONAL/TEMPORARY: additional repo to which to push oscontainer
-  oscontainer_old:
-    repo: quay.io/coreos-assembler/fcos
   # OPTIONAL: repo and tags to which to push legacy oscontainer
   legacy_oscontainer:
     repo: quay.io/openshift-release-dev/rhel-coreos-dev
     tags: ["${STREAM}-legacy", "${VERSION}-legacy"]
-  # OPTIONAL/TEMPORARY: additional repo to which to push legacy oscontainer
-  legacy_oscontainer_old:
-    repo: registry.ci.openshift.org/rhcos/rhel-coreos
   # OPTIONAL: repo and tags to which to push the extensions container
   extensions:
     repo: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
