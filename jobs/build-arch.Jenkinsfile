@@ -74,8 +74,6 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-def cosa_controller_img = stream_info.cosa_controller_img_hack ?: cosa_img
-
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
@@ -112,7 +110,7 @@ lock(resource: "release-${params.VERSION}-${basearch}") {
 lock(resource: "build-${params.STREAM}-${basearch}") {
     cosaPod(cpu: "${ncpus}",
             memory: "${cosa_memory_request_mb}Mi",
-            image: cosa_controller_img,
+            image: cosa_img,
             env: container_env,
             serviceAccount: "jenkins") {
     timeout(time: timeout_mins, unit: 'MINUTES') {
