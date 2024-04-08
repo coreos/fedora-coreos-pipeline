@@ -33,6 +33,9 @@ def generate_diskvar_json(shortcommit, arch, artifacts, staging_repo, repo) {
             "osname": "fedora-coreos",
             "container-repo": "${staging_repo}",
             "container-tag": "${arch}-${shortcommit}",
+            // Do not pass anything to kernel args for podman
+            // See: https://github.com/coreos/fedora-coreos-pipeline/pull/975
+            "extra-kargs-string": "",
             "image-type": "${artifact["platform"]}",
             "container-imgref": "ostree-remote-registry:fedora:${repo}:5.1",
             "metal-image-size": "3072",
