@@ -59,27 +59,7 @@ def supermin_run(cache, arch, artifact, shortcommit) {
 
 
 properties([
-    pipelineTriggers([
-        [$class: 'GenericTrigger',
-         genericVariables: [
-          [
-           key: 'PODMAN_MACHINE_GIT_REF',
-           value: '$.ref',
-           expressionType: 'JSONPath',
-           regexpFilter: 'refs/heads/', //Optional, defaults to empty string
-           defaultValue: ''  //Optional, defaults to empty string
-          ]
-         ],
-         causeString: 'Triggered on $ref',
-         token: 'build-podman-os',
-         tokenCredentialId: '',
-         printContributedVariables: true,
-         printPostContent: true,
-         silentResponse: false,
-         regexpFilterText: '$PODMAN_MACHINE_GIT_REF',
-         regexpFilterExpression: 'main'
-        ]
-    ]),
+    pipelineTriggers([cron('H H * * *')]),
     parameters([
       string(name: 'ARCHES',
              description: 'Space-separated list of target architectures',
