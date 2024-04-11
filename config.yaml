@@ -89,8 +89,13 @@ clouds:
     # we make our images public in the release job via plume
     public: false
     # Accounts to share newly created AMIs with
+    # Added the FCOS community account so kola can use for testing
     grant_users:
       - "013116697141"
+    # Add FedoraGroup=coreos as per Fedora Policy
+    # Ref: https://github.com/coreos/fedora-coreos-tracker/issues/1605
+    tags:
+      - "FedoraGroup=coreos"
   azure:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
