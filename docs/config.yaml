@@ -151,6 +151,9 @@ clouds:
     # OPTIONAL: accounts to share newly created AMIs with
     grant_users:
       - "1234567890"
+    # OPTIONAL: AWS tags to add on the AMIs
+    tags:
+      - "FedoraGroup=coreos"    
     # REQUIRED (if AWS build upload credentials provided): the region to do
     # initial image creation in.
     primary_region: us-east-1
