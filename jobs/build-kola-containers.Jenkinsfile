@@ -100,7 +100,7 @@ node {
 
     if ( !params.FORCE ) {
         // get the git commit ref for the last built container
-        def previous_ref = shWrapCapture("""
+        def previous_ref = shwrapCapture("""
             skopeo inspect --no-creds docker://${params.CONTAINER_REGISTRY_ORG}/${contexts[0]}:latest \
             | jq -r '.Labels.org.opencontainers.image.revision'
         """)
