@@ -7,6 +7,8 @@ node {
 
 properties([
     pipelineTriggers([
+        // run weekly to ensure regular updates
+        cron("@weekly"),
         [$class: 'GenericTrigger',
          genericVariables: [
           [
