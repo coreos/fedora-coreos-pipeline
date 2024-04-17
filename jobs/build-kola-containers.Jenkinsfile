@@ -97,32 +97,6 @@ node {
         cd ${path}
         find . -maxdepth 1 -mindepth 1 -type d -exec basename {} \\;
     """).trim().split("\n")
-
-    if ( !params.FORCE ) {
-        // get the git commit ref for the last built container
-        def previous_ref = shwrapCapture("""
-            skopeo inspect --no-creds docker://${params.CONTAINER_REGISTRY_ORG}/${contexts[0]}:latest \
-            | jq -r '.Labels.org.opencontainers.image.revision'
-        """)
-
-        // Check for changes in tests/containers/* since the last build
-        // If none, no need to run this
-        changeset = shwrapRc("git diff --quiet ${previous_ref} -- ${path}")
-    } else {
-        changeset = 1
-  }
-}
-
-if ( changeset == 0 ) {
-    currentBuild.result = 'SUCCESS'
-    currentBuild.description = "[${gitref}@${shortcommit}] 💤 (no change)."
-    return
-} else if ( changeset != 1 ) {
-    currentBuild.result = 'FAILURE'
-    currentBuild.description = "[${gitref}@${shortcommit}] ❌ Cannot determine changes. git diff return code ${changeset}."
-    message = "build-kola-test-containers #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${gitref}@${shortcommit}]"
-    pipeutils.trySlackSend(message: message)
-    return
 }
 
 currentBuild.description = "[${gitref}@${shortcommit}] Waiting"
@@ -138,6 +112,34 @@ lock(resource: "build-kola-containers") {
             serviceAccount: "jenkins") {
     timeout(time: 60, unit: 'MINUTES') {
     try {
+
+        if ( !params.FORCE ) {
+            // get the git commit ref for the last built container
+            def previous_ref = shwrapCapture("""
+                skopeo inspect --no-creds docker://${params.CONTAINER_REGISTRY_ORG}/${contexts[0]}:latest \
+                | jq -r '.Labels.org.opencontainers.image.revision'
+            """)
+
+            // Check for changes in tests/containers/* since the last build
+            // If none, no need to run this
+            def path = params.PATH_TO_CONTEXTS
+            changeset = shwrapRc("git diff --quiet ${previous_ref} -- ${path}")
+
+        } else {
+            changeset = 1
+        }
+
+        if ( changeset == 0 ) {
+            currentBuild.result = 'SUCCESS'
+            currentBuild.description = "[${gitref}@${shortcommit}] 💤 (no change)."
+            return
+        } else if ( changeset != 1 ) {
+            currentBuild.result = 'FAILURE'
+            currentBuild.description = "[${gitref}@${shortcommit}] ❌ Cannot determine changes. git diff return code ${changeset}."
+            message = "build-kola-test-containers #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${gitref}@${shortcommit}]"
+            pipeutils.trySlackSend(message: message)
+            return
+        }
 
         currentBuild.description = "[${gitref}@${shortcommit}] Running"
 
