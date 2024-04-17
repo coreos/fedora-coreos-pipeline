@@ -222,7 +222,7 @@ lock(resource: "build-podman-os") {
             parallel archinfo.keySet().collectEntries{arch -> [arch, {
                 pipeutils.withOptionalExistingCosaRemoteSession(
                     arch: arch, session: archinfo[arch]['session']) {
-                    shwrap("""cosa kola run  --basic-qemu-scenarios --qemu-image=./podman-${arch}-${shortcommit}.qcow2""")
+                    shwrap("""cosa kola run  basic* --qemu-image=./podman-${arch}-${shortcommit}.qcow2""")
                 }
             }]}
         }
