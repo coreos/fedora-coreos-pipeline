@@ -75,6 +75,9 @@ streams:
           - vmware
       # OPTIONAL: override default coreos-assembler image to build with
       cosa_img: quay.io/coreos-assembler/coreos-assembler:stable
+      # OPTIONAL: Override default coreos-assembler image to use for
+      # the controller pod in the build-arch job (default is :main)
+      cosa_controller_img: quay.io/coreos-assembler/coreos-assembler:next
       # OPTIONAL: override additional architectures to build for
       additional_arches:
         - s390x
