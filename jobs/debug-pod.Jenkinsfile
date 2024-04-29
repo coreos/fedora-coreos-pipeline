@@ -45,6 +45,9 @@ def stream_info = pipecfg.streams[params.STREAM]
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
+// We'll just always use main for the controller image here.
+def cosa_controller_img = "quay.io/coreos-assembler/coreos-assembler:main"
+
 // Note that the heavy lifting is done on a remote node via podman
 // --remote so we shouldn't need much memory or CPU.
 def cosa_memory_request_mb = 512
@@ -56,7 +59,7 @@ podName += UUID.randomUUID().toString().substring(0, 8)
 
 cosaPod(cpu: "${ncpus}",
         memory: "${cosa_memory_request_mb}Mi",
-        image: cosa_img,
+        image: cosa_controller_img,
         env: container_env,
         serviceAccount: "jenkins",
         name : podName) {
