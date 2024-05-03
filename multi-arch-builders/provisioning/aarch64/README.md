@@ -13,7 +13,7 @@
 
 ```bash
 # Add your credentials to the environment.
-# Be aware for aarch64 the region is us-east-2
+# Be aware for rhcos the region is us-east-2
 HISTCONTROL='ignoreboth'
  export AWS_DEFAULT_REGION=us-east-2
  export AWS_ACCESS_KEY_ID=XXXX
@@ -61,7 +61,7 @@ export TF_VAR_itpaas_splunk_repo=...
    # If you plan to make changes to the code as modules/plugins, go ahead and run it:
    tofu init -upgrade
    # To destroy it run:
-   tofu destroy -target aws_instance.coreos-aarch64-builder
+   tofu destroy -target aws_instance.coreos-builder
 ```
 ## Generating additional resources with unique names
 
@@ -74,18 +74,18 @@ To achieve this, you'll need to manually edit the resource name
 in the Tofu configuration.
 
 ```
-resource "aws_instance" "coreos-aarch64-builder"
+resource "aws_instance" "coreos-builder"
 ```
 Make sure the resource name is unique, in this case
-if I already have a resource named `coreos-aarch64-builder`,
-I need to change it to `coreos-aarch64-devel-builder` for example.
+if I already have a resource named `coreos-builder`,
+I need to change it to `coreos-devel-builder` for example.
 
 I may also want to update the project var:
 
 ```
 variable "project" {
  type    = string
- default = "coreos-aarch64-devel-builder"
+ default = "coreos-devel-builder"
 }
 ```
 
