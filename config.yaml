@@ -3,25 +3,15 @@ streams:
     type: production
   testing:
     type: production
-    env:
-      COSA_USE_OSBUILD: true
   next:
     type: production
-    env:
-      COSA_USE_OSBUILD: true
   testing-devel:
     type: development
     default: true
-    env:
-      COSA_USE_OSBUILD: true
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
-    env:
-      COSA_USE_OSBUILD: true
   rawhide:
     type: mechanical
-    env:
-      COSA_USE_OSBUILD: true
   #branched:
   #  type: mechanical
   #  env:
