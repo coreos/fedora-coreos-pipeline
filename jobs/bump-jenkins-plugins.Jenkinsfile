@@ -120,7 +120,7 @@ node {
                 def message = "jenkins/plugins: update to latest versions"
                 shwrap("""
                     cd fedora-coreos-pipeline
-                    git add jenkins/controller/plugins.txt
+                    git add ${plugins_lockfile}
                     git commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-jenkins-plugins.Jenkinsfile'
                 """)
                 withCredentials([usernamePassword(credentialsId: botCreds,
