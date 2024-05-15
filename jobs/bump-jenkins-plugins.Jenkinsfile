@@ -32,7 +32,7 @@ def getVersionFromPluginUrl(pluginUrl) {
 node {
     checkout scm: [
         $class: 'GitSCM',
-        branches: [[name: "${pr_branch}"]],
+        branches: [[name: "main"]],
         userRemoteConfigs: [[url: "https://github.com/${fork_repo}.git"]],
         extensions: [[$class: 'WipeWorkspace']]
     ]
@@ -61,15 +61,10 @@ node {
         def plugins_lockfile = "jenkins/controller/plugins.txt"
 
         stage("Read plugins.txt") {
-            /* Clone the repository and switch to the '${pr_branch}' branch */
+            /* Clone the repository and switch to the 'main' branch */
             shwrapCapture("""
-                git clone --depth=1 --branch ${pr_branch} https://github.com/${fork_repo}.git
-                cd fedora-coreos-pipeline
-                git remote add upstream https://github.com/${repo}.git
-                git fetch upstream
-                git reset --hard upstream/main
+                git clone --depth=1 --branch main https://github.com/${fork_repo}.git
             """)
-
             /* Read the plugins from the lockfile */
             pluginslist = shwrapCapture("grep -v ^# ${plugins_lockfile}").split('\n')
         }
@@ -128,7 +123,7 @@ node {
                                                   passwordVariable: 'GHTOKEN')]) {
                                                     shwrap("""
                                                         cd fedora-coreos-pipeline
-                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} ${pr_branch}
+                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
                                                         curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/${fork_repo}/pulls
                                                     """)
                 }
@@ -139,13 +134,15 @@ node {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
+        def message = "bump-jenkins-plugins #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
         if (currentBuild.result == 'SUCCESS') {
             currentBuild.description = "bump-jenkins-plugins ⚡"
+            message = ":sparkles: ${message}"
         } else {
             currentBuild.description = "bump-jenkins-plugins ❌"
         }
         if (currentBuild.result != 'SUCCESS') {
-            message = "bump-jenkins-plugins #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
+            message = ":fire: ${message}"
             pipeutils.trySlackSend(message: message)
         }
     }
