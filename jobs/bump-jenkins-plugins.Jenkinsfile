@@ -143,7 +143,7 @@ node {
         }
         if (currentBuild.result != 'SUCCESS') {
             message = ":fire: ${message}"
-            pipeutils.trySlackSend(message: message)
         }
+        pipeutils.trySlackSend(message: message)
     }
 }
