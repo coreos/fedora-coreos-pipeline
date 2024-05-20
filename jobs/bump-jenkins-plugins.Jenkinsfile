@@ -137,7 +137,7 @@ node {
         def message = "bump-jenkins-plugins #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
         if (currentBuild.result == 'SUCCESS') {
             currentBuild.description = "bump-jenkins-plugins ⚡"
-            message = ":sparkles: ${message}"
+            message = ":pr: ${message}"
         } else {
             currentBuild.description = "bump-jenkins-plugins ❌"
         }
