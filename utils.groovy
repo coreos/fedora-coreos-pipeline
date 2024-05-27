@@ -710,12 +710,13 @@ def get_supported_additional_arches() {
 def matrixSend(message) {
 
     withCredentials([usernamePassword(credentialsId: 'matrix-bot-webhook-token',
-                                      usernameVariable: 'URL',
+                                      usernameVariable: 'MATRIX_WEBHOOK_URL',
                                       passwordVariable: 'TOKEN')]) {
 
     shwrap("""
            curl -X POST -H "Content-Type: application/json" \
-           -u $TOKEN $URL \
+           -u $TOKEN $MATRIX_WEBHOOK_URL \
+           --silent \
            -d '
            {
              "body": "$message"
