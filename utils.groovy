@@ -706,4 +706,22 @@ def get_supported_additional_arches() {
     return supported
 }
 
+// try sending a message on matrix through maubot
+def matrixSend(message) {
+
+    withCredentials([usernamePassword(credentialsId: 'matrix-bot-webhook-token',
+                                      usernameVariable: 'URL',
+                                      passwordVariable: 'TOKEN')]) {
+
+    shwrap("""
+           curl -X POST -H "Content-Type: application/json" \
+           -u $TOKEN $URL \
+           -d '
+           {
+             "body": "$message"
+            }'
+    """)
+    }
+}
+
 return this
