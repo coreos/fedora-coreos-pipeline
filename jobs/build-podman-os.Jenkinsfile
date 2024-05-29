@@ -33,6 +33,7 @@ def generate_diskvar_json(shortcommit, arch, artifacts, staging_repo, repo) {
         def jsonContent = """
         {
             "osname": "fedora-coreos",
+            "ostree-container": "",
             "container-repo": "${staging_repo}",
             "container-tag": "${arch}-${shortcommit}",
             "extra-kargs-string": "",
