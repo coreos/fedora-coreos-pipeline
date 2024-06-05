@@ -715,7 +715,7 @@ def matrixSend(message) {
 
     shwrap("""
            curl -X POST -H "Content-Type: application/json" \
-           -u $TOKEN $MATRIX_WEBHOOK_URL \
+           -u \$TOKEN \$MATRIX_WEBHOOK_URL \
            --silent \
            -d '
            {
