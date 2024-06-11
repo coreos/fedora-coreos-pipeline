@@ -10,6 +10,8 @@ PROTECTED_JENKINSES = [
         ['fcos-builds', 'prod/streams/${STREAM}', false],
     'https://jenkins-rhcos-devel.apps.ocp-virt.prod.psi.redhat.com/':
         ['rhcos-ci', 'prod/streams/${STREAM}', true],
+    'https://jenkins-rhcos--runtime-int.apps.int.preprod-stable-spoke1-dc-iad2.itup.redhat.com/':
+        ['rhcos-ci', 'prod/streams/${STREAM}', true],
     'https://jenkins-rhcos.apps.ocp-virt.prod.psi.redhat.com/':
         ['art-rhcos-ci', 'prod/streams/${STREAM}', true]
 ]
