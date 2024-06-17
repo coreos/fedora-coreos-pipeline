@@ -56,6 +56,8 @@ if (params.VERSION == "") {
     throw new Exception("Missing VERSION parameter!")
 }
 
+build_description = "${build_description}[$params.VERSION]"
+
 // runtime parameter always wins
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
@@ -94,7 +96,7 @@ lock(resource: "sign-${params.VERSION}") {
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
             cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
             cosa buildfetch --build=${params.VERSION} \
-                ${arch_args} --artifact=all --url=s3://${s3_stream_dir}/builds \
+                ${arch_args.join(' ')} --artifact=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
             """)
         }
@@ -165,5 +167,5 @@ lock(resource: "sign-${params.VERSION}") {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
-    pipeutils.trySlackSend(message: ":key: fix-build #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
+    pipeutils.trySlackSend(message: ":hammer: fix-build #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here
