@@ -121,22 +121,26 @@ lock(resource: "sign-${params.VERSION}") {
         """)
 
         for (basearch in basearches) {
-            if (!params.SKIP_SIGNING || !params.SKIP_COMPOSE_IMPORT)  {
-                pipeutils.tryWithMessagingCredentials() {
-                    def parallelruns = [:]
-                    if (!params.SKIP_SIGNING) {
-                        parallelruns['Sign Images'] = {
-                            pipeutils.signImages(params.STREAM, params.VERSION, basearch, s3_stream_dir)
-                        }
+            pipeutils.tryWithMessagingCredentials() {
+                def parallelruns = [:]
+                if (!params.SKIP_SIGNING) {
+                    parallelruns['Sign Images'] = {
+                        pipeutils.signImages(params.STREAM, params.VERSION, basearch, s3_stream_dir)
                     }
-                    if (!params.SKIP_COMPOSE_IMPORT) {
-                        parallelruns['OSTree Import: Compose Repo'] = {
-                            pipeutils.composeRepoImport(params.VERSION, basearch, s3_stream_dir)
-                        }
+                } else {
+                    // If we skipped signing, just at least validate them
+                    // and make sure they have public ACLs.
+                    parallelruns['Verify Image Signatures'] = {
+                        pipeutils.signImages(params.STREAM, params.VERSION, basearch, s3_stream_dir, true)
                     }
-                    // process this batch
-                    parallel parallelruns
                 }
+                if (!params.SKIP_COMPOSE_IMPORT) {
+                    parallelruns['OSTree Import: Compose Repo'] = {
+                        pipeutils.composeRepoImport(params.VERSION, basearch, s3_stream_dir)
+                    }
+                }
+                // process this batch
+                parallel parallelruns
             }
 
             if (!params.SKIP_TESTS) {

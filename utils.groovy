@@ -659,13 +659,14 @@ def AWSBuildUploadCredentialExists() {
 
 // Calls `cosa sign robosignatory --images ...`. Assumes to have access to the
 // messaging credentials.
-def signImages(stream, version, basearch, s3_stream_dir) {
+def signImages(stream, version, basearch, s3_stream_dir, verify_only=false) {
+    def verify_arg = verify_only ? "--verify-only" : ""
     shwrapWithAWSBuildUploadCredentials("""
     cosa sign --build=${version} --arch=${basearch} \
         robosignatory --s3 ${s3_stream_dir}/builds \
         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
         --extra-fedmsg-keys stream=${stream} \
-        --images --gpgkeypath /etc/pki/rpm-gpg \
+        --images ${verify_arg} --gpgkeypath /etc/pki/rpm-gpg \
         --fedmsg-conf \${FEDORA_MESSAGING_CONF}
     """)
 }
