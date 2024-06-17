@@ -657,6 +657,31 @@ def AWSBuildUploadCredentialExists() {
     return utils.credentialsExist(creds)
 }
 
+// Calls `cosa sign robosignatory --images ...`. Assumes to have access to the
+// messaging credentials.
+def signImages(stream, version, basearch, s3_stream_dir) {
+    shwrapWithAWSBuildUploadCredentials("""
+    cosa sign --build=${version} --arch=${basearch} \
+        robosignatory --s3 ${s3_stream_dir}/builds \
+        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+        --extra-fedmsg-keys stream=${stream} \
+        --images --gpgkeypath /etc/pki/rpm-gpg \
+        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
+    """)
+}
+
+// Requests OSTree commit to be imported into the compose repo. Assumes to have
+// access to the messaging credentials.
+def composeRepoImport(version, basearch, s3_stream_dir) {
+    shwrap("""
+    cosa shell -- \
+    /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
+        --build=${version} --arch=${basearch} \
+        --s3=${s3_stream_dir} --repo=compose \
+        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
+    """)
+}
+
 // Grabs the jenkins.io/emoji-prefix annotation from the slack-api-token
 def getSlackEmojiPrefix() {
     def emoji = shwrapCapture("""

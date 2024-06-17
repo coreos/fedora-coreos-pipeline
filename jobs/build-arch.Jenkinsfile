@@ -370,23 +370,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             pipeutils.tryWithMessagingCredentials() {
                 def parallelruns = [:]
                 parallelruns['Sign Images'] = {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa sign --build=${newBuildID} --arch=${basearch} \
-                        robosignatory --s3 ${s3_stream_dir}/builds \
-                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                        --extra-fedmsg-keys stream=${params.STREAM} \
-                        --images --gpgkeypath /etc/pki/rpm-gpg \
-                        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
-                    """)
+                    pipeutils.signImages(params.STREAM, newBuildID, basearch, s3_stream_dir)
                 }
                 parallelruns['OSTree Import: Compose Repo'] = {
-                    shwrap("""
-                    cosa shell -- \
-                    /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                        --build=${newBuildID} --arch=${basearch} \
-                        --s3=${s3_stream_dir} --repo=compose \
-                        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
-                    """)
+                    pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
                 }
                 // process this batch
                 parallel parallelruns
