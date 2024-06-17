@@ -507,7 +507,7 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
                   string(name: 'SRC_CONFIG_COMMIT', value: commit)]
 
     // Kick off the Kola AWS job if we have an uploaded image, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --get-value amis") != "None" &&
+    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value amis") != "None" &&
         cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch) &&
         utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
                                      credentialsId: 'aws-kola-tests-config')])) {
@@ -518,7 +518,7 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     }
 
     // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --get-value images.azure") != "None" &&
+    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.azure") != "None" &&
         cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
         utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
                                      credentialsId: 'azure-kola-tests-config')])) {
@@ -526,7 +526,7 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     }
 
     // Kick off the Kola GCP job if we have an uploaded image, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --get-value gcp") != "None" &&
+    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value gcp") != "None" &&
         cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch) &&
         utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
                                      credentialsId: 'gcp-kola-tests-config')])) {
@@ -534,7 +534,7 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     }
 
     // Kick off the Kola OpenStack job if we have an artifact, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --get-value images.openstack") != "None" &&
+    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.openstack") != "None" &&
         cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
         utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
                                      credentialsId: 'openstack-kola-tests-config')])) {
