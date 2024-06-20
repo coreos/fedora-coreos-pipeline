@@ -78,7 +78,8 @@ cosaPod(memory: "512Mi", kvm: false,
                      build: params.VERSION, arch: params.ARCH,
                      extraArgs: params.KOLA_TESTS,
                      skipBasicScenarios: true,
-                     platformArgs: '-p=aws --aws-region=us-east-1')
+                     platformArgs: '-p=aws --aws-region=us-east-1',
+                     skipKolaTags: stream_info.skip_kola_tags)
             }
 
             if (params.ARCH == "x86_64") {
@@ -102,7 +103,8 @@ cosaPod(memory: "512Mi", kvm: false,
                          extraArgs: xen_tests,
                          skipUpgrade: true,
                          marker: "xen",
-                         platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=i3.large')
+                         platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=i3.large',
+                         skipKolaTags: stream_info.skip_kola_tags)
                 }
                 parallelruns['Kola:Intel-Ice-Lake'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1004
@@ -111,7 +113,8 @@ cosaPod(memory: "512Mi", kvm: false,
                          extraArgs: tests,
                          skipUpgrade: true,
                          marker: "intel-ice-lake",
-                         platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m6i.large')
+                         platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=m6i.large',
+                         skipKolaTags: stream_info.skip_kola_tags)
                 }
             } else if (params.ARCH == "aarch64") {
                 def tests = params.KOLA_TESTS
@@ -125,7 +128,8 @@ cosaPod(memory: "512Mi", kvm: false,
                          extraArgs: tests,
                          skipUpgrade: true,
                          marker: "graviton3",
-                         platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=c7g.xlarge')
+                         platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=c7g.xlarge',
+                         skipKolaTags: stream_info.skip_kola_tags)
                 }
             }
 
