@@ -186,6 +186,7 @@ EOF
                 extraArgs: "--tag extended-upgrade --append-butane tmp/target_stream.bu",
                 skipBasicScenarios: true,
                 skipUpgrade: true,
+                skipKolaTags: pipecfg.streams[params.STREAM].skip_kola_tags,
             ]
             def k1, k2, k3
 

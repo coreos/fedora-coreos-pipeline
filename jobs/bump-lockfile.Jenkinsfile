@@ -220,7 +220,8 @@ lock(resource: "bump-lockfile") {
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
-                             marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE)
+                             marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
+                             skipKolaTags: stream_info.skip_kola_tags)
                         stage("${arch}:Build Metal") {
                             shwrap("cosa buildextend-metal")
                             shwrap("cosa buildextend-metal4k")

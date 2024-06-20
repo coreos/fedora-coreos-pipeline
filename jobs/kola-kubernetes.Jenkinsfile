@@ -72,6 +72,7 @@ cosaPod(memory: "512Mi", kvm: false,
                  build: params.VERSION, arch: params.ARCH,
                  extraArgs: "--tag k8s",
                  skipUpgrade: true,
+                 skipKolaTags: stream_info.skip_kola_tags,
                  platformArgs: '-p=aws --aws-region=us-east-1')
         }
 

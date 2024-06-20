@@ -135,6 +135,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                      build: params.VERSION, arch: params.ARCH,
                      extraArgs: params.KOLA_TESTS,
                      skipUpgrade: true,
+                     skipKolaTags: stream_info.skip_kola_tags,
                      platformArgs: """-p=azure                               \
                          --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                          --azure-location $region                            \

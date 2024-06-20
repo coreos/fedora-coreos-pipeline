@@ -78,6 +78,7 @@ cosaPod(memory: "512Mi", kvm: false,
                 kola(cosaDir: env.WORKSPACE, parallel: 5,
                     build: params.VERSION, arch: params.ARCH,
                     extraArgs: params.KOLA_TESTS,
+                    skipKolaTags: stream_info.skip_kola_tags,
                     platformArgs: """-p=gcp \
                         --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                         --gcp-project=${gcp_project}""")
@@ -97,6 +98,7 @@ cosaPod(memory: "512Mi", kvm: false,
                         build: params.VERSION, arch: params.ARCH,
                         extraArgs: confidential_tests,
                         skipUpgrade: true,
+                        skipKolaTags: stream_info.skip_kola_tags,
                         marker: "confidential",
                         platformArgs: """-p=gcp \
                             --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \

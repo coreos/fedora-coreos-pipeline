@@ -119,6 +119,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                      extraArgs: params.KOLA_TESTS,
                      rerunSuccessArgs: "tags=all",
                      skipUpgrade: true,
+                     skipKolaTags: stream_info.skip_kola_tags,
                      platformArgs: """-p=openstack                               \
                          --openstack-config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
                          --openstack-flavor=v3-starter-4                         \
