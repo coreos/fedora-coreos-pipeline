@@ -3,87 +3,11 @@ Here are some rough instructions for bringing up multi-arch builders.
 
 ### aarch64
 
-The aarch64 builder runs on an AWS bare metal node. We use a bare
-metal node for `/dev/kvm` access.
+The aarch64 builder runs on an AWS bare metal node (we use a bare
+metal node for `/dev/kvm` access) and deployed via terraform/tofu.
+Change directory into and follow the directions at:
 
-```bash
-# Add your credentials to the environment.
-HISTCONTROL='ignoreboth'
- export AWS_DEFAULT_REGION=us-east-1
- export AWS_ACCESS_KEY_ID=XXXX
- export AWS_SECRET_ACCESS_KEY=YYYYYYYY
-```
-
-Create the Ignition config
-
-```bash
-cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat coreos-aarch64-builder.bu | butane --pretty --strict --files-dir=. > coreos-aarch64-builder.ign
-```
-
-Bring the instance up with appropriate details:
-
-```bash
-NAME="coreos-aarch64-builder-$(date +%Y%m%d)"
-AMI=''
-TYPE='a1.metal'
-DISK='200'
-SUBNET='subnet-050b478f586723c62'
-SECURITY_GROUPS='sg-0ff537e445349ca0e'
-USERDATA="${PWD}/coreos-aarch64-builder.ign"
-aws ec2 run-instances                     \
-    --output json                         \
-    --image-id $AMI                       \
-    --instance-type $TYPE                 \
-    --subnet-id $SUBNET                   \
-    --security-group-ids $SECURITY_GROUPS \
-    --user-data "file://${USERDATA}"      \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${NAME}}]" \
-    --block-device-mappings "VirtualName=/dev/xvda,DeviceName=/dev/xvda,Ebs={VolumeSize=${DISK},VolumeType=gp3}" \
-    > out.json
-```
-
-Wait for the instance to come up (`a1.metal` instances can take 5-10 minutes to
-come up) and log in:
-
-```bash
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
-IP=$(aws ec2 describe-instances --instance-ids $INSTANCE --output json \
-     | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
-ssh "core@${IP}"
-```
-
-Make sure the instance came up fine:
-
-```bash
-sudo systemctl --failed
-```
-
-Now that the instance is up we can re-assign the floating IP address.
-This removes the IP from the existing instance (if there is one) so you'll
-want to make sure no jobs are currently running on the existing instance
-by checking to make sure Jenkins is idle (i.e. no build-cosa or multi-arch
-aarch64 jobs are running).
-
-```bash
-# Grab the instance ID and associate the IP address
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
-EIP='18.233.54.49'
-EIPID='eipalloc-4305254a'
-aws ec2 associate-address --instance-id $INSTANCE --allow-reassociation --allocation-id $EIPID
-```
-
-Now you should be able to `ssh "core@${EIP}"`.
-
-NOTE: Just this once ignore the ssh host key changed warning if you see it.
-
-
-Once you are ready the old builder can be taken down:
-
-```
-OLDINSTANCEID=<foo> # use `aws ec2 describe-instances` to find
-aws ec2 terminate-instances --instance-ids $OLDINSTANCEID
-```
+- [Provisioning aarch64 builder](provisioning/aarch64/README.md)
 
 ### ppc64le
 
@@ -217,84 +141,11 @@ ibmcloud is instance-delete $OLDINSTANCEID
 
 ### x86_64
 
-The x86_64 builder runs on an AWS node without `/dev/kvm` access. Right now this
-builder only builds the COSA container image and does not do FCOS builds so it
-doesn't need `/dev/kvm`. If that need changes then we can switch the instance type
-in the future.
+The x86_64 builder runs in AWS. It is currently not used to build
+Fedora CoreOS, but is used to build and push the x86_64 version
+of various container images. This detail means that this builder
+doesn't need to be an AWS bare metal node for `/dev/kvm` access.
+It is deployed via terraform/tofu. Change directory into and follow
+the directions at:
 
-```bash
-# Add your credentials to the environment.
-HISTCONTROL='ignoreboth'
- export AWS_DEFAULT_REGION=us-east-1
- export AWS_ACCESS_KEY_ID=XXXX
- export AWS_SECRET_ACCESS_KEY=YYYYYYYY
-```
-
-Create the Ignition config
-
-```bash
-cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat coreos-x86_64-builder.bu | butane --pretty --strict --files-dir=. > coreos-x86_64-builder.ign
-```
-
-Bring the instance up with appropriate details:
-
-```bash
-NAME="coreos-x86_64-builder-$(date +%Y%m%d)"
-AMI=''
-TYPE='c6a.xlarge'
-DISK='100'
-SUBNET='subnet-050b478f586723c62'
-SECURITY_GROUPS='sg-0ff537e445349ca0e'
-USERDATA="${PWD}/coreos-x86_64-builder.ign"
-aws ec2 run-instances                     \
-    --output json                         \
-    --image-id $AMI                       \
-    --instance-type $TYPE                 \
-    --subnet-id $SUBNET                   \
-    --security-group-ids $SECURITY_GROUPS \
-    --user-data "file://${USERDATA}"      \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${NAME}}]" \
-    --block-device-mappings "VirtualName=/dev/xvda,DeviceName=/dev/xvda,Ebs={VolumeSize=${DISK},VolumeType=gp3}" \
-    > out.json
-```
-
-Wait for the instance to come up and log in:
-
-```bash
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
-IP=$(aws ec2 describe-instances --instance-ids $INSTANCE --output json \
-     | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
-ssh "core@${IP}"
-```
-
-Make sure the instance came up fine:
-
-```bash
-sudo systemctl --failed
-```
-
-Now that the instance is up we can re-assign the floating IP address.
-This removes the IP from the existing instance (if there is one) so you'll
-want to make sure no jobs are currently running on the existing instance
-by checking to make sure Jenkins is idle (i.e. no build-cosa jobs are running).
-
-```bash
-# Grab the instance ID and associate the IP address
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
-EIP='34.199.112.205'
-EIPID='eipalloc-01bfbeca9d47b2202'
-aws ec2 associate-address --instance-id $INSTANCE --allow-reassociation --allocation-id $EIPID
-```
-
-Now you should be able to `ssh "core@${EIP}"`.
-
-NOTE: Just this once ignore the ssh host key changed warning if you see it.
-
-
-Once you are ready the old builder can be taken down:
-
-```
-OLDINSTANCEID=<foo> # use `aws ec2 describe-instances` to find
-aws ec2 terminate-instances --instance-ids $OLDINSTANCEID
-```
+- [Provisioning x86_64 builder](provisioning/x86_64/README.md)

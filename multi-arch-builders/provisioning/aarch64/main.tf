@@ -19,11 +19,6 @@ provider "aws" {}
 provider "ct" {}
 provider "http" {}
 
-variable "project" {
- type    = string
- default = "coreos-aarch64-builder"
-}
-
 # Which distro are we deploying a builder for? Override the
 # default by setting the env var: TF_VAR_distro=rhcos
 variable "distro" {
@@ -39,6 +34,11 @@ check "health_check_distro" {
     error_message = "Distro must be 'fcos' or 'rhcos'"
   }
 }
+
+locals {
+ project = "coreos-${var.arch}-builder"
+}
+
 
 
 # Variables used for splunk deployment, which is only
@@ -74,10 +74,10 @@ check "health_check_rhcos_splunk_vars" {
 
 locals {
     fcos_snippets = [
-      file("../../coreos-aarch64-builder.bu"),
+      file("../../coreos-${var.arch}-builder.bu"),
     ]
     rhcos_snippets = [
-      file("../../coreos-aarch64-builder.bu"),
+      file("../../coreos-${var.arch}-builder.bu"),
       templatefile("../../builder-splunk.bu", {
         SPLUNK_HOSTNAME = var.splunk_hostname
         SPLUNK_SIDECAR_REPO = var.splunk_sidecar_repo
@@ -95,15 +95,16 @@ data "aws_region" "aws_region" {}
 
 # Gather information about the AWS image for the current region
 data "http" "stream_metadata" {
-  url = "https://builds.coreos.fedoraproject.org/streams/stable.json"
-
+  url = var.distro == "rhcos" ?  "https://builds.coreos.fedoraproject.org/streams/stable.json" : "https://builds.coreos.fedoraproject.org/streams/testing.json"
   request_headers = {
     Accept = "application/json"
   }
 }
-# Lookup the aarch64 AWS image for the current AWS region
+# Lookup the AWS image for the current AWS region/architecture
+# Also set the instance_type based on the architecture
 locals {
-  ami = lookup(jsondecode(data.http.stream_metadata.body).architectures.aarch64.images.aws.regions, data.aws_region.aws_region.name).image
+  ami = lookup(lookup(jsondecode(data.http.stream_metadata.body).architectures, var.arch).images.aws.regions, data.aws_region.aws_region.name).image
+  instance_type = var.arch == "aarch64" ? "m6g.metal" : "c6a.xlarge"
 }
 
 variable "rhcos_aws_vpc_prod" {
@@ -122,22 +123,29 @@ locals {
 }
 
 
-resource "aws_instance" "coreos-aarch64-builder" {
+resource "aws_instance" "coreos-builder" {
   tags = {
-    Name = "${var.project}-${formatdate("YYYYMMDD", timestamp())}"
+    Name = "${local.project}-${formatdate("YYYYMMDD", timestamp())}"
   }
   ami           = local.ami 
   user_data     = data.ct_config.butane.rendered
-  instance_type = "m6g.metal"
+  instance_type = local.instance_type
   vpc_security_group_ids = [aws_security_group.sg.id] 
   subnet_id              = local.aws_subnet_id
   root_block_device {
-      volume_size = "200"
+      volume_size = "300"
       volume_type = "gp3"
   }
-  associate_public_ip_address = var.distro == "fcos" ? "true" : "false"
+  associate_public_ip_address = "false"
+}
+
+# associate the elastic IP
+resource "aws_eip_association" "aws_eip_association" {
+  count = var.distro == "fcos" ? 1 : 0
+  instance_id   = aws_instance.coreos-builder.id
+  public_ip = var.arch == "aarch64" ? "18.233.54.49" : "34.199.112.205"
 }
 
 output "instance_ip_addr" {
-  value = var.distro == "rhcos" ? aws_instance.coreos-aarch64-builder.private_ip : aws_instance.coreos-aarch64-builder.public_ip
+  value = var.distro == "rhcos" ?  aws_instance.coreos-builder.private_ip : aws_eip_association.aws_eip_association[0].public_ip
 } 
