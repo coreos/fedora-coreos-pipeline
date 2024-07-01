@@ -72,6 +72,9 @@ objects:
             kind: ImageStreamTag
             name: ${JENKINS_S2I_SRC_IMAGESTREAM_NAME}
             namespace: ${JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE}
+          env:
+            - name: JENKINS_UC_DOWNLOAD
+              value: 'https://archives.jenkins.io'
           forcePull: true
       output:
         to:
