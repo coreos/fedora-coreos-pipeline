@@ -21,7 +21,6 @@ def getVersionFromPluginUrl(pluginUrl) {
     def parts = pluginUrl.split("/")
     def pluginVersion
     if (parts.size() >= 4) {
-        def groupId = parts[-3]
         pluginVersion = parts[-2]
     } else {
         error("Unable to extract plugin version from the URL.")
@@ -121,11 +120,12 @@ node {
                 withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
-                                                    shwrap("""
-                                                        cd fedora-coreos-pipeline
-                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
-                                                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/${fork_repo}/pulls
-                                                    """)
+                    // Push to the forked repo & create a PR against "coreos: fedora-coreos-pipeline:main" repo
+                    shwrap("""
+                        cd fedora-coreos-pipeline
+                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
+                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls --fail
+                    """)
                 }
             }
         }
