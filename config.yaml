@@ -23,6 +23,12 @@ streams:
 
 additional_arches: [aarch64, ppc64le, s390x]
 
+env:
+  # This matches the UUID in multi-arch-builders/create-cex-device.sh
+  # Ideally, we'd pass this a cleaner way. See also:
+  # https://github.com/coreos/coreos-assembler/pull/3828#discussion_r1669010741
+  KOLA_CEX_UUID: "68cd2d83-3eef-4e45-b22c-534f90b16cb9"
+
 source_config:
   url: https://github.com/coreos/fedora-coreos-config
 

@@ -29,6 +29,17 @@ systemd:
         ExecStart=/usr/local/bin/create-secex-data.sh
         [Install]
         WantedBy=multi-user.target
+    - name: cex-config.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Create IBM CEX mediate device
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/local/bin/create-cex-device.sh
+        [Install]
+        WantedBy=multi-user.target
 storage:
   files:
     - path: /usr/local/bin/create-secex-data.sh
@@ -91,3 +102,12 @@ storage:
 
             echo "Importing tarball into volume"
             sudo -u builder -H /bin/bash -c "cd /var/home/builder; podman volume import secex-data /var/home/builder/${TARBALL}"
+
+    - path: /usr/local/bin/create-cex-device.sh
+      mode: 0755
+      user:
+        name: root
+      group:
+        name: root
+      contents:
+        local: create-cex-device.sh
