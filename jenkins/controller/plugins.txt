@@ -36,3 +36,5 @@ jms-messaging:1.1.27
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
 #
+# for https://github.com/jenkinsci/lockable-resources-plugin/issues/550
+lockable-resources:1255.vf48745da_35d0
