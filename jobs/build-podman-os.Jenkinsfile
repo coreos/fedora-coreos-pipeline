@@ -41,7 +41,8 @@ def generate_diskvar_json(shortcommit, arch, artifacts, staging_repo, repo) {
             "container-imgref": "ostree-remote-registry:fedora:${repo}:5.1",
             "metal-image-size": "3072",
             "cloud-image-size": "10240",
-            "deploy-via-container": "true"
+            "deploy-via-container": "true",
+            "rootfs-size": "0"
         }
         """
         def file_path="./diskvars-${arch}-${artifact["suffix"]}.json"
