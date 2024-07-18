@@ -2,7 +2,7 @@ resource "aws_vpc" "vpc" {
   count = var.distro == "fcos" ? 1 : 0
   cidr_block           = "172.31.0.0/16"
   tags = {
-    Name = "${var.project}-vpc"
+    Name = "${local.project}-vpc"
   }
 }
 
@@ -27,7 +27,7 @@ resource "aws_subnet" "private_subnets" {
  cidr_block = element(var.private_subnet_cidrs, count.index)
  availability_zone = element(data.aws_availability_zones.azs.names, count.index)
  tags = {
-   Name = "${var.project}-private-subnet-${count.index + 1}"
+   Name = "${local.project}-private-subnet-${count.index + 1}"
  }
 }
 
@@ -40,7 +40,7 @@ resource "aws_route_table" "internet_route" {
     gateway_id = aws_internet_gateway.gw[0].id
   }
   tags = {
-    Name = "${var.project}-ig"
+    Name = "${local.project}-ig"
   }
 }
 

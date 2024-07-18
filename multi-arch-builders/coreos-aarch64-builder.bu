@@ -1,6 +1,5 @@
 # This butane config will do the following:
 #
-# - Merge in the builder-common.ign Ignition file
 # - Allow the builder user to log in with the associated ssh key
 # - Set a hostname
 #

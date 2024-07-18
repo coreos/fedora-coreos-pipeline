@@ -1,5 +1,19 @@
+locals {
+  rhcos_cidr_blocks = ["0.0.0.0/0"]
+  fcos_cidr_blocks = [
+        # FCOS Production Jenkins
+        "38.145.60.3/32",
+        # FCOS Staging Jenkins
+        "38.145.60.4/32",
+        # Fedora Bastion Hosts
+        # bastion01.fedoraproject.org 
+        "38.145.60.11/32",
+        # bastion02.fedoraproject.org 
+        "38.145.60.12/32",
+    ]
+}
 resource "aws_security_group" "sg" {
-  name        = "${var.project}-security-group"
+  name        = "${local.project}-security-group"
   description = "Allow SSH inbound traffic only"
   vpc_id      = local.aws_vpc_id
 
@@ -8,7 +22,7 @@ resource "aws_security_group" "sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.distro == "fcos" ? local.fcos_cidr_blocks : local.rhcos_cidr_blocks
   }
 
   egress {
@@ -19,6 +33,6 @@ resource "aws_security_group" "sg" {
   }
 
   tags = {
-    Name = "${var.project}-security-group"
+    Name = "${local.project}-security-group"
   }
 }
