@@ -18,7 +18,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-cosaPod() {
+cosaPod(serviceAccount: "jenkins") {
     try {
         git(url: 'https://github.com/coreos/fedora-coreos-streams',
             branch: 'main', credentialsId: 'github-coreosbot-token-username-password')
