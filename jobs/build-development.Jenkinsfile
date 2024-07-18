@@ -6,7 +6,10 @@ node {
 }
 
 properties([
-    pipelineTriggers(pipeutils.get_push_trigger()),
+    pipelineTriggers([
+        // run every 24h only for now
+        cron("H H * * *")
+    ]),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
