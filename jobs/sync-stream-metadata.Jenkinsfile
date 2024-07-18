@@ -63,6 +63,9 @@ cosaPod(serviceAccount: "jenkins") {
                 """)
             }
         }
+
+        currentBuild.result = 'SUCCESS'
+        
     } catch (e) {
         currentBuild.result = 'FAILURE'
         throw e
