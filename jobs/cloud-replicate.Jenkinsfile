@@ -122,22 +122,6 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
             libcloud.replicate_to_clouds(pipecfg, basearch, params.VERSION, params.STREAM)
         }
 
-        stage('Publish') {
-            pipeutils.withAWSBuildUploadCredentials() {
-                // Since some of the earlier operations (like AWS replication) only modify
-                // the individual meta.json files we need to re-generate the release metadata
-                // to get the new info and upload it back to s3.
-                def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
-                def acl = pipecfg.s3.acl ?: 'public-read'
-                shwrap("""
-                cosa generate-release-meta --build-id ${params.VERSION} --workdir .
-                cosa buildupload --build=${params.VERSION} --skip-builds-json \
-                    ${arch_args} s3 --aws-config-file=\${AWS_BUILD_UPLOAD_CONFIG} \
-                    --acl=${acl} ${s3_stream_dir}/builds
-                """)
-            }
-        }
-
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✓"
 
@@ -146,5 +130,25 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
     currentBuild.result = 'FAILURE'
     throw e
 } finally {
+    // Always run the publish stage to update meta.json
+    // On failure progress is maintained and re-running the job will skip
+    // replication on regions that succeeded previously
+    stage('Publish') {
+        def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
+        echo "s3_stream_dir ${s3_stream_dir}" 
+        pipeutils.withAWSBuildUploadCredentials() {
+            // Since some of the earlier operations (like AWS replication) only modify
+            // the individual meta.json files we need to re-generate the release metadata
+            // to get the new info and upload it back to s3.
+            def arch_args = basearches.collect{"--arch ${it}"}.join(" ")
+            def acl = pipecfg.s3.acl ?: 'public-read'
+            shwrap("""
+            cosa generate-release-meta --build-id ${params.VERSION} --workdir .
+            cosa buildupload --build=${params.VERSION} --skip-builds-json \
+                ${arch_args} s3 --aws-config-file=\${AWS_BUILD_UPLOAD_CONFIG} \
+                --acl=${acl} ${s3_stream_dir}/builds
+            """)
+        }
+    }
     pipeutils.trySlackSend(message: ":cloud: :arrows_counterclockwise: cloud-replicate #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${basearches.join(' ')}] (${params.VERSION})")
 }}} // try-catch-finally, cosaPod and lock finish here
