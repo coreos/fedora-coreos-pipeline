@@ -273,7 +273,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }]}
             }
         }
-
         if (brew_profile && !stream_info.skip_brew_upload) {
             stage('Brew Upload') {
                 def tag = pipecfg.streams[params.STREAM].brew_tag
@@ -332,6 +331,12 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     }
                 }
             }
+        }
+        stage('Fork Garbage Collection') {
+            build job: 'garbage-collection', wait: false, parameters: [
+                string(name: 'STREAM', value: params.STREAM),
+                booleanParam(name: 'DRY_RUN', value: false)
+            ]
         }
         stage('Publish') {
             pipeutils.withAWSBuildUploadCredentials() {
