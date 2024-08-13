@@ -94,6 +94,21 @@ def validate_pipecfg(pipecfg, is_hotfix) {
     }
 }
 
+def load_gc() {
+    def jenkinscfg = load_jenkins_config()
+    def url = jenkinscfg['pipecfg-url']
+    def gc_policy_data
+
+    if (url == 'in-tree') {
+        gc_policy_data = readYaml(file: "gc-policy.yaml")
+    } else {
+        // assume the user called `load_pipecfg()` in this workdir; if not, let error out
+        gc_policy_data = readYaml(file: "pipecfg/gc-policy.yaml")
+    }
+
+    return gc_policy_data
+}
+
 def add_hotfix_parameters_if_supported() {
     def supported = true
     if (env.JENKINS_URL in PROTECTED_JENKINSES) {
@@ -202,7 +217,7 @@ def bump_builds_json(stream, buildid, arch, s3_stream_dir, acl) {
     // unlock
     //
     // XXX: should fold this into `cosa buildupload` somehow
-    lock(resource: "bump-builds-json-${stream}") {
+    lock(resource: "builds-json-${stream}") {
         def remotejson = "s3://${s3_stream_dir}/builds/builds.json"
         aws_s3_cp_allow_noent(remotejson, './remote-builds.json')
         shwrap("""
