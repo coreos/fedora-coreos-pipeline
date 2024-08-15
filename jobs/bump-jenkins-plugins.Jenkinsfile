@@ -123,7 +123,7 @@ node {
                                                   passwordVariable: 'GHTOKEN')]) {
                                                     shwrap("""
                                                         cd fedora-coreos-pipeline
-                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} main:${pr_branch}
+                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
                                                         curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
                                                     """)
                 }
