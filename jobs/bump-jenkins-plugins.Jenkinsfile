@@ -120,18 +120,18 @@ node {
                 withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
-                    // Push to the fork repository
+                    // Push to the fork repo
                     shwrap("""
                         cd fedora-coreos-pipeline
                         git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
                     """)
 
-                    // Create a PR against the main coreos repository
+                    // Create a PR against the coreos:main repo
                     def response = shwrapCapture("""
-                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${fork_repo}:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
+                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
                     """)
 
-                    // Log the response for debugging purposes
+
                     println("GitHub API response: ${response}")
 
                     if (response.contains("\"message\": \"Validation Failed\"")) {
