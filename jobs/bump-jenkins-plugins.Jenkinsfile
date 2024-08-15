@@ -21,7 +21,6 @@ def getVersionFromPluginUrl(pluginUrl) {
     def parts = pluginUrl.split("/")
     def pluginVersion
     if (parts.size() >= 4) {
-        def groupId = parts[-3]
         pluginVersion = parts[-2]
     } else {
         error("Unable to extract plugin version from the URL.")
@@ -121,11 +120,23 @@ node {
                 withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
-                                                    shwrap("""
-                                                        cd fedora-coreos-pipeline
-                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
-                                                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
-                                                    """)
+                    // Push to the fork repository
+                    shwrap("""
+                        cd fedora-coreos-pipeline
+                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
+                    """)
+
+                    // Create a PR against the main coreos repository
+                    def response = shwrapCapture("""
+                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${fork_repo}:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
+                    """)
+
+                    // Log the response for debugging purposes
+                    println("GitHub API response: ${response}")
+
+                    if (response.contains("\"message\": \"Validation Failed\"")) {
+                        error("GitHub API request failed: ${response}")
+                    }
                 }
             }
         }
