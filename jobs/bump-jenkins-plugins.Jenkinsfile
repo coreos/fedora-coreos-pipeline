@@ -33,7 +33,7 @@ node {
     checkout scm: [
         $class: 'GitSCM',
         branches: [[name: "main"]],
-        userRemoteConfigs: [[url: "https://github.com/${fork_repo}.git"]],
+        userRemoteConfigs: [[url: "https://github.com/${repo}.git"]],
         extensions: [[$class: 'WipeWorkspace']]
     ]
     pipeutils = load("utils.groovy")
@@ -63,7 +63,7 @@ node {
         stage("Read plugins.txt") {
             /* Clone the repository and switch to the 'main' branch */
             shwrapCapture("""
-                git clone --depth=1 --branch main https://github.com/${fork_repo}.git
+                git clone --depth=1 --branch main https://github.com/${repo}.git
             """)
             /* Read the plugins from the lockfile */
             pluginslist = shwrapCapture("grep -v ^# ${plugins_lockfile}").split('\n')
@@ -123,7 +123,7 @@ node {
                                                   passwordVariable: 'GHTOKEN')]) {
                                                     shwrap("""
                                                         cd fedora-coreos-pipeline
-                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
+                                                        git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} main:${pr_branch}
                                                         curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
                                                     """)
                 }
