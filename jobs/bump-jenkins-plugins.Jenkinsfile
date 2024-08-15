@@ -128,7 +128,7 @@ node {
 
                     // Create a PR against the coreos:main repo
                     def response = shwrapCapture("""
-                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls
+                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls --fail
                     """)
 
 
