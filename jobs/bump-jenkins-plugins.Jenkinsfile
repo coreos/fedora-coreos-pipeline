@@ -33,7 +33,7 @@ node {
     checkout scm: [
         $class: 'GitSCM',
         branches: [[name: "main"]],
-        userRemoteConfigs: [[url: "https://github.com/${repo}.git"]],
+        userRemoteConfigs: [[url: "https://github.com/${fork_repo}.git"]],
         extensions: [[$class: 'WipeWorkspace']]
     ]
     pipeutils = load("utils.groovy")
@@ -63,7 +63,7 @@ node {
         stage("Read plugins.txt") {
             /* Clone the repository and switch to the 'main' branch */
             shwrapCapture("""
-                git clone --depth=1 --branch main https://github.com/${repo}.git
+                git clone --depth=1 --branch main https://github.com/${fork_repo}.git
             """)
             /* Read the plugins from the lockfile */
             pluginslist = shwrapCapture("grep -v ^# ${plugins_lockfile}").split('\n')
