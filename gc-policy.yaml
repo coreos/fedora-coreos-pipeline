@@ -1,4 +1,6 @@
 branched:
-    cloud-uploads: 3y
+    cloud-uploads: 1y
 rawhide:
-    cloud-uploads: 3y
+    cloud-uploads: 1y
+bodhi-updates:
+    cloud-uploads: 1y
