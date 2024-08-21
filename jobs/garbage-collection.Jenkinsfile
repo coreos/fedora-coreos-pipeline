@@ -52,10 +52,9 @@ lock(resource: "gc-${params.STREAM}") {
             }
             def originalBuildsJson = readJSON file: 'builds/builds.json'
             def originalTimestamp = originalBuildsJson.timestamp
+            def acl = pipecfg.s3.acl ?: 'public-read'
 
             withCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config')]) {
-                def acl = pipecfg.s3.acl ?: 'public-read'
-
                 stage('Garbage Collection') {
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa cloud-prune --policy ${new_gc_policy_path} \
@@ -81,12 +80,14 @@ lock(resource: "gc-${params.STREAM}") {
                         cosa cloud-prune --policy ${new_gc_policy_path} \
                         --stream ${params.STREAM} \
                         --upload-builds-json ${dry_run} \
+                        --acl=${acl} \
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                         """)
                     }
                 }
             }
             currentBuild.result = 'SUCCESS'
+            currentBuild.description = "${build_description} ✓"
 
         } catch (e) {
             currentBuild.result = 'FAILURE'
