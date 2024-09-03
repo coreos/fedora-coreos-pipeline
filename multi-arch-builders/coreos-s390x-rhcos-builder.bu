@@ -4,6 +4,7 @@
 # - Merge in the builder-splunk.ign Ignition file
 # - Enable the Secure Execution Host
 # - Create and initialize the secex-data volume
+# - Enable the Cex hardware based luks encryption
 #
 variant: fcos
 version: 1.4.0

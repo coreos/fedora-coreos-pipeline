@@ -56,3 +56,10 @@ if [[ "${card_no}.${domain_no}" != ${validate_dom} ]]; then
     echo -e "Mismatched card number. \n"
     exit 1
 fi
+
+echo "Setting the permission on vfio device node."
+if [ ! -c '/dev/vfio/0' ]; then
+    echo -e "Failed setting the permission on '/dev/vfio/0'. \n"
+    exit 1
+fi
+chmod 0666 /dev/vfio/0
