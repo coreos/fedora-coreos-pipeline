@@ -1,3 +1,5 @@
+/* Note: AWS region enablement, refer to the documentation here: [AWS Region Enablement](docs/aws-region-enable.md) */
+
 import org.yaml.snakeyaml.Yaml;
 
 node {
@@ -26,7 +28,7 @@ cosaPod(serviceAccount: "jenkins"){
     }
     if (disabled_regions != "") {
         warn("Disabled AWS regions detected: ${disabled_regions}")
-        pipeutils.trySlackSend(message: ":aws: check-aws-regions #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> detected disabled regions: ${disabled_regions}")
+        pipeutils.trySlackSend(message: ":aws: check-aws-regions #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> detected disabled regions: ${disabled_regions}\n :pencil: To enable region -> <https://github.com/aaradhak/fedora-coreos-pipeline/blob/checkaws/docs/aws-region-enable.md|AWS Region Enablement>")
         return
     }    
 }
