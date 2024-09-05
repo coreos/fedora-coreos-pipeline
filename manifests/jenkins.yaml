@@ -251,7 +251,7 @@ parameters:
   name: VOLUME_CAPACITY
   required: true
   # DELTA: changed from 1Gi
-  value: 20Gi
+  value: 25Gi
 - description: The OpenShift Namespace where the Jenkins ImageStream resides.
   displayName: Jenkins ImageStream Namespace
   name: NAMESPACE
