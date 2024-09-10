@@ -32,7 +32,7 @@ objects:
         dockerStrategy:
           from:
             kind: ImageStreamTag
-            name: jenkins:2
+            name: jenkins:scheduled-upgrade-redeploy
             namespace: openshift
           forcePull: true
       output:
@@ -63,7 +63,7 @@ objects:
         dockerStrategy:
           from:
             kind: ImageStreamTag
-            name: jenkins-agent-base:latest
+            name: jenkins-agent-base:scheduled-upgrade
             namespace: openshift
           forcePull: true
       output:
