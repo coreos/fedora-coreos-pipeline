@@ -103,7 +103,8 @@ storage:
       contents:
         inline: |
             [Timer]
-            OnCalendar=*-*-* 05:00:00 UTC
+            OnCalendar=*-*-* 10:00:00 UTC
+            OnCalendar=*-*-* 22:00:00 UTC
             AccuracySec=30m
             Persistent=true
             [Install]
