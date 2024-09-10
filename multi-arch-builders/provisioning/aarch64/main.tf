@@ -126,13 +126,13 @@ resource "aws_instance" "coreos-aarch64-builder" {
   tags = {
     Name = "${var.project}-${formatdate("YYYYMMDD", timestamp())}"
   }
-  ami           = local.ami 
+  ami           = local.ami
   user_data     = data.ct_config.butane.rendered
   instance_type = "m6g.metal"
-  vpc_security_group_ids = [aws_security_group.sg.id] 
+  vpc_security_group_ids = [aws_security_group.sg.id]
   subnet_id              = local.aws_subnet_id
   root_block_device {
-      volume_size = "200"
+      volume_size = "400"
       volume_type = "gp3"
   }
   associate_public_ip_address = var.distro == "fcos" ? "true" : "false"
@@ -140,4 +140,4 @@ resource "aws_instance" "coreos-aarch64-builder" {
 
 output "instance_ip_addr" {
   value = var.distro == "rhcos" ? aws_instance.coreos-aarch64-builder.private_ip : aws_instance.coreos-aarch64-builder.public_ip
-} 
+}
