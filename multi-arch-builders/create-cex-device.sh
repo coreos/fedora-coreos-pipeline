@@ -30,7 +30,7 @@ for card in $cards; do
 done
 
 # Validating the card and domain
-if [ -z "${card}" ] || [ -z "${card_domain}"]; then
+if [ -z "${card}" ] || [ -z "${card_domain}" ]; then
     echo "couldn't find card with CCA controller"
     exit 1
 fi
