@@ -8,10 +8,16 @@ streams:
   testing-devel:
     type: development
     default: true
+    env:
+      COSA_TESTISO_DEBUG: true
   next-devel:         # do not touch; line managed by `next-devel/manage.py`
     type: development # do not touch; line managed by `next-devel/manage.py`
+    env:
+      COSA_TESTISO_DEBUG: true
   rawhide:
     type: mechanical
+    env:
+      COSA_TESTISO_DEBUG: true
   # branched:
   #  type: mechanical
   #  env:
