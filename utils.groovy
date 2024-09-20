@@ -8,11 +8,11 @@ import org.yaml.snakeyaml.Yaml
 PROTECTED_JENKINSES = [
     'https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/':
         ['fcos-builds', 'prod/streams/${STREAM}', false],
-    'https://jenkins-rhcos-devel.apps.ocp-virt.prod.psi.redhat.com/':
-        ['rhcos-ci', 'prod/streams/${STREAM}', true],
-    'https://jenkins-rhcos--runtime-int.apps.int.preprod-stable-spoke1-dc-iad2.itup.redhat.com/':
+    'https://jenkins-rhcos--devel-pipeline.apps.int.preprod-stable-spoke1-dc-iad2.itup.redhat.com/':
         ['rhcos-ci', 'prod/streams/${STREAM}', true],
     'https://jenkins-rhcos.apps.ocp-virt.prod.psi.redhat.com/':
+        ['art-rhcos-ci', 'prod/streams/${STREAM}', true],
+    'https://jenkins-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-dc-iad2.itup.redhat.com/':
         ['art-rhcos-ci', 'prod/streams/${STREAM}', true]
 ]
 
