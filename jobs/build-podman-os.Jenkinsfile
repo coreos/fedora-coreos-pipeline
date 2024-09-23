@@ -38,7 +38,7 @@ def generate_diskvar_json(shortcommit, arch, artifacts, staging_repo, repo) {
             "container-tag": "${arch}-${shortcommit}",
             "extra-kargs-string": "",
             "image-type": "${artifact["platform"]}",
-            "container-imgref": "ostree-remote-registry:fedora:${repo}:5.1",
+            "container-imgref": "ostree-remote-registry:fedora:${repo}:${version}",
             "metal-image-size": "3072",
             "cloud-image-size": "10240",
             "deploy-via-container": "true",
@@ -71,9 +71,17 @@ properties([
              description: 'Space-separated list of target architectures',
              defaultValue: "x86_64 aarch64",
              trim: true),
+      string(name: 'PODMAN_GIT_URL',
+             description: 'Podman git repo',
+             defaultValue: "https://github.com/containers/podman",
+             trim: true),
       string(name: 'PODMAN_MACHINE_GIT_URL',
              description: 'Override the coreos-assembler git repo to use',
              defaultValue: "https://github.com/containers/podman-machine-os",
+             trim: true),
+      string(name: 'PODMAN_VERSION',
+             description: 'Podman version',
+             defaultValue: "main",
              trim: true),
       string(name: 'PODMAN_MACHINE_GIT_REF',
              description: 'Override the coreos-assembler git ref to use',
@@ -123,6 +131,22 @@ def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 
 node {
+    change = checkout(
+        changelog: true,
+        poll: false,
+        scm: [
+            $class: 'GitSCM',
+            branches: [[name: "origin/main"]],
+            userRemoteConfigs: [[url: params.PODMAN_GIT_URL]],
+            extensions: [[$class: 'CloneOption',
+                          noTags: true,
+                          reference: '',
+                          shallow: true]]
+        ]
+    )
+
+    def version = shwrapCapture("grep '^const RawVersion' version/rawversion/version.go | cut -d\" -f2")
+
     change = checkout(
         changelog: true,
         poll: false,
@@ -254,7 +278,7 @@ lock(resource: "build-podman-os") {
         }
         withCredentials([file(credentialsId: 'podman-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
             stage("Push Manifest") {
-                def manifest = "${params.CONTAINER_REGISTRY_STAGING_REPO}:5.1-${shortcommit}"
+                def manifest = "${params.CONTAINER_REGISTRY_STAGING_REPO}:${version}-${shortcommit}"
                 def cmds = "/usr/bin/buildah manifest create ${manifest}"
                 parallel archinfo.keySet().collectEntries{arch -> [arch, {
                     def image = "docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}"
@@ -286,8 +310,8 @@ lock(resource: "build-podman-os") {
                     // Release the manifest and container images
                     shwrap("""
                         skopeo copy --all --authfile \$REGISTRY_SECRET   \
-                        docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:5.1-${shortcommit} \
-                        docker://${params.CONTAINER_REGISTRY_REPO}:5.1
+                        docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${version}-${shortcommit} \
+                        docker://${params.CONTAINER_REGISTRY_REPO}:${version}
                     """)
                 }
             }
@@ -298,7 +322,7 @@ lock(resource: "build-podman-os") {
                     shwrap("""
                         export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
                         skopeo delete --authfile=\$REGISTRY_SECRET \
-                        docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:5.1-${shortcommit}
+                        docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${version}-${shortcommit}
                     """)
                 }
                 parallel archinfo.keySet().collectEntries{arch -> [arch, {
