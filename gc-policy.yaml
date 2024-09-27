@@ -4,3 +4,6 @@ rawhide:
     cloud-uploads: 1y
 bodhi-updates:
     cloud-uploads: 1y
+    images: 58m
+    images-keep: [qemu, live-iso]
+    build: 62m

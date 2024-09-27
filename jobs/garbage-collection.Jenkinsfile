@@ -14,7 +14,7 @@ properties([
     pipelineTriggers([]),
     parameters([
         choice(name: 'STREAM',
-               choices: pipeutils.get_streams_choices(pipecfg),
+               choices: pipeutils.get_streams_choices(pipecfg) + ['branched', 'bodhi-updates'],
                description: 'CoreOS stream to run GC'),
         booleanParam(name: 'DRY_RUN',
                      defaultValue: true,
