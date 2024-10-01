@@ -1,9 +1,21 @@
 branched:
+    containers: 2w
     cloud-uploads: 1y
 rawhide:
+    containers: 2w
     cloud-uploads: 1y
 bodhi-updates:
     cloud-uploads: 1y
     images: 58m
     images-keep: [qemu, live-iso]
     build: 62m
+testing-devel:
+   containers: 2w
+next-devel:
+   containers: 2w
+next:
+   containers: 2m
+testing:
+   containers: 2m
+stable:
+   containers: 2m
