@@ -102,14 +102,13 @@ storage:
           Type=oneshot
           RemainAfterExit=yes
           ExecStartPre=nm-online --timeout=30
-          # use `--arch=x86_64` because the RPM doesnt exist for aarch64.
-          # ppc64le and s390x RPMs are not compatible with journald input as mentioned
-          # in the splunk journald documentation for version 8.2.6
-          # https://docs.splunk.com/Documentation/Splunk/8.2.6/Data/CollecteventsfromJournalD
+          # use `--arch=x86_64` because non x86_64 RPMs
+          # are not compatible with journald input as mentioned
+          # in the splunk journald documentation for version 9.3.1 (latest)
+          # https://docs.splunk.com/Documentation/Splunk/9.3.1/Data/CollecteventsfromJournalD
           # The --arch=x86_64 works here because we have `qemu-user-static-x86`
           # installed on non-x86_64 FCOS streams.
-          ExecStart=-podman build --pull-always --cache-ttl=480h --arch=x86_64 -t localhost/splunkforwarder:latest ${ITPAAS_SPLUNK_REPO}
-          ExecStart=-podman build --build-arg project=rhcos-multiarch-builders --cache-ttl=480h --from localhost/splunkforwarder:latest -t localhost/splunkforwarder-rhcos ${SPLUNK_SIDECAR_REPO}
+          ExecStart=-podman build --build-arg project=rhcos-multiarch-builders --cache-ttl=480h --arch=x86_64 -t localhost/splunkforwarder-rhcos ${SPLUNK_SIDECAR_REPO}
           ExecStartPost=-podman image prune --force --filter until=720h
           [Install]
           WantedBy=default.target
