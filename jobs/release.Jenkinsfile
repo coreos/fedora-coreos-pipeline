@@ -333,6 +333,12 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
         }
+        stage('Fork Garbage Collection') {
+            build job: 'garbage-collection', wait: false, parameters: [
+                string(name: 'STREAM', value: params.STREAM),
+                booleanParam(name: 'DRY_RUN', value: false)
+            ]
+        }
         stage('Publish') {
             pipeutils.withAWSBuildUploadCredentials() {
                 // Since some of the earlier operations (like AWS replication) only modify
