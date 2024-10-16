@@ -186,12 +186,16 @@ lock(resource: "build-kola-containers") {
                         images += " --image=docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${imageName}-${arch}-${shortcommit}"
                     }
 
-                    shwrap("""
-                        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                        cosa push-container-manifest --v2s2 \
-                            --auth=\$REGISTRY_SECRET --tag latest \
-                            --repo ${params.CONTAINER_REGISTRY_ORG}/${imageName} ${images}
-                    """)
+                    // arbitrarily selecting the x86_64 builder; we don't run this
+                    // locally because podman wants user namespacing (yes, even just
+                    // to push a manifest...)
+                    pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
+                        shwrap("""
+                            cosa push-container-manifest --v2s2 \
+                                --auth=\$REGISTRY_SECRET --tag latest \
+                                --repo ${params.CONTAINER_REGISTRY_ORG}/${imageName} ${images}
+                        """)
+                    }
                 }
             }
 

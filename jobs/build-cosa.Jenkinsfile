@@ -134,12 +134,16 @@ lock(resource: "build-${containername}") {
                     def arch = architecture
                     images += " --image=docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}"
                 }
-                shwrap("""
-                export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                cosa push-container-manifest --v2s2 \
-                    --auth=\$REGISTRY_SECRET --tag ${gitref} \
-                    --repo ${params.CONTAINER_REGISTRY_REPO} ${images}
-                """)
+                // arbitrarily selecting the x86_64 builder; we don't run this
+                // locally because podman wants user namespacing (yes, even just
+                // to push a manifest...)
+                pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
+                    shwrap("""
+                    cosa push-container-manifest --v2s2 \
+                        --auth=\$REGISTRY_SECRET --tag ${gitref} \
+                        --repo ${params.CONTAINER_REGISTRY_REPO} ${images}
+                    """)
+                }
                 // Specifically for the `main` branch let's also update the `latest` tag
                 // If there was a way to alias/tie these two together in the Quay UI
                 // that would be preferable.
