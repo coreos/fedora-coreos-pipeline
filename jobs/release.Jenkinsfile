@@ -88,10 +88,12 @@ def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: "release-${params.STREAM}", extra: locks) {
     // We should probably try to change this behavior in the coreos-ci-lib
     // So we won't need to handle the secret case here.
-    def cosaPodDefinition =  [cpu: "1", memory: "1Gi", image: cosa_img,
+    // Request 4.5Gi: in the worst case, we need to upload 4 container images in
+    // parallel via supermin and each VM is 1G.
+    def cosaPodDefinition =  [cpu: "1", memory: "4608Mi", image: cosa_img,
             serviceAccount: "jenkins"]
     if (brew_profile) {
-        cosaPodDefinition = [cpu: "1", memory: "1Gi", image: cosa_img,
+        cosaPodDefinition = [cpu: "1", memory: "4608Mi", image: cosa_img,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
@@ -263,11 +265,14 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                         def tag_args = registry_repos[configname].tags.collect{"--tag=$it"}
                         def v2s2_arg = registry_repos.v2s2 ? "--v2s2" : ""
                         shwrap("""
-                        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                        cosa push-container-manifest --auth=\${REGISTRY_SECRET} \
+                        export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
+                        cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
+                        cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
+                            --auth=tmp/push-secret-${metajsonname} \
                             --repo=${repo} ${tag_args.join(' ')} \
                             --artifact=${artifact} --metajsonname=${metajsonname} \
                             --build=${params.VERSION} ${v2s2_arg}
+                        rm tmp/push-secret-${metajsonname}
                         """)
                     }
                 }]}
