@@ -56,38 +56,58 @@ lock(resource: "gc-${params.STREAM}") {
             def originalTimestamp = originalBuildsJson.timestamp
             def acl = pipecfg.s3.acl ?: 'public-read'
 
-            withCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config')]) {
-                stage('Garbage Collection') {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa cloud-prune --policy ${new_gc_policy_path} \
-                    --stream ${params.STREAM} ${dry_run} \
-                    --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
-                    --acl=${acl} \
-                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
-                    """)
-                }
-            }
-
-            def currentBuildsJson = readJSON file: 'builds/builds.json'
-            def currentTimestamp = currentBuildsJson.timestamp
-
-            // If the timestamp on builds.json after the 'Garbage Collection' step
-            // is the same as before, that means, there were no resources to be pruned
-            // and hence, no need to update the builds.json.
-            if (originalTimestamp != currentTimestamp) {
-                // Nested lock for the Upload Builds JSON step
-                lock(resource: "builds-json-${params.STREAM}") {
-                    stage('Upload Builds JSON') {
+            // containers tags and cloud artifacts can be GCed in parallel
+            def parallelruns = [:]
+            parallelruns['Cloud artifacts'] = {
+                withCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config')]) {
+                    stage('Cloud artifacts GC') {
                         pipeutils.shwrapWithAWSBuildUploadCredentials("""
                         cosa cloud-prune --policy ${new_gc_policy_path} \
-                        --stream ${params.STREAM} \
-                        --upload-builds-json ${dry_run} \
+                        --stream ${params.STREAM} ${dry_run} \
+                        --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                         --acl=${acl} \
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                         """)
                     }
                 }
+
+                def currentBuildsJson = readJSON file: 'builds/builds.json'
+                def currentTimestamp = currentBuildsJson.timestamp
+
+                // If the timestamp on builds.json after the 'Garbage Collection' step
+                // is the same as before, that means, there were no resources to be pruned
+                // and hence, no need to update the builds.json.
+                if (originalTimestamp != currentTimestamp) {
+                    // Nested lock for the Upload Builds JSON step
+                    lock(resource: "builds-json-${params.STREAM}") {
+                        stage('Upload Builds JSON') {
+                            pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                            cosa cloud-prune --policy ${new_gc_policy_path} \
+                            --stream ${params.STREAM} \
+                            --upload-builds-json ${dry_run} \
+                            --acl=${acl} \
+                            --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+                            """)
+                        }
+                    }
+                }
             }
+            parallelruns['Container tags'] = {
+                // get repo url from pipecfg
+                def registry = pipecfg.registry_repos.oscontainer.repo
+                withCredentials([file(variable: 'REGISTRY_SECRET', 
+                                            credentialsId: 'oscontainer-push-registry-secret')]) {
+                    pipeutils.shwrap("""
+                        cosa container-prune --policy ${new_gc_policy_path} \
+                            --registry-auth-file=\${REGISTRY_SECRET} \
+                            --stream ${params.STREAM} ${dry_run} \
+                            ${registry}
+                    """)
+                }
+            }
+            
+            parallel parallelruns
+
             currentBuild.result = 'SUCCESS'
             currentBuild.description = "${build_description} ✓"
 
