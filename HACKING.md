@@ -242,6 +242,8 @@ If you want to store builds persistently, now is a good time to allocate
 S3 storage.  See the [upstream coreos-assembler docs](https://github.com/coreos/coreos-assembler/blob/main/README-design.md)
 around build architecture.
 
+If you need to set up versioning and lifecycle management for the bucket, refer to [s3 bucket versioning doc](https://github.com/coreos/fedora-coreos-pipeline/blob/main/docs/s3-bucket-versioning.md) for detailed steps. For FCOS production builds using the `fcos-builds` bucket we apply a lifecycle policy of 14 days to manage old versions efficiently.
+
 Today, the FCOS pipeline is oriented towards having its own
 bucket; this will likely be fixed in the future.  But using your
 credentials, you should now do e.g.:
