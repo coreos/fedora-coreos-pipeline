@@ -54,7 +54,6 @@ default_artifacts:
     - metal4k
     - live
     - openstack
-    - hashlist-experimental
   aarch64:
     - applehv
     - aws
