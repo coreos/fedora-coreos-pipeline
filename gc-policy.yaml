@@ -1,3 +1,7 @@
+testing-devel:
+    cloud-uploads: 2y
+next-devel:
+    cloud-uploads: 2y
 branched:
     cloud-uploads: 1y
 rawhide:
