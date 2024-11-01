@@ -22,13 +22,13 @@ properties([
     ])
 ])
 
-def build_description = "[${params.STREAM}]"
 def cosa_img = 'quay.io/coreos-assembler/coreos-assembler:main'
 // def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 // Let's keep container_env as empty map temporarily to prune on disabled streams 
 def container_env = [:]
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 def dry_run = params.DRY_RUN ? "--dry-run" : ""
+def build_description = "[${params.STREAM}] ${params.DRY_RUN ? '[dry-run]' : ''}"
 
 lock(resource: "gc-${params.STREAM}") {
     cosaPod(image: cosa_img, env: container_env,
