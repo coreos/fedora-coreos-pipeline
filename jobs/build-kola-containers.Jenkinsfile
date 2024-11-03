@@ -190,6 +190,13 @@ lock(resource: "build-kola-containers") {
                     // locally because podman wants user namespacing (yes, even just
                     // to push a manifest...)
                     pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
+
+                        // delete previously existing manifests
+                        if ( params.FORCE ) {
+                          shwrap("""
+                            podman manifest rm ${params.CONTAINER_REGISTRY_ORG}/${imageName}
+                          """)
+                        }
                         shwrap("""
                             cosa push-container-manifest --v2s2 \
                                 --auth=\$REGISTRY_SECRET --tag latest \
