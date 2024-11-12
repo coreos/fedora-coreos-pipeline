@@ -427,6 +427,41 @@ def build_artifacts(pipecfg, stream, basearch) {
     // First get the list of artifacts to build from the config
     def artifacts = get_artifacts_to_build(pipecfg, stream, basearch)
 
+    // If `cosa osbuild` is supported then let's build what we can using OSBuild
+    if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-osbuild") == 0) {
+        // Determine which platforms are OSBuild experimental versus
+        // stable (i.e. the default is to use OSBuild for them).
+        def experimental = shwrapCapture("cosa osbuild --supported-platforms").tokenize()
+        def stable = shwrapCapture('''
+            cosa shell -- bash -c '
+                for buildextend in /usr/lib/coreos-assembler/cmd-buildextend-*; do
+                    if [ "$(readlink -f ${buildextend})" == "/usr/lib/coreos-assembler/cmd-osbuild" ]; then
+                        echo "${buildextend:42}"
+                    fi
+                done
+            '
+        ''').tokenize('\n')
+        // Based on the pipeline configuration we'll either use OSBuild for as
+        // much as we can (experimental) or just what it is the default for (stable)
+        def osbuild_supported_artifacts = stable
+        if (pipecfg.streams[stream].osbuild_experimental) {
+            osbuild_supported_artifacts = experimental
+        }
+        // Let's build separately the artifacts that can be built directly with OSBuild.
+        def osbuild_artifacts = []
+        for (artifact in artifacts) {
+            if (artifact in osbuild_supported_artifacts) {
+                osbuild_artifacts += artifact
+            }
+        }
+        if (!osbuild_artifacts.isEmpty()) {
+            artifacts.removeAll(osbuild_artifacts)
+            stage('💽:OSBuild') {
+                shwrap("cosa osbuild ${osbuild_artifacts.join(' ')}")
+            }
+        }
+    }
+
     // Next let's do some massaging of the inputs based on two problems we
     // need to consider:
     //
