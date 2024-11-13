@@ -16,6 +16,7 @@ streams:
     type: mechanical
     env:
       COSA_TESTISO_DEBUG: true
+    osbuild_experimental: true
   # branched:
   #   type: mechanical
   # bodhi-updates:
@@ -51,7 +52,7 @@ default_artifacts:
     - metal
     - metal4k
     - live
-#   - openstack
+    - openstack
 # aarch64:
 #   - applehv
 #   - aws
@@ -70,8 +71,8 @@ default_artifacts:
 #   - azurestack
 #   - digitalocean
 #   - exoscale
-#   - gcp
-#   - hyperv
+    - gcp
+    - hyperv
 #   - ibmcloud
 #   - kubevirt
 #   - nutanix
