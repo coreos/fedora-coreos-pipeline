@@ -8,14 +8,14 @@ streams:
   testing-devel:
     type: development
     default: true
+    env:
+      COSA_TESTISO_DEBUG: true
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
-    # Set the COSA_USE_OSBUILD environment variable to force use of OSBuild
-    # for image building.
     env:
-      COSA_USE_OSBUILD: true
+      COSA_TESTISO_DEBUG: true
   # branched:
   #   type: mechanical
   # bodhi-updates:
@@ -39,7 +39,7 @@ s3:
 #registry_repos:
 #  oscontainer:
 #    repo: quay.io/fedora/fedora-coreos
-#    tags: ["${STREAM}"]
+#    tags: ["${STREAM}", "${VERSION}"]
 #  kubevirt:
 #    repo: quay.io/fedora/fedora-coreos-kubevirt
 #    tags: ["${STREAM}"]
@@ -52,7 +52,6 @@ default_artifacts:
     - metal4k
     - live
 #   - openstack
-#   - hashlist-experimental
 # aarch64:
 #   - applehv
 #   - aws
@@ -87,8 +86,13 @@ clouds:
     # we make our images public in the release job via plume
     public: false
     # Accounts to share newly created AMIs with
+    # Added the FCOS community account so kola can use for testing
     grant_users:
       - "013116697141"
+    # Add FedoraGroup=coreos as per Fedora Policy
+    # Ref: https://github.com/coreos/fedora-coreos-tracker/issues/1605
+    tags:
+      - "FedoraGroup=coreos"
   azure:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
@@ -109,5 +113,6 @@ clouds:
     test_architectures: [x86_64, aarch64]
 
 misc:
+  versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
