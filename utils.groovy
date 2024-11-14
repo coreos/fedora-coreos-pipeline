@@ -435,7 +435,7 @@ def build_artifacts(pipecfg, stream, basearch) {
         def stable = shwrapCapture('''
             cosa shell -- bash -c '
                 for buildextend in /usr/lib/coreos-assembler/cmd-buildextend-*; do
-                    if [ "$(readlink -f ${buildextend})" == "/usr/lib/coreos-assembler/cmd-osbuild" ]; then
+                    if [ "$(readlink -f $buildextend)" == "/usr/lib/coreos-assembler/cmd-osbuild" ]; then
                         echo "${buildextend:42}"
                     fi
                 done
@@ -454,7 +454,7 @@ def build_artifacts(pipecfg, stream, basearch) {
                 osbuild_artifacts += artifact
             }
         }
-        if (!osbuild_artifacts.isEmpty()) {
+        if (osbuild_artifacts.size() > 0) {
             artifacts.removeAll(osbuild_artifacts)
             stage('💽:OSBuild') {
                 shwrap("cosa osbuild ${osbuild_artifacts.join(' ')}")
