@@ -10,6 +10,10 @@ properties([
         // run every 24h only for now
         cron("H H * * *")
     ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '100',
+        artifactNumToKeepStr: '100'
+    )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 

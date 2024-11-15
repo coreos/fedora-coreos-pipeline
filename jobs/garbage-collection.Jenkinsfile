@@ -19,7 +19,11 @@ properties([
         booleanParam(name: 'DRY_RUN',
                      defaultValue: true,
                      description: 'Only print what would be deleted')
-    ])
+    ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '200',
+        artifactNumToKeepStr: '200'
+    ))
 ])
 
 def cosa_img = 'quay.io/coreos-assembler/coreos-assembler:main'
