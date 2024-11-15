@@ -40,6 +40,10 @@ properties([
              defaultValue: "",
              trim: true)
     ] + pipeutils.add_hotfix_parameters_if_supported()),
+    buildDiscarder(logRotator(
+        numToKeepStr: '200',
+        artifactNumToKeepStr: '200'
+    )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 

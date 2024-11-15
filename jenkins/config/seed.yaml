@@ -18,6 +18,10 @@ jobs:
                                defaultValue: false,
                                description: 'Whether to redefine existing jobs (make sure to rerun all jobs with triggers to re-activate them)'),
                 ]),
+                buildDiscarder(logRotator(
+                    numToKeepStr: '100',
+                    artifactNumToKeepStr: '100'
+                )),
                 durabilityHint('PERFORMANCE_OPTIMIZED')
               ])
 

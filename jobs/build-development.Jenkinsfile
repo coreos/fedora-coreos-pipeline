@@ -7,6 +7,10 @@ node {
 
 properties([
     pipelineTriggers(pipeutils.get_push_trigger()),
+    buildDiscarder(logRotator(
+        numToKeepStr: '100',
+        artifactNumToKeepStr: '100'
+    )),
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
