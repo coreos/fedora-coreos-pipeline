@@ -1,11 +1,15 @@
 testing-devel:
     cloud-uploads: 2y
+    containers: 2w
 next-devel:
     cloud-uploads: 2y
+    containers: 2w
 branched:
     cloud-uploads: 1y
+    containers: 2w
 rawhide:
     cloud-uploads: 1y
+    containers: 2w
 bodhi-updates:
     cloud-uploads: 1y
     images: 58m
