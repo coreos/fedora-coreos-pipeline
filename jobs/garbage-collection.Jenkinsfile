@@ -59,7 +59,7 @@ lock(resource: "gc-${params.STREAM}") {
             withCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config')]) {
                 stage('Garbage Collection') {
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa cloud-prune --policy ${new_gc_policy_path} \
+                    cosa coreos-prune --policy ${new_gc_policy_path} \
                     --stream ${params.STREAM} ${dry_run} \
                     --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                     --acl=${acl} \
@@ -79,7 +79,7 @@ lock(resource: "gc-${params.STREAM}") {
                 lock(resource: "builds-json-${params.STREAM}") {
                     stage('Upload Builds JSON') {
                         pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                        cosa cloud-prune --policy ${new_gc_policy_path} \
+                        cosa coreos-prune --policy ${new_gc_policy_path} \
                         --stream ${params.STREAM} \
                         --upload-builds-json ${dry_run} \
                         --acl=${acl} \
