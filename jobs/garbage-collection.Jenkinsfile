@@ -56,13 +56,18 @@ lock(resource: "gc-${params.STREAM}") {
             def originalTimestamp = originalBuildsJson.timestamp
             def acl = pipecfg.s3.acl ?: 'public-read'
 
-            withCredentials([file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config')]) {
+            withCredentials([
+                file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config'),
+                file(variable: 'REGISTRY_SECRET', credentialsId: 'oscontainer-push-registry-secret'),
+                file(variable: 'AWS_BUILD_UPLOAD_CONFIG', credentialsId: 'aws-build-upload-config')
+            ]) {
                 stage('Garbage Collection') {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                    shwrap("""
                     cosa coreos-prune --policy ${new_gc_policy_path} \
                     --stream ${params.STREAM} ${dry_run} \
                     --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                     --acl=${acl} \
+                    --registry-auth-file=\${REGISTRY_SECRET} \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                     """)
                 }
