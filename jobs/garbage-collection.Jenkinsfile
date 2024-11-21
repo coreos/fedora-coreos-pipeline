@@ -62,7 +62,7 @@ lock(resource: "gc-${params.STREAM}") {
 
             withCredentials([
                 file(variable: 'GCP_KOLA_TESTS_CONFIG', credentialsId: 'gcp-image-upload-config'),
-                file(variable: 'REGISTRY_SECRET', credentialsId: 'cosa-push-registry-secret'),
+                file(variable: 'REGISTRY_SECRET', credentialsId: 'oscontainer-push-registry-secret'),
                 file(variable: 'AWS_BUILD_UPLOAD_CONFIG', credentialsId: 'aws-build-upload-config')
             ]) {
                 stage('Garbage Collection') {
