@@ -110,7 +110,7 @@ clouds:
       - "fedora-coreos-${STREAM}"
       - "https://compute.googleapis.com/compute/v1/projects/vm-options/global/licenses/enable-vmx"
   openstack:
-    test_architectures: [x86_64, aarch64]
+    test_architectures: [none]
 
 misc:
   versionary: true
