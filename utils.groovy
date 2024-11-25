@@ -384,6 +384,12 @@ def streams_of_type(config, type) {
     return config.streams.findAll{k, v -> v.type == type}.collect{k, v -> k}
 }
 
+// Returns a list of stream names from `streams_subset` that have `scheduled: true` set
+def scheduled_streams(config, streams_subset) {
+    return streams_subset.findAll{stream ->
+        config.streams[stream].scheduled}.collect{k, v -> k}
+}
+
 def get_streams_choices(config) {
     def default_stream = config.streams.find{k, v -> v['default'] == true}?.key
     def other_streams = config.streams.keySet().minus(default_stream) as List
