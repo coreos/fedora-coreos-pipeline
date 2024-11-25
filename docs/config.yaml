@@ -101,6 +101,11 @@ streams:
       # OPTIONAL: allow building using OSBuild for artifacts where OSBuild is
       # not yet the default in CoreOS Assembler.
       osbuild_experimental: true
+      # OPTIONAL: stream will be set as "scheduled"
+      # By default, `build-mechanical` builds all mechanical streams.
+      # When mechanical streams have `scheduled` on, then
+      # `build-mechanical` will only build those streams
+      scheduled: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
