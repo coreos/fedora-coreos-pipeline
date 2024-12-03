@@ -135,8 +135,14 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                         --region=${region} delete-image --id=${openstack_image_name}
                     """)
                 }
+                stage('Garbage Collection') {
+                    shwrap("""
+                    ore openstack gc --debug                          \
+                        --config-file=\${OPENSTACK_KOLA_TESTS_CONFIG} \
+                        --region=${region} \
+                    """)
+                }
             }
-
         }
 
         currentBuild.result = 'SUCCESS'
