@@ -1,17 +1,46 @@
+# Production
+testing:
+    cloud-uploads: 24m
+    containers: 3m
+    # images: 30m
+    # images-keep: [qemu, live-iso]
+    # build: 36m # Upgrade test handling needed
+stable:
+    cloud-uploads: 24m
+    containers: 3m
+    # images: 30m
+    # images-keep: [qemu, live-iso]
+    # build: 36m # Upgrade test handling needed
+next:
+    cloud-uploads: 24m
+    containers: 3m
+    # images: 30m
+    # images-keep: [qemu, live-iso]
+    # build: 36m # Upgrade test handling needed
+# Development
 testing-devel:
-    cloud-uploads: 2y
+    cloud-uploads: 12m
     containers: 2w
+    images: 18m
+    images-keep: [qemu, live-iso]
+    build: 24m
 next-devel:
-    cloud-uploads: 2y
+    cloud-uploads: 12m
     containers: 2w
-branched:
-    cloud-uploads: 1y
-    containers: 2w
+    images: 18m
+    images-keep: [qemu, live-iso]
+    build: 24m
+# Mechanical
 rawhide:
-    cloud-uploads: 1y
+    cloud-uploads: 12m
     containers: 2w
+    images: 18m
+    images-keep: [qemu, live-iso]
+    build: 24m
+branched:
+    cloud-uploads: 12m
+    containers: 2w
+    build: 18m
 bodhi-updates:
     cloud-uploads: 1y
-    images: 58m
-    images-keep: [qemu, live-iso]
-    build: 62m
+    build: 2y
