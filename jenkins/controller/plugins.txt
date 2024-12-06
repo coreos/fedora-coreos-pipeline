@@ -28,10 +28,10 @@ kubernetes-credentials-provider:1.262.v2670ef7ea_0c5
 pipeline-github:2.8-159.09e4403bc62f
 slack:684.v833089650554
 timestamper:1.27
-splunk-devops-extend:1.10.1
-splunk-devops:1.10.1
+splunk-devops-extend:1.10.2
+splunk-devops:1.10.2
 antisamy-markup-formatter:162.v0e6ec0fcfcf6
-jms-messaging:1.1.27
+jms-messaging:1.1.28
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
