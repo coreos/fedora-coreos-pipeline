@@ -342,11 +342,14 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
         }
-        stage('Fork Garbage Collection') {
-            build job: 'garbage-collection', wait: false, parameters: [
-                string(name: 'STREAM', value: params.STREAM),
-                booleanParam(name: 'DRY_RUN', value: false)
-            ]
+        // Trigger the GC job only if `gc-policy.yaml` exists, which currently applies only to FCOS.
+        if (pipeutils.load_gc()) {
+            stage('Fork Garbage Collection') {
+                build job: 'garbage-collection', wait: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    booleanParam(name: 'DRY_RUN', value: false)
+                ]
+            }
         }
         stage('Publish') {
             pipeutils.withAWSBuildUploadCredentials() {
