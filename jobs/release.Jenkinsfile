@@ -4,6 +4,7 @@ node {
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
     libcloud = load("libcloud.groovy")
+    gc_policy_data = pipeutils.load_gc()
 }
 
 def brew_principal = pipecfg.brew?.principal
@@ -343,7 +344,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
         // Trigger the GC job only if `gc-policy.yaml` exists, which currently applies only to FCOS.
-        if (pipeutils.load_gc()) {
+        if (gc_policy_data) {
             stage('Fork Garbage Collection') {
                 build job: 'garbage-collection', wait: false, parameters: [
                     string(name: 'STREAM', value: params.STREAM),
