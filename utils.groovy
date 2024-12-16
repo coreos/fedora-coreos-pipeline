@@ -98,12 +98,13 @@ def load_gc() {
     def jenkinscfg = load_jenkins_config()
     def url = jenkinscfg['pipecfg-url']
     def gc_policy_data
+    def filePath = (url == 'in-tree') ? 'gc-policy.yaml' : 'pipecfg/gc-policy.yaml'
 
-    if (url == 'in-tree') {
-        gc_policy_data = readYaml(file: "gc-policy.yaml")
+    if (fileExists(filePath)) {
+        gc_policy_data = readYaml(file: filePath)
     } else {
-        // assume the user called `load_pipecfg()` in this workdir; if not, let error out
-        gc_policy_data = readYaml(file: "pipecfg/gc-policy.yaml")
+        echo "GC policy file '${filePath}' not found. Skipping load."
+        return null
     }
 
     return gc_policy_data
