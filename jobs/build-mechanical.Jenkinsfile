@@ -25,14 +25,10 @@ node {
     }
 
     mechanical_streams.each{
-        try {
-            echo "Triggering build for mechanical stream: ${it}"
-            build job: 'build', wait: true, parameters: [
-              string(name: 'STREAM', value: it),
-              booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
-            ]
-        } catch (e) {
-            echo "Build failed for mechanical stream: ${it}"
-        }   
+        echo "Triggering build for mechanical stream: ${it}"
+        build job: 'build', wait: true, propagate: false, parameters: [
+          string(name: 'STREAM', value: it),
+          booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+        ]
     }
 }
