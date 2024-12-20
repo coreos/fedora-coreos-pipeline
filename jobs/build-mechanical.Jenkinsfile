@@ -7,8 +7,8 @@ node {
 
 properties([
     pipelineTriggers([
-        // run every 24h only for now
-        cron("H H * * *")
+        // run every 24h at 2am UTC
+        cron("0 2 * * *")
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -25,10 +25,14 @@ node {
     }
 
     mechanical_streams.each{
-        echo "Triggering build for mechanical stream: ${it}"
-        build job: 'build', wait: false, parameters: [
-          string(name: 'STREAM', value: it),
-          booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
-        ]
+        try {
+            echo "Triggering build for mechanical stream: ${it}"
+            build job: 'build', wait: true, parameters: [
+              string(name: 'STREAM', value: it),
+              booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+            ]
+        } catch (e) {
+            echo "Build failed for mechanical stream: ${it}"
+        }   
     }
 }
