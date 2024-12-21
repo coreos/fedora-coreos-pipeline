@@ -26,7 +26,8 @@ properties([
          silentResponse: false,
          regexpFilterText: '$COREOS_ASSEMBLER_GIT_REF',
          regexpFilterExpression: 'main|rhcos-.*'
-        ]
+        ], 
+        cron('H H * * 1,3')
     ]),
     parameters([
       string(name: 'ARCHES',
