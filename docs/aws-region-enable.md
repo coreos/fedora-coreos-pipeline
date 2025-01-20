@@ -53,6 +53,10 @@ In case of RHCOS:
   ARN: arn:aws:iam::531415883065:user/art-rhcos-ci-s3-bot
   Refer 'RH-DEV AWS Account' in Bitwarden for User ID
 
+In case of RHCOS:
+- Follow the link https://devservices.dpp.openshift.com/support/, select "general AWS Question/request ticket" and submit ticket to the DPP team.
+  If more direct interactions would be needed with the folks handling the ticket, please check in the slack channel #forum-pge-cloud-ops
+
 ### 4. Follow Up:
 
 - Monitor the ticket status and follow up as necessary to ensure the region is enabled and public access is configured.
