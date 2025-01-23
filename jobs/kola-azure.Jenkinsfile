@@ -31,6 +31,9 @@ properties([
              description: 'The exact config repo git commit to run tests against',
              defaultValue: '',
              trim: true),
+      booleanParam(name: 'FORCE',
+             defaultValue: false,
+             description: 'Whether to force an upload'),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -92,6 +95,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
             def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
             def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
             def azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
+            def overwrite = params.FORCE ? "--overwrite" : ""
 
             stage('Upload/Create Image') {
                 // Create the image in Azure
@@ -111,6 +115,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     --blob-name $azure_image_name
                 # Then create them fresh
                 ore azure upload-blob --log-level=INFO                  \
+                    $overwrite                                          \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
