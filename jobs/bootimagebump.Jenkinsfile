@@ -1,100 +1,109 @@
-pipeline {
-    agent {
-        label 'cosa-builder'
+import org.yaml.snakeyaml.Yaml;
+
+node {
+    checkout scm
+    // these are script global vars
+    pipeutils = load("utils.groovy")
+    pipecfg = pipeutils.load_pipecfg()
+}
+
+properties([
+    pipelineTriggers([]),
+    parameters([
+        choice(name: 'STREAM',
+               choices: pipeutils.get_streams_choices(pipecfg),
+               description: 'RHCOS stream to bump'),
+        string(name: 'BUILD_VERSION',
+               description: 'RHCOS build version to use for the bump',
+               defaultValue: '',
+               trim: true),
+        string(name: 'BOOTIMAGE_BUG_ID',
+               description: 'JIRA bug ID for the bootimage bump',
+               defaultValue: '',
+               trim: true),
+    ]),
+    buildDiscarder(logRotator(
+        numToKeepStr: '100',
+        artifactNumToKeepStr: '100'
+    )),
+    durabilityHint('PERFORMANCE_OPTIMIZED')
+])
+
+def build_description = "[${params.STREAM}][bootimage-bump]"
+
+// Reload pipecfg if a hotfix build was provided
+if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
+    node {
+        pipecfg = pipeutils.load_pipecfg(params.PIPECFG_HOTFIX_REPO, params.PIPECFG_HOTFIX_REF)
+        build_description = "[${params.STREAM}-${pipecfg.hotfix.name}][bootimage-bump]"
     }
+}
 
-    parameters {
-        string(name: 'STREAM', description: 'Stream name for RHCOS')
-        string(name: 'BUILD_VERSION', description: 'Build version for RHCOS')
-    }
+// Define environment variables
+def INSTALLER_REPO = 'https://github.com/openshift/installer.git'
+def COSA_IMAGE = "quay.io/coreos-assembler/coreos-assembler:rhcos-${params.STREAM}"
+def RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
 
-    environment {
-        COSA_IMAGE = "quay.io/coreos-assembler/coreos-assembler:rhcos-${params.STREAM}"
-        INSTALLER_REPO = "https://github.com/openshift/installer"
-        WORKSPACE_DIR = "workspace/installer"
-    }
-
-    stages {
-        stage('Prepare Workspace') {
-            steps {
-                script {
-                    cleanWs()
-                    sh "mkdir -p ${WORKSPACE_DIR}"
-                }
-            }
-        }
-
-        stage('Clone Installer Repo') {
-            steps {
-                sh "git clone ${INSTALLER_REPO} ${WORKSPACE_DIR}"
-            }
-        }
-
-        stage('Retrieve Bootimage Bump Bug Info') {
-            steps {
-                script {
-                    def jiraToken = env.JIRA_TOKEN
-                    def jiraUrl = "https://issues.redhat.com/rest/api/2/search"
-                    def query = "jql=project=OCPBUGS AND component=RHCOS AND status!=Closed"
-
-                    def jiraResponse = sh(script: "curl -s -H 'Authorization: Bearer ${jiraToken}' -H 'Content-Type: application/json' '${jiraUrl}?${query}'", returnStdout: true)
-                    def jiraData = readJSON text: jiraResponse
-
-                    if (jiraData.issues.size() > 0) {
-                        def issue = jiraData.issues[0]
-                        env.JIRA_BUG_ID = issue.key
-                        env.BLOCK_BUGS_LIST = issue.fields.blocks.join(',')
-                    } else {
-                        error "No JIRA issues found matching the criteria."
-                    }
-                }
-            }
-        }
-
-        stage('Run Cloud-Replicate Job') {
-            steps {
-                build job: 'cloud-replicate', parameters: [
-                    string(name: 'STREAM', value: params.STREAM),
-                    string(name: 'BUILD_VERSION', value: params.BUILD_VERSION)
-                ]
-            }
-        }
-
-        stage('Create Bootimage Metadata PR') {
-            steps {
-                script {
-                    sh "docker run --rm -v $(pwd):/srv --workdir /srv/installer ${COSA_IMAGE} \\
-                        plume cosa2stream \\
-                        --target data/data/coreos/rhcos.json \\
-                        --distro rhcos \\
-                        --no-signatures \\
-                        --name ${params.STREAM} \\
-                        --url https://rhcos.mirror.openshift.com/art/storage/prod/streams \\
-                        x86_64=${params.BUILD_VERSION} \\
-                        aarch64=${params.BUILD_VERSION} \\
-                        s390x=${params.BUILD_VERSION} \\
-                        ppc64le=${params.BUILD_VERSION}"
-
-                    dir(WORKSPACE_DIR) {
-                        sh "git checkout -b bump-bootimage-${params.STREAM}"
-                        sh "git add data/data/coreos/rhcos.json"
-                        sh "git commit -m 'OCPBUG-${env.JIRA_BUG_ID}: Bump RHCOS bootimage metadata'"
-                        sh "git push origin bump-bootimage-${params.STREAM}"
-                    }
-
-                    def prUrl = sh(script: "hub pull-request -f -b openshift:master -m 'OCPBUG-${env.JIRA_BUG_ID}: Bump RHCOS bootimage metadata'", returnStdout: true).trim()
-                    echo "Pull Request created: ${prUrl}"
-                }
-            }
+try {
+    stage('Prepare Workspace') {
+        echo "Cloning openshift/installer repository..."
+        sh "git clone ${INSTALLER_REPO} ${env.WORKSPACE}/installer"
+        dir("${env.WORKSPACE}/installer") {
+            sh "git checkout -b bootimage-bump-${params.BUILD_VERSION}"
         }
     }
 
-    post {
-        success {
-            echo "Bootimage bump job completed successfully!"
-        }
-        failure {
-            echo "Bootimage bump job failed! Check the logs for details."
+    stage('Bump Bootimage Metadata') {
+        echo "Running plume cosa2stream to bump RHCOS bootimage metadata..."
+        dir("${env.WORKSPACE}/installer") {
+            sh """
+            podman run --rm -v ${env.WORKSPACE}/installer:/workspace:z ${COSA_IMAGE} \
+            plume cosa2stream \
+                --target ${RHCOS_METADATA_FILE} \
+                --distro rhcos \
+                --no-signatures \
+                --name ${params.STREAM} \
+                --url https://rhcos.mirror.openshift.com/art/storage/prod/streams \
+                x86_64=${params.BUILD_VERSION} \
+                aarch64=${params.BUILD_VERSION} \
+                s390x=${params.BUILD_VERSION} \
+                ppc64le=${params.BUILD_VERSION}
+            """
         }
     }
+
+    stage('Create Pull Request') {
+        echo "Creating PR for bootimage bump..."
+        dir("${env.WORKSPACE}/installer") {
+            sh """
+            git add ${RHCOS_METADATA_FILE}
+            git commit -m "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}"
+            git push origin bootimage-bump-${params.BUILD_VERSION}
+            """
+            // Use GitHub CLI to create the PR
+            sh """
+            gh pr create \
+                --title "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}" \
+                --body "This PR bumps the RHCOS bootimage to version ${params.BUILD_VERSION}."
+            """
+        }
+    }
+
+    currentBuild.result = 'SUCCESS'
+} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    def message = "[${params.STREAM}][bootimage-bump] #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
+
+    if (currentBuild.result == 'SUCCESS') {
+        message = ":sparkles: ${message}"
+    } else if (currentBuild.result == 'UNSTABLE') {
+        message = ":warning: ${message}"
+    } else {
+        message = ":fire: ${message}"
+    }
+
+    echo message
+    pipeutils.trySlackSend(message: message)
 }
