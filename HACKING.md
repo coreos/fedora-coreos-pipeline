@@ -609,6 +609,22 @@ password works to log in as `developer`.
 It may be a good idea to set the Kubernetes plugin to
 [use DNS for service names](TROUBLESHOOTING.md#issue-for-jenkins-dns-names).
 
+#### [OPTIONAL] Add internal router shard label to Jenkins route
+
+To run the RHCOS pipeline in the internal ITUP clusters, the Jenkins route must have the `shard=internal` label added to the route and the hostname URL must be updated to include `apps.int`.
+
+Manually edit the route after pipeline deployment:
+```
+# optionally run this if the route already exists
+oc delete route jenkins
+
+# recreate the route with the right label and hostname
+oc expose service jenkins -l shard=internal --hostname jenkins-<NAMESPACE>.apps.int.<cluster-URL>
+
+# if label was not added, manually add it to the new route
+oc label routes jenkins shard=internal
+```
+
 ### Running the pipeline
 
 Once Jenkins is ready, make sure that the seed job has been run successfully.
