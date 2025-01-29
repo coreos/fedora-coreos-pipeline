@@ -44,10 +44,14 @@ This document provides the information on how to address and resolve missing AWS
 
 In case of FCOS:
 - Ensure all relevant information is included and submit the ticket to the Fedora Infrastructure team.
+- AWS Account ID: 125523088429
 
 In case of RHCOS:
 - Follow the link https://devservices.dpp.openshift.com/support/, select "general AWS Question/request ticket" and submit ticket to the DPP team.
   If more direct interactions would be needed with the folks handling the ticket, please check in the slack channel #forum-pge-cloud-ops
+- Account: 531415883065
+  ARN: arn:aws:iam::531415883065:user/art-rhcos-ci-s3-bot
+  Refer 'RH-DEV AWS Account' in Bitwarden for User ID
 
 ### 4. Follow Up:
 
