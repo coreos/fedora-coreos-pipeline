@@ -42,16 +42,16 @@ node {
     def RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
 
     try {
-        stage('Prepare Workspace') {
-            echo "Cloning openshift/installer repository..."
-            sh "git clone ${INSTALLER_REPO} ${env.WORKSPACE}/installer"
+        stage('Setup workspace') {
+            echo " AR - Cloning openshift/installer repo"
+            sh "git clone --depth=1 --branch main ${INSTALLER_REPO} ${env.WORKSPACE}/installer"
             dir("${env.WORKSPACE}/installer") {
                 sh "git checkout -b bootimage-bump-${params.BUILD_VERSION}"
             }
         }
 
         stage('Bump Bootimage Metadata') {
-            echo "Running plume cosa2stream to bump RHCOS bootimage metadata..."
+            echo "AR - Run plume cosa2stream to bump RHCOS bootimage metadata"
             dir("${env.WORKSPACE}/installer") {
                 sh """
                 podman run --rm -v ${env.WORKSPACE}/installer:/workspace:z ${COSA_IMAGE} \
@@ -70,7 +70,7 @@ node {
         }
 
         stage('Create Pull Request') {
-            echo "Creating PR for bootimage bump..."
+            echo "AR - Create PR"
             dir("${env.WORKSPACE}/installer") {
                 sh """
                 git add ${RHCOS_METADATA_FILE}
