@@ -1,7 +1,12 @@
 import org.yaml.snakeyaml.Yaml;
 
 node {
-    checkout scm
+    checkout scm: [
+        $class: 'GitSCM',
+        branches: [[name: "main"]],
+        userRemoteConfigs: [[url: "https://github.com/${fork_repo}.git"]],
+        extensions: [[$class: 'WipeWorkspace']]
+    ]
     // these are script global vars
     pipeutils = load("utils.groovy")
     pipecfg = pipeutils.load_pipecfg()
