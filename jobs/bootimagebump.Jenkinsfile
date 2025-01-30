@@ -45,8 +45,7 @@ node {
         stage('Bump Bootimage Metadata') {
             echo "AR - Run plume cosa2stream to bump RHCOS bootimage metadata"
             shwrap("""
-            release quay.io/coreos-assembler/coreos-assembler:rhcos-x.y
-            podman run --rm -v ${env.WORKSPACE}/installer:/workspace:z ${COSA_IMAGE} \
+            podman run --rm -v ${env.WORKSPACE} ${COSA_IMAGE} \
             plume cosa2stream \
                 --target ${RHCOS_METADATA_FILE} \
                 --distro rhcos \
@@ -72,6 +71,8 @@ node {
                     --body "This PR bumps the RHCOS bootimage to version ${params.BUILD_VERSION}."
                 """)
         currentBuild.result = 'SUCCESS'
+        }
+
     } catch (e) {
         currentBuild.result = 'FAILURE'
         throw e
