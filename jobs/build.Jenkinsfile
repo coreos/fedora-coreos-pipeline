@@ -31,7 +31,7 @@ properties([
                    defaultValue: false,
                    description: 'Whether to force a rebuild'),
       booleanParam(name: 'EARLY_ARCH_JOBS',
-                   defaultValue: true,
+                   defaultValue: false,
                    description: "Fork off the multi-arch jobs before all tests have run"),
       booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                    defaultValue: false,
