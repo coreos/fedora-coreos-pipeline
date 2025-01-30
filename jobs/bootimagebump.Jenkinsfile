@@ -102,6 +102,6 @@ node {
         }
 
         echo message
-        pipeutils.trySlackSend(message: message)
+        //pipeutils.trySlackSend(message: message)
     }
 }
