@@ -71,9 +71,6 @@ node {
                     --title "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}" \
                     --body "This PR bumps the RHCOS bootimage to version ${params.BUILD_VERSION}."
                 """)
-            }
-        }
-
         currentBuild.result = 'SUCCESS'
     } catch (e) {
         currentBuild.result = 'FAILURE'
