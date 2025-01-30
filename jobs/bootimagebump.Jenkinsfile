@@ -37,7 +37,7 @@ node {
         stage('Setup workspace') {
             echo " AR - Cloning openshift/installer repo"
             shwrap("""
-                    git clone --depth=1 --branch main ${INSTALLER_REPO} \
+                    git clone --depth=1 --branch main ${INSTALLER_REPO}
                     git checkout -b bootimage-bump-${params.BUILD_VERSION}
             """)
         }
