@@ -61,15 +61,27 @@ node {
 
         stage('Create Pull Request') {
             echo "AR - Create PR"
-                shwrap ("""
-                git add ${RHCOS_METADATA_FILE}
-                git commit -m "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}"
-                git push origin bootimage-bump-${params.BUILD_VERSION}
-                // Use GitHub CLI to create the PR
-                gh pr create \
-                    --title "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}" \
-                    --body "This PR bumps the RHCOS bootimage to version ${params.BUILD_VERSION}."
-                """)
+            if (shwrap("git diff --exit-code") != 0){
+                    shwrap ("""
+                    git add ${RHCOS_METADATA_FILE}
+                    git commit -m "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}"
+                    git push origin bootimage-bump-${params.BUILD_VERSION}
+                    // Need to work on this part
+                    """)
+
+                    withCredentials([usernamePassword(credentialsId: botCreds,
+                                                  usernameVariable: 'GHUSER',
+                                                  passwordVariable: 'GHTOKEN')]) {
+                        shwrap("""
+                                git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
+                                curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls --fail
+                        """)
+                    /*
+                    git push -f --title "OCPBUGS-${params.BOOTIMAGE_BUG_ID}: Bump RHCOS bootimage to ${params.BUILD_VERSION}" \
+                        --body "This PR bumps the RHCOS bootimage to version ${params.BUILD_VERSION}."*/
+                    }
+            }
+        
         currentBuild.result = 'SUCCESS'
         }
 
