@@ -9,7 +9,7 @@ node {
     checkout scm: [
         $class: 'GitSCM',
         branches: [[name: "master"]],
-        userRemoteConfigs: [[url: "https://github.com/${INSTALLER_REPO}.git"]],
+        userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
         extensions: [[$class: 'WipeWorkspace']]
     ]
     // these are script global vars
