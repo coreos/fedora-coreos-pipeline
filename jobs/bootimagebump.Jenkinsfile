@@ -8,7 +8,6 @@ node {
         $class: 'GitSCM',
         branches: [[name: "main"]],
         userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
-        extensions: [[$class: 'WipeWorkspace']]
     ]
     // these are script global vars
     pipeutils = load("utils.groovy")
