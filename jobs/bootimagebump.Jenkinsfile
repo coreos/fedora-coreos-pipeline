@@ -5,6 +5,7 @@ def INSTALLER_REPO = 'https://github.com/openshift/installer.git'
 
 node {
     checkout scm: [
+        echo "AR - scm"
         $class: 'GitSCM',
         branches: [[name: "main"]],
         userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
@@ -12,9 +13,10 @@ node {
             [$class: 'CloneOption', depth: 1, shallow: true],
             [$class: 'WipeWorkspace']]
     ]
+    echo " AR -  pipeutils"
     // these are script global vars
     pipeutils = load("utils.groovy")
-
+    echo " AR - properties"
     properties([
         pipelineTriggers([]),
         parameters([
@@ -40,7 +42,7 @@ node {
     def COSA_IMAGE = "quay.io/coreos-assembler/coreos-assembler:rhcos-${params.STREAM}"
     def RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
 
-
+    echo " AR - try"
     try {
         stage('Setup workspace') {
             echo " AR - Cloning openshift/installer repo"
