@@ -5,7 +5,6 @@ def INSTALLER_REPO = 'https://github.com/openshift/installer.git'
 
 node {
     checkout scm: [
-        echo "AR - scm"
         $class: 'GitSCM',
         branches: [[name: "main"]],
         userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
