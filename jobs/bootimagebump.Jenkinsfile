@@ -9,7 +9,7 @@ node {
         branches: [[name: "main"]],
         userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
         extensions: [
-            [$class: 'CloneOption', depth: 1, shallow: true],
+            [$class: 'CloneOption', depth: 1, noTags: true, shallow: true],
             [$class: 'WipeWorkspace']]
     ]
     echo " AR -  pipeutils"
