@@ -12,7 +12,6 @@ node {
     ]
     // these are script global vars
     pipeutils = load("utils.groovy")
-    pipecfg = pipeutils.load_pipecfg()
 
     properties([
         pipelineTriggers([]),
