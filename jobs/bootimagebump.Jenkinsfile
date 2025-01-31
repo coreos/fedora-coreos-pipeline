@@ -7,7 +7,7 @@ node {
     checkout scm: [
         $class: 'GitSCM',
         branches: [[name: "main"]],
-        userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
+        userRemoteConfigs: [[url: "${INSTALLER_REPO}"]]
     ]
     // these are script global vars
     pipeutils = load("utils.groovy")
