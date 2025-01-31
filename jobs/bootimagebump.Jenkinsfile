@@ -2,13 +2,11 @@ import org.yaml.snakeyaml.Yaml;
 
 // Define environment variables
 def INSTALLER_REPO = 'https://github.com/openshift/installer.git'
-def COSA_IMAGE = "quay.io/coreos-assembler/coreos-assembler:rhcos-${params.STREAM}"
-def RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
 
 node {
     checkout scm: [
         $class: 'GitSCM',
-        branches: [[name: "master"]],
+        branches: [[name: "main"]],
         userRemoteConfigs: [[url: "${INSTALLER_REPO}"]],
         extensions: [[$class: 'WipeWorkspace']]
     ]
@@ -38,6 +36,8 @@ node {
         durabilityHint('PERFORMANCE_OPTIMIZED')
     ])
 
+    def COSA_IMAGE = "quay.io/coreos-assembler/coreos-assembler:rhcos-${params.STREAM}"
+    def RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
 
 
     try {
