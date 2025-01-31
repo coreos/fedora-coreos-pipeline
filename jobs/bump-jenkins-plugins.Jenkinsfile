@@ -36,7 +36,6 @@ node {
         extensions: [[$class: 'WipeWorkspace']]
     ]
     pipeutils = load("utils.groovy")
-    pipecfg = pipeutils.load_pipecfg()
 
     properties([
         pipelineTriggers([
