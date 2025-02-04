@@ -52,6 +52,17 @@ In case of RHCOS:
 - Account: 531415883065
   ARN: arn:aws:iam::531415883065:user/art-rhcos-ci-s3-bot
   Refer 'RH-DEV AWS Account' in Bitwarden for User ID
+- Note:
+    - Ensure that the new AWS regions are added to the Tenant Egress configuration in the RHCOS ITUP PROD cluster to prevent any TCP timeout issues.
+    - Update the Tenant Egress directory in the internal Git repository with details of the new AWS regions.
+      Include the corresponding DPP ticket reference in the comments as shown below:
+      Example:
+      ```
+      // DPP ticket - https://issues.redhat.com/browse/DPP-16314
+      to:
+        dnsName: ec2.ap-southeast-3.amazonaws.com
+      type: Allow
+      ```
 
 ### 4. Follow Up:
 
