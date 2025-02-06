@@ -17,10 +17,9 @@ streams:
     env:
       COSA_TESTISO_DEBUG: true
     osbuild_experimental: true
-  # branched:
-  #  type: mechanical
-  #  env:
-  #    COSA_USE_OSBUILD: true
+  branched:
+    type: mechanical
+    osbuild_experimental: true
   # bodhi-updates:
   #   type: mechanical
   # bodhi-updates-testing:
