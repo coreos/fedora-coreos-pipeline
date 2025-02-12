@@ -516,26 +516,32 @@ def build_artifacts(pipecfg, stream, basearch) {
 
 def get_registry_repos(pipecfg, stream, version) {
     def registry_repos = pipecfg.registry_repos ?: [:]
-    // merge top-level registry_repos with stream-specific bits
-    registry_repos += pipecfg.streams[stream].additional_registry_repos ?: [:]
+    // get stream-specific bits additional repos
+    def additional_repos = pipecfg.streams[stream].additional_registry_repos ?: [:]
+    for (repo in ['oscontainer', 'legacy_oscontainer', 'extensions', 'kubevirt']) {
+        //merge top-level registry_repos with addtional repos
+        registry_repos[repo] += additional_repos[repo] ?: []
+     }
     for (repo in (registry_repos.keySet() as List)) {
         if (repo == 'v2s2') {
             // this is a boolean option, not a registry repo
             continue
         }
-        if (registry_repos[repo].tags) {
-            def processed_tags = []
-            for (tag in registry_repos."${repo}".tags) {
-                tag = utils.substituteStr(tag, [STREAM: stream, VERSION: version])
-                if (pipecfg.hotfix) {
-                    // this is a hotfix build; include the hotfix name
-                    // in the tag suffix so we don't clobber official
-                    // tags
-                    tag += "-hotfix-${pipecfg.hotfix.name}"
+        for (entry in registry_repo[repo]) {
+            if (entry.tags) {
+                def processed_tags = []
+                for (tag in entry.tags) {
+                    tag = utils.substituteStr(tag, [STREAM: stream, VERSION: version])
+                    if (pipecfg.hotfix) {
+                        // this is a hotfix build; include the hotfix name
+                        // in the tag suffix so we don't clobber official
+                        // tags
+                        tag += "-hotfix-${pipecfg.hotfix.name}"
+                    }
+                    processed_tags += tag
                 }
-                processed_tags += tag
+                entry.tags = processed_tags
             }
-            registry_repos[repo]['tags'] = processed_tags
         }
     }
     return registry_repos
