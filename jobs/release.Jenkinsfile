@@ -259,26 +259,28 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         if (push_containers) {
             stage("Push Containers") {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
-                    if (!registry_repos?."${configname}"?.'repo') {
+                    if (!registry_repos?."${configname}") {
                         echo "No registry repo config for ${configname}. Skipping"
                         return
                     }
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
-                        def repo = registry_repos[configname]['repo']
+                        def repos = registry_repos[configname]
                         def (artifact, metajsonname) = val
-                        def tag_args = registry_repos[configname].tags.collect{"--tag=$it"}
-                        def v2s2_arg = registry_repos.v2s2 ? "--v2s2" : ""
-                        shwrap("""
-                        export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
-                        cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
-                        cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
-                            --auth=tmp/push-secret-${metajsonname} \
-                            --repo=${repo} ${tag_args.join(' ')} \
-                            --artifact=${artifact} --metajsonname=${metajsonname} \
-                            --build=${params.VERSION} ${v2s2_arg}
-                        rm tmp/push-secret-${metajsonname}
-                        """)
+                        for (repo in repos) {
+                            def tag_args = repo.tags.collect{"--tag=$it"}
+                            def v2s2_arg = repo.v2s2 ? "--v2s2" : ""
+                            shwrap("""
+                            export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
+                            cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
+                            cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
+                                --auth=tmp/push-secret-${metajsonname} \
+                                --repo=${repo.repo} ${tag_args.join(' ')} \
+                                --artifact=${artifact} --metajsonname=${metajsonname} \
+                                --build=${params.VERSION} ${v2s2_arg}
+                            rm tmp/push-secret-${metajsonname}
+                            """)
+                        }
                     }
                 }]}
             }

@@ -81,6 +81,12 @@ streams:
       # OPTIONAL: override additional architectures to build for
       additional_arches:
         - s390x
+      # OPTIONAL: add OCI registries to upload images to, specific to this stream.
+      # This will be merged with the `registry_repos` key.
+      additional_registry_repos:
+        oscontainer:
+          - repo: quay.io/someorg/someimage
+            tags: ["${STREAM}"] 
     rawhide:
       type: mechanical
       # OPTIONAL: additional architectures to skip building for
@@ -138,25 +144,29 @@ brew:
 registry_repos:
   # OPTIONAL: repo and tags to which to push oscontainer
   oscontainer:
-    # REQUIRED: repo name
-    repo: quay.io/fedora/fedora-coreos
-    # REQUIRED: list of tags to create/overwrite when pushing
-    #           STREAM and VERSION are supported for templating
-    tags: ["${STREAM}"]
-  # OPTIONAL: repo and tags to which to push legacy oscontainer
+      # REQUIRED: repo name
+    - repo: quay.io/fedora/fedora-coreos
+      # REQUIRED: list of tags to create/overwrite when pushing
+      #           STREAM and VERSION are supported for templating
+      tags: ["${STREAM}"]
+      # multiple push destinations can be specified
+    - repo: quay.io/some_other/registry
+      tags: ["{$STREAM}"]
+   # OPTIONAL: repo and tags to which to push legacy oscontainer
   legacy_oscontainer:
-    repo: quay.io/openshift-release-dev/rhel-coreos-dev
-    tags: ["${STREAM}-legacy", "${VERSION}-legacy"]
+    - repo: quay.io/openshift-release-dev/rhel-coreos-dev
+      tags: ["${STREAM}-legacy", "${VERSION}-legacy"]
   # OPTIONAL: repo and tags to which to push the extensions container
   extensions:
-    repo: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
-    tags: ["${STREAM}-extensions", "${VERSION}-extensions"]
+    - repo: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
+      tags: ["${STREAM}-extensions", "${VERSION}-extensions"]
   # OPTIONAL: repo and tags to which to push kubevirt containerdisk container
   kubevirt:
-    repo: quay.io/fedora/fedora-coreos-kubevirt
-    tags: ["${STREAM}"]
-  # OPTIONAL: whether to push in v2s2 format rather than OCI
-  v2s2: true
+    - repo: quay.io/fedora/fedora-coreos-kubevirt
+      tags: ["${STREAM}"]
+      # OPTIONAL: whether to push in v2s2 format rather than OCI
+      # Default to false if not specified
+      v2s2: true
 
 # OPTIONAL: cloud-related knobs
 clouds:
