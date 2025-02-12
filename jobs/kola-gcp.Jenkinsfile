@@ -84,15 +84,15 @@ cosaPod(memory: "512Mi", kvm: false,
                         --gcp-project=${gcp_project}""")
             }
             if (params.ARCH == "x86_64") {
-                parallelruns['Kola:Confidential'] = {
-                    def tests = params.KOLA_TESTS
-                    if (tests == "") {
-                        tests = "basic"
-                    }
+                def tests = params.KOLA_TESTS
+                if (tests == "") {
+                    tests = "basic"
+                }
+                parallelruns['Kola:Confidential-SNP'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1202
                     def confidential_tests = tests
                     if (confidential_tests == "basic") {
-                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-tdx-nvme-symlink ext.config.platforms.gcp.confidential-vm-snp-nvme-symlink"
+                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-snp-nvme-symlink"
                     }
                     // https://github.com/coreos/coreos-assembler/issues/3556
                     kola(cosaDir: env.WORKSPACE,
@@ -100,11 +100,29 @@ cosaPod(memory: "512Mi", kvm: false,
                         extraArgs: confidential_tests,
                         skipUpgrade: true,
                         skipKolaTags: stream_info.skip_kola_tags,
-                        marker: "confidential",
+                        marker: "confidential-snp",
                         platformArgs: """-p=gcp \
                             --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                             --gcp-project=${gcp_project} \
                             --gcp-confidential-type sev_snp""")
+                }
+                parallelruns['Kola:Confidential-TDX'] = {
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1202
+                    def confidential_tests = tests
+                    if (confidential_tests == "basic") {
+                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-tdx-nvme-symlink"
+                    }
+                    // https://github.com/coreos/coreos-assembler/issues/3556
+                    kola(cosaDir: env.WORKSPACE,
+                        build: params.VERSION, arch: params.ARCH,
+                        extraArgs: confidential_tests,
+                        skipUpgrade: true,
+                        skipKolaTags: stream_info.skip_kola_tags,
+                        marker: "confidential-tdx",
+                        platformArgs: """-p=gcp \
+                            --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                            --gcp-project=${gcp_project} \
+                            --gcp-confidential-type tdx""")
                 }
             }
             
