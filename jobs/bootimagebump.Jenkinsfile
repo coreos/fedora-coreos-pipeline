@@ -92,24 +92,31 @@ node {
             }
 
             stage('Create Pull Request') {
-                        def message = "${params.BOOTIMAGE_BUG_ID}: Update RHCOS-${params.STREAM} bootimage metadata to ${params.BUILD_VERSION}"
+                if (shwrap("git diff --exit-code") != 0){
+                        def message = "${params.BOOTIMAGE_BUG_ID}: Update RHCOS-${RELEASE_BRANCH} bootimage metadata to ${params.BUILD_VERSION}"
+                        def commit_message = """\
+                        ${params.BOOTIMAGE_BUG_ID}: Update RHCOS ${RELEASE_BRANCH} bootimage metadata to ${params.BUILD_VERSION}
+
+                        The changes done here will update the RHCOS ${RELEASE_BRANCH} bootimage metadata and address the following issues:
+
+                        ${params.JIRA_ISSUES}
+
+                        This change was generated using:
+
+                        \`\`\`
+                        plume cosa2stream --target ${RHCOS_METADATA_FILE}            \\
+                        --distro rhcos --no-signatures --name ${params.STREAM}            \\
+                        --url https://rhcos.mirror.openshift.com/art/storage/prod/streams \\
+                        x86_64=${params.BUILD_VERSION}                                    \\
+                        aarch64=${params.BUILD_VERSION}                                   \\
+                        s390x=${params.BUILD_VERSION}                                     \\
+                        ppc64le=${params.BUILD_VERSION}
+                        \`\`\`
+                        """.stripIndent()
                         echo "AR - Create PR | rel - ${RELEASE_BRANCH}"
                         shwrap ("""
                         cd installer
                         git add ${RHCOS_METADATA_FILE}
-                        git commit -m '${message}
-                        The changes done here will update the RHCOS ${params.STREAM} bootimage metadata and address the following issues:
-                        ${params.JIRA_ISSUES}
-                        This change was generated using
-                        plume cosa2stream --target data/data/coreos/rhcos.json               \\
-                           --distro rhcos --no-signatures --name ${params.STREAM}       \\
-                           --url https://rhcos.mirror.openshift.com/art/storage/prod/streams \\
-                           x86_64=${params.BUILD_VERSION}                                    \\
-                           aarch64=${params.BUILD_VERSION}                                   \\
-                           s390x=${params.BUILD_VERSION}                                     \\
-                           ppc64le=${params.BUILD_VERSION}'
-                        """)
-                        echo "git Committed"
                         withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
@@ -120,7 +127,7 @@ node {
                                     curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${PR_BRANCH}", "base": "${RELEASE_BRANCH}" }' https://api.github.com/repos/openshift/installer/pulls --fail
                             """)
                         }
-                //}
+                }
             currentBuild.result = 'SUCCESS'
             }
         } catch (e) {
