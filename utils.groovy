@@ -425,6 +425,11 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
         artifacts -= pipecfg.streams[stream].skip_artifacts?.all ?: []
         artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
     }
+    if (pipecfg.streams[stream].skip_disk_images) {
+        // Only keep the extensions container. Note that the ostree container
+        // and QEMU image are always built and not skippable artifacts.
+        artifacts = artifacts.intersect(["extensions-container"])
+    }
     return artifacts.unique()
 }
 
