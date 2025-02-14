@@ -40,11 +40,11 @@ s3:
 
 registry_repos:
   oscontainer:
-    repo: quay.io/fedora/fedora-coreos
-    tags: ["${STREAM}", "${VERSION}"]
+    - repo: quay.io/fedora/fedora-coreos
+      tags: ["${STREAM}", "${VERSION}"]
   kubevirt:
-    repo: quay.io/fedora/fedora-coreos-kubevirt
-    tags: ["${STREAM}"]
+    - repo: quay.io/fedora/fedora-coreos-kubevirt
+      tags: ["${STREAM}"]
 
 default_artifacts:
   all:
