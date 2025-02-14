@@ -92,7 +92,7 @@ cosaPod(memory: "512Mi", kvm: false,
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1202
                     def confidential_tests = tests
                     if (confidential_tests == "basic") {
-                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-nvme-symlink"
+                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-tdx-nvme-symlink ext.config.platforms.gcp.confidential-vm-snp-nvme-symlink"
                     }
                     // https://github.com/coreos/coreos-assembler/issues/3556
                     kola(cosaDir: env.WORKSPACE,
