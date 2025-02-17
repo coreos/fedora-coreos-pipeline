@@ -100,7 +100,7 @@ cosaPod(memory: "512Mi", kvm: false,
                         }
                         kola(cosaDir: env.WORKSPACE,
                             build: params.VERSION, arch: params.ARCH,
-                            extraArgs: xen_tests,
+                            extraArgs: "--tag aws-xen-test " + xen_tests,
                             skipUpgrade: true,
                             marker: "xen",
                             platformArgs: '-p=aws --aws-region=us-east-1 --aws-type=i3.large',
