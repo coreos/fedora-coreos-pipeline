@@ -215,19 +215,17 @@ lock(resource: "bump-lockfile") {
                         stage("${arch}:Fetch") {
                             shwrap("cosa fetch --strict")
                         }
-                        stage("${arch}:Build") {
-                            shwrap("cosa build --force --strict")
+                        stage("${arch}:Build OSTree") {
+                            shwrap("cosa build ostree --force --strict")
+                        }
+                        stage("${arch}:OSBuild") {
+                            shwrap("cosa osbuild qemu metal metal4k live")
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
                              marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
                              skipKolaTags: stream_info.skip_kola_tags)
-                        stage("${arch}:Build Metal") {
-                            shwrap("cosa buildextend-metal")
-                            shwrap("cosa buildextend-metal4k")
-                        }
-                        stage("${arch}:Build Live") {
-                            shwrap("cosa buildextend-live --fast")
+                        stage("${arch}:Compress Metal") {
                             // Test metal4k with an uncompressed image and
                             // metal with a compressed one. Limit to 4G to be
                             // good neighbours and reduce chances of getting
