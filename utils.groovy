@@ -414,23 +414,22 @@ def get_push_trigger() {
 // Gets desired artifacts to build from pipeline config
 def get_artifacts_to_build(pipecfg, stream, basearch) {
     // Explicit stream-level override takes precedence
-    def artifacts = pipecfg.streams[stream].artifacts?."${basearch}"
-    if (artifacts == null) {
-        // calculate artifacts from defaults + additional - skip
-        artifacts = []
-        artifacts += pipecfg.default_artifacts.all ?: []
-        artifacts += pipecfg.default_artifacts."${basearch}" ?: []
-        artifacts += pipecfg.streams[stream].additional_artifacts?.all ?: []
-        artifacts += pipecfg.streams[stream].additional_artifacts?."${basearch}" ?: []
-        artifacts -= pipecfg.streams[stream].skip_artifacts?.all ?: []
-        artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
+    def artifacts = (pipecfg.streams[stream].artifacts?."${basearch}" ?: []) as Set
+    if (artifacts.isEmpty()) {
+        // calculate artifacts from defaults, add additional, remove skip
+        artifacts.addAll(pipecfg.default_artifacts.all ?: [])
+        artifacts.addAll(pipecfg.default_artifacts."${basearch}" ?: [])
+        artifacts.addAll(pipecfg.streams[stream].additional_artifacts?.all ?: [])
+        artifacts.addAll(pipecfg.streams[stream].additional_artifacts?."${basearch}" ?: [])
+        artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?.all ?: [])
+        artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: [])
     }
     if (pipecfg.streams[stream].skip_disk_images) {
         // Only keep the extensions container. Note that the ostree container
         // and QEMU image are always built and not skippable artifacts.
         artifacts = artifacts.intersect(["extensions-container"])
     }
-    return artifacts.unique()
+    return artifacts
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
