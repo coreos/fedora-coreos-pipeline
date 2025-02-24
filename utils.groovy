@@ -429,7 +429,7 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
         // and QEMU image are always built and not skippable artifacts.
         artifacts = artifacts.intersect(["extensions-container"])
     }
-    return artifacts
+    return artifacts.toList()
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
