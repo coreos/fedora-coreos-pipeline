@@ -37,6 +37,34 @@ hacks:
   # OPTIONAL: skip UEFI on older RHCOS
   skip_uefi_tests_on_older_rhcos: true
 
+# OPTIONAL: Node image keys
+ocp_node_builds:
+    # REQUIRED: OCP release to build
+    release:
+        "4.19-9.6":
+           # REQUIRED: knobs related to the source config
+           source_config:
+               # REQUIRED: source config repo URL to build
+               url: https://github.com/openshift/os
+               # REQUIRED: source config ref to build
+               ref: master
+               # REQUIRED: image to replace the FROM to build
+           from: quay.io/openshift-release-dev/ocp-v4.0-art-dev:rhel-9.6-coreos
+           # REQUIRED: knobs related to the yumrepo to build
+           yumrepo:
+               # REQUIRED: source config repo URL to build
+               url: https://gitlab.cee.redhat.com/coreos/redhat-coreos.git
+               # REQUIRED: source config ref to build
+               ref: master
+               # REQUIRED: repo file name to build
+               file: rhel-9.6.repo
+    # REQUIRED: knobs related to the source config
+    registries:
+        # REQUIRED: staging repo to push the final image built
+        staging: registry.ci.openshift.org/coreos/node-staginear
+        # REQUIRED: prodution repo to push the final image built
+        prod: quay.io/openshift-release-dev/ocp-v4.0-art-dev:{RELEASE}-node-image
+
 # OPTIONAL: coreos-assembler image to build with. Supports ${STREAM} variable.
 # If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
 cosa_img: quay.io/jlebon/coreos-assembler:pr3139-${STREAM}
