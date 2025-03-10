@@ -391,9 +391,11 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
-def get_streams_choices(config) {
-    def default_stream = config.streams.find{k, v -> v['default'] == true}?.key
-    def other_streams = config.streams.keySet().minus(default_stream) as List
+def get_streams_choices(config, node = null) {
+    def stream_source = node ? config.ocp_node_builds.release : config.streams
+
+    def default_stream = stream_source.find { k, v -> v['default'] == true }?.key
+    def other_streams = stream_source.keySet().minus(default_stream) as List
     return [default_stream] + other_streams
 }
 
