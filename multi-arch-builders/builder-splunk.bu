@@ -7,7 +7,6 @@
 # The following env variables need to be set before creating the ignition config:
 #
 # - ${SPLUNK_HOSTNAME}
-# - ${ITPAAS_SPLUNK_REPO}
 # - ${SPLUNK_SIDECAR_REPO}
 #
 variant: fcos
