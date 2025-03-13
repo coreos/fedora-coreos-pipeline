@@ -5,6 +5,7 @@ streams:
     type: production
   next:
     type: production
+    osbuild_experimental: true
   testing-devel:
     type: development
     default: true
@@ -12,6 +13,7 @@ streams:
       COSA_TESTISO_DEBUG: true
   next-devel:         # do not touch; line managed by `next-devel/manage.py`
     type: development # do not touch; line managed by `next-devel/manage.py`
+    osbuild_experimental: true
   rawhide:
     type: mechanical
     env:
