@@ -225,25 +225,26 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // buildfetch previous build info
-        stage('BuildFetch') {
-            if (s3_stream_dir) {
-                pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa buildfetch --arch=${basearch} \
-                    --url s3://${s3_stream_dir}/builds \
-                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
-                """)
-                if (parent_version != "") {
-                    // also fetch the parent version; this is used by cosa to do the diff
+        lock(resource: "buildfetch") {
+            stage('BuildFetch') {
+                if (s3_stream_dir) {
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa buildfetch --arch=${basearch} \
-                        --build ${parent_version} \
                         --url s3://${s3_stream_dir}/builds \
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                     """)
+                    if (parent_version != "") {
+                        // also fetch the parent version; this is used by cosa to do the diff
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                        cosa buildfetch --arch=${basearch} \
+                            --build ${parent_version} \
+                            --url s3://${s3_stream_dir}/builds \
+                            --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+                        """)
+                    }
                 }
             }
         }
-
 
         def prevBuildID = null
         if (utils.pathExists("builds/latest")) {
@@ -259,7 +260,7 @@ lock(resource: "build-${params.STREAM}") {
                 shwrap("python3 /usr/lib/coreos-assembler/download-overrides.py")
                 overrides_fetch_param = "--with-cosa-overrides"
             }
-            shwrap("cosa fetch ${overrides_fetch_param} ${strict_build_param}")            
+            shwrap("cosa fetch ${overrides_fetch_param} ${strict_build_param}")
         }
 
         stage('Build OSTree') {
@@ -592,7 +593,7 @@ def run_release_job(buildID) {
 
 def buildid_has_work_pending(buildID, arches) {
     def locked = true
-    // these locks match the ones in the release job 
+    // these locks match the ones in the release job
     def locks = arches.collect{[resource: "release-${buildID}-${it}"]}
     lock(resource: "release-${params.STREAM}", extra: locks, skipIfLocked: true) {
         // NB: `return` here wouldn't actually return from the function
