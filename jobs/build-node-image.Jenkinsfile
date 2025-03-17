@@ -1,4 +1,4 @@
-def gitref, commit, shortcommit
+def commit, shortcommit
 
 node {
     checkout scm
@@ -134,9 +134,9 @@ lock(resource: "build-node-image") {
         throw e
     } finally {
         if (currentBuild.result == 'SUCCESS') {
-            currentBuild.description = "[${gitref}@${shortcommit}] ⚡"
+            currentBuild.description = "[${params.RELEASE}@${shortcommit}] ⚡"
         } else {
-            currentBuild.description = "[${gitref}@${shortcommit}] ❌"
+            currentBuild.description = "[${params.RELEASE}@${shortcommit}] ❌"
         }
         if (currentBuild.result != 'SUCCESS') {
             message = ":openshift: build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.RELEASE}][${src_config_ref}@${shortcommit}]"
