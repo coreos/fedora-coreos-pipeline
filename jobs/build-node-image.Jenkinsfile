@@ -55,7 +55,8 @@ lock(resource: "build-node-image") {
         def container_registry_staging_repo = pipecfg.ocp_node_builds.registries.staging
         def container_registry_repo_and_tag = utils.substituteStr(pipecfg.ocp_node_builds.registries.prod,
                                                                  [RELEASE: params.RELEASE])
-
+        def container_registry_staging_manifest_tag = "${params.RELEASE}-${shortcommit}"
+        def container_registry_staging_image_tag = "${params.RELEASE}-ARCH_REPLACE-${shortcommit}"
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
@@ -64,70 +65,24 @@ lock(resource: "build-node-image") {
         }
 
         stage('Build Layered Image') {
-            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-                def build_from = params.FROM ?: stream_info.from
-                parallel arches.collectEntries{arch -> [arch, {
-                    pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                        shwrap("""
-                            cosa remote-build-container --arch $arch \
-                                --git-ref $commit --force \
-                                --git-url ${src_config_url} \
-                                --repo ${container_registry_staging_repo} \
-                                --push-to-registry --auth=\${REGISTRY_SECRET} \
-                                --secret id=yumrepos,src=\$(pwd)/yumrepos/${stream_info.yumrepo.file} \
-                                --mount-host-ca-certs \
-                                --security-opt label=disable \
-                                --from ${build_from} \
-                                --tag ${params.RELEASE}-${arch}-${shortcommit}
-                        """)
-                    }
-                }]}
-            }
+            def build_from = params.FROM ?: stream_info.from
+            pipeutils.build_remote_image(arches, commit, src_config_url, container_registry_staging_repo,
+                                         container_registry_staging_image_tag, stream_info.yumrepo.file, build_from,
+                                          ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
         }
-        withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-            stage("Push Manifest") {
-                def images = ""
-                for (arch in arches) {
-                    images += " --image=docker://${container_registry_staging_repo}:${params.RELEASE}-${arch}-${shortcommit}"
-                }
-                // arbitrarily selecting the s390x builder; we don't run this
-                // locally because podman wants user namespacing (yes, even just
-                // to push a manifest...)
-                pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
-                    shwrap("""
-                    cosa push-container-manifest \
-                        --auth=\$REGISTRY_SECRET --tag ${params.RELEASE}-${shortcommit} \
-                        --repo ${container_registry_staging_repo} ${images}
-                    """)
-                }
-            }
+
+        stage("Push Manifest") {
+            pipeutils.push_manifest(arches, container_registry_staging_repo, container_registry_staging_image_tag, container_registry_staging_manifest_tag)
         }
-        withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-           stage("Release Manifest") {
-                // Release the manifest and container images
-                shwrap("""
-                    skopeo copy --all --authfile \$REGISTRY_SECRET \
-                        docker://${container_registry_staging_repo}:${params.RELEASE}-${shortcommit} \
-                        docker://${container_registry_repo_and_tag}
-                """)
-            }
+
+        stage("Release Manifest") {
+            pipeutils.release_manifest(container_registry_staging_repo, container_registry_staging_manifest_tag, container_registry_repo_and_tag)
         }
-        withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-            stage('Delete Intermediate Tags') {
-                shwrap("""
-                    export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                    skopeo delete --authfile=\$REGISTRY_SECRET \
-                        docker://${container_registry_staging_repo}:${params.RELEASE}-${shortcommit}
-                """)
-                parallel archinfo.keySet().collectEntries{arch -> [arch, {
-                    shwrap("""
-                        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                        skopeo delete --authfile=\$REGISTRY_SECRET \
-                            docker://${container_registry_staging_repo}:${params.RELEASE}-${arch}-${shortcommit}
-                    """)
-                }]}
-            }
+
+        stage('Delete Intermediate Tags') {
+            pipeutils.delete_tags(archinfo, container_registry_staging_repo, container_registry_staging_image_tag, container_registry_staging_manifest_tag)
         }
+
         currentBuild.result = 'SUCCESS'
     } catch (e) {
         currentBuild.result = 'FAILURE'
