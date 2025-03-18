@@ -834,4 +834,89 @@ def matrixSend(message) {
     }
 }
 
+def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
+                        extra_build_args=None) {
+    def build_args = ["--git-ref", commit, "--git-url", url, "--repo", repo,
+                      "--push-to-registry"]
+    if (secret) {
+         build_args += ["--secret", secret]
+    }
+    if (from) {
+        build_args += ["--from", from]
+    }
+    build_args += extra_build_args
+    parallel arches.collectEntries { arch ->
+        [arch, {
+            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                def final_args = build_args + ["--arch", arch, "--tag", "${tag}-${arch}"]
+                shwrap("cosa remote-build-container ${final_args.join(' ')}")
+            }
+        }]
+    }
+}
+
+def push_manifest(arches, repo, image_tag, manifest_tag) {
+    def images = ""
+    for (arch in arches) {
+        images += " --image=docker://${repo}:${image_tag}-${arch}"
+    }
+    // arbitrarily selecting the s390x builder; we don't run this
+    // locally because podman wants user namespacing (yes, even just
+    // to push a manifest...)
+    pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
+        shwrap("""
+        cosa push-container-manifest \
+            --tag ${manifest_tag} --repo ${repo} ${images}
+        """)
+    }
+}
+
+def copy_image(src_image, dest_image, registry_secret_path=None) {
+    shwrap("""
+        skopeo copy --all --authfile=${registry_secret_path} \
+            docker://${src_image} \
+            docker://${dest_image}
+    """)
+}
+
+def delete_tags(arches, repo, image_tag, manifest_tag, registry_secret_path=None) {
+    shwrap("""
+        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+        skopeo delete --authfile=${registry_secret_path} \
+            docker://${repo}:${manifest_tag}
+    """)
+    parallel arches.keySet().collectEntries{arch -> [arch, {
+        shwrap("""
+            export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+            skopeo delete --authfile=${registry_secret_path} \
+                docker://${repo}:${image_tag}-${arch}
+        """)
+    }]}
+}
+
+def build_and_push_image(params = [:]) {
+    // Available parameters:
+    // arches:               list    -- List of architectures to run against
+    // extra_build_args:     list    -- List of extra commands to pass to `cosa remote` cmd
+    // from:                 string  -- Value to replace in the Containerfile
+    // image_tag_staging:    string  -- Image tag for the staging repo.
+    // manifest_tag_staging: string  -- Manifest tag for the staging repo.
+    // secret:               string  -- File path for the `podman --secret`
+    // src_commit:           string  -- Source Git commit.
+    // src_url:              string  -- Source Git URL.
+    // staging_repository:   string  -- Repository URL for the staging repo.
+
+    def secret = params.get('secret', "");
+    def from = params.get('from', "");
+    def extra_build_args = params.get('extra_build_args', "");
+
+    build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
+                       params['image_tag_staging'], secret, from, extra_build_args)
+
+    stage("Push Manifest") {
+        push_manifest(params['arches'], params['staging_repository'], params['image_tag_staging'],
+                      params['manifest_tag_staging'])
+    }
+}
+
 return this
