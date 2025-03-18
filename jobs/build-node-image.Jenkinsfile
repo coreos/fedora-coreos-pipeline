@@ -71,16 +71,32 @@ lock(resource: "build-node-image") {
                                           ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
         }
 
-        stage("Push Manifest") {
-            pipeutils.push_manifest(arches, container_registry_staging_repo, container_registry_staging_image_tag, container_registry_staging_manifest_tag)
+        stage('Build Extension Container') {
+            pipeutils.build_remote_image(arches, commit, src_config_url, container_registry_staging_repo,
+                                         "${container_registry_staging_image_tag}-extensions", stream_info.yumrepo.file, false,
+                                         ["--security-opt label=disable", "--mount-host-ca-certs", "--force",
+                                          "--git-file extensions/Dockerfile"] )
         }
 
-        stage("Release Manifest") {
-            pipeutils.release_manifest(container_registry_staging_repo, container_registry_staging_manifest_tag, container_registry_repo_and_tag)
+        stage("Push Manifests") {
+            pipeutils.push_manifest(arches, container_registry_staging_repo, container_registry_staging_image_tag,
+                                    container_registry_staging_manifest_tag)
+            pipeutils.push_manifest(arches, container_registry_staging_repo, "${container_registry_staging_image_tag}-extensions",
+                                    "${container_registry_staging_manifest_tag}-extensions")
+        }
+
+        stage("Release Manifests") {
+            pipeutils.release_manifest(container_registry_staging_repo, container_registry_staging_manifest_tag,
+                                       container_registry_repo_and_tag)
+            pipeutils.release_manifest(container_registry_staging_repo, "${container_registry_staging_manifest_tag}-extensions",
+                                       "${container_registry_repo_and_tag}-extensions")
         }
 
         stage('Delete Intermediate Tags') {
-            pipeutils.delete_tags(archinfo, container_registry_staging_repo, container_registry_staging_image_tag, container_registry_staging_manifest_tag)
+            pipeutils.delete_tags(archinfo, container_registry_staging_repo, container_registry_staging_image_tag,
+                                  container_registry_staging_manifest_tag)
+            pipeutils.delete_tags(archinfo, container_registry_staging_repo, "${container_registry_staging_image_tag-extensions}",
+                                  "${container_registry_staging_manifest_tag-extensions")
         }
 
         currentBuild.result = 'SUCCESS'
