@@ -550,6 +550,20 @@ def get_registry_repos(pipecfg, stream, version) {
     return registry_repos
 }
 
+def get_ocp_node_registry_repo(pipecfg, release) {
+    def staging_repo = pipecfg.ocp_node_builds.registries.staging
+    def repo_and_tag = utils.substituteStr(pipecfg.ocp_node_builds.registries.prod,
+                                           [RELEASE: release])
+
+    if (pipecfg.hotfix) {
+        // this is a hotfix build; include the hotfix name
+        // in the tag suffix so we don't clobber official
+        // tags
+        repo_and_tag += "-hotfix-${pipecfg.hotfix.name}"
+    }
+    return [staging_repo, repo_and_tag]
+}
+
 // Determine if the config.yaml has a test_architectures entry for
 // this cloud which is intended to limit the architectures that
 // are tested for the given cloud.
