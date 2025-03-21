@@ -820,4 +820,92 @@ def matrixSend(message) {
     }
 }
 
+def build_remote_image(arches, commit, url, repo, tag, yumrepo=None, from=None,
+                        extraArgs=None) {
+     // Note we can pass ARCH_REPLACE keyword in the tag,
+     // in this way we make the process easier to handle arch tag names.
+    withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+        def cmd = """cosa remote-build-container --arch ARCH_REPLACE\
+            --git-ref ${commit} \
+            --git-url ${url} \
+            --repo ${repo} \
+            --push-to-registry \
+            --auth=${REGISTRY_SECRET} \
+            --tag ${tag}"""
+
+        if (yumrepo) {
+            cmd += " --secret id=yumrepos,src=\$(pwd)/yumrepos/${yumrepo}"
+        }
+        if (from) {
+            cmd += " --from ${from}"
+        }
+        if (extraArgs) {
+            for (arg in extraArgs) {
+                cmd += " ${arg}"
+            }
+        }
+        parallel arches.collectEntries { arch ->
+            [arch, {
+                pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                    def run_cmd = cmd.replace("ARCH_REPLACE", arch)
+                    shwrap(run_cmd)
+                }
+            }]
+        }
+    }
+}
+
+def push_manifest(arches, repo, image_tag, manifest_tag) {
+     // Note we can pass ARCH_REPLACE keyword in the tag,
+     // in this way we make the process easier to handle arch tag names.
+     withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+         def images = ""
+         for (arch in arches) {
+             def tag = image_tag.replace("ARCH_REPLACE", arch)
+             images += " --image=docker://${repo}:${tag}"
+         }
+         // arbitrarily selecting the s390x builder; we don't run this
+         // locally because podman wants user namespacing (yes, even just
+         // to push a manifest...)
+         pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
+             shwrap("""
+             cosa push-container-manifest \
+                 --auth=\$REGISTRY_SECRET --tag ${manifest_tag} \
+                 --repo ${repo} ${images}
+             """)
+         }
+     }
+}
+
+def release_manifest(staging_repo, staging_tag, prod_repo_and_tag) {
+
+    withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+        // Release the manifest and container images
+        shwrap("""
+            skopeo copy --all --authfile \$REGISTRY_SECRET \
+                docker://${staging_repo}:${staging_tag} \
+                docker://${prod_repo_and_tag}
+        """)
+    }
+}
+
+def delete_tags(arches, repo, image_tag, manifest_tag) {
+
+    withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
+        shwrap("""
+            export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+            skopeo delete --authfile=\$REGISTRY_SECRET \
+                docker://${repo}:${manifest_tag}
+        """)
+        parallel arches.keySet().collectEntries{arch -> [arch, {
+            def tag = image_tag.replace("ARCH", arch)
+            shwrap("""
+                export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+                skopeo delete --authfile=\$REGISTRY_SECRET \
+                    docker://${repo}:${tag}
+            """)
+        }]}
+    }
+}
+
 return this
