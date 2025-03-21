@@ -55,6 +55,7 @@ default_artifacts:
     - aws
     - azure
     - gcp
+    - hetzner
     - hyperv
   ppc64le:
     - powervs
@@ -69,6 +70,7 @@ default_artifacts:
     - digitalocean
     - exoscale
     - gcp
+    - hetzner
     - hyperv
     - ibmcloud
     - kubevirt
