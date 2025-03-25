@@ -845,20 +845,25 @@ def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
         build_args += ["--from", from]
     }
     build_args += extra_build_args
+    def digest_list = []
     parallel arches.collectEntries { arch ->
         [arch, {
             pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                 def final_args = build_args + ["--arch", arch, "--tag", "${tag}-${arch}"]
+                final_args += ["--write-digest-to-file", "${tag}-${arch}"]
                 shwrap("cosa remote-build-container ${final_args.join(' ')}")
+                digest_list += readFile("${tag}-${arch}")
+                shwrap("""rm -f ${tag}-${arch} """)
             }
         }]
     }
+    return digest_list
 }
 
-def push_manifest(arches, repo, image_tag, manifest_tag) {
+def push_manifest(digests, repo, manifest_tag) {
     def images = ""
-    for (arch in arches) {
-        images += " --image=docker://${repo}:${image_tag}-${arch}"
+    for (digest in digests) {
+        images += " --image=docker://${repo}@${digest}"
     }
     // arbitrarily selecting the s390x builder; we don't run this
     // locally because podman wants user namespacing (yes, even just
@@ -879,23 +884,23 @@ def copy_image(src_image, dest_image, registry_secret_path=None) {
     """)
 }
 
-def delete_tags(arches, repo, image_tag, manifest_tag, registry_secret_path=None) {
+def delete_tags(digests, repo, manifest_tag, registry_secret_path=None) {
     shwrap("""
         export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
         skopeo delete --authfile=${registry_secret_path} \
             docker://${repo}:${manifest_tag}
     """)
-    parallel arches.keySet().collectEntries{arch -> [arch, {
+    parallel digests.keySet().collectEntries{arch -> [digest, {
         shwrap("""
             export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
             skopeo delete --authfile=${registry_secret_path} \
-                docker://${repo}:${image_tag}-${arch}
+                docker://${repo}:${digest}
         """)
     }]}
 }
 
 def build_and_push_image(params = [:]) {
-    // Available parameters:
+// Available parameters:
     // arches:               list    -- List of architectures to run against
     // extra_build_args:     list    -- List of extra commands to pass to `cosa remote` cmd
     // from:                 string  -- Value to replace in the Containerfile
@@ -910,12 +915,10 @@ def build_and_push_image(params = [:]) {
     def from = params.get('from', "");
     def extra_build_args = params.get('extra_build_args', "");
 
-    build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
-                       params['image_tag_staging'], secret, from, extra_build_args)
-
+    def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
+                                     params['image_tag_staging'], secret, from, extra_build_args)
     stage("Push Manifest") {
-        push_manifest(params['arches'], params['staging_repository'], params['image_tag_staging'],
-                      params['manifest_tag_staging'])
+        push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'])
     }
 }
 
