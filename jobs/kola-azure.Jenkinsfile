@@ -59,31 +59,33 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
     try {
 
         def azure_image_name, azure_image_filepath
-        stage('Fetch Metadata/Image') {
-            def commitopt = ''
-            if (params.SRC_CONFIG_COMMIT != '') {
-                commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
-            }
-            // Grab the metadata. Also grab the image so we can upload it.
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-                shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
-                    --url=s3://${s3_stream_dir}/builds --artifact=azure
-                """)
-                pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
-                    shwrap("cosa decompress --build=${params.VERSION} --artifact=azure")
+        lock(resource: "kola-cloud-buildfetch") {
+            stage('Fetch Metadata/Image') {
+                def commitopt = ''
+                if (params.SRC_CONFIG_COMMIT != '') {
+                    commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
-                azure_image_filepath = shwrapCapture("""
-                cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path azure
-                """)
-            }
+                // Grab the metadata. Also grab the image so we can upload it.
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                    credentialsId: 'aws-build-upload-config')]) {
+                    def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                    def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+                    shwrap("""
+                    cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
+                    time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
+                        --url=s3://${s3_stream_dir}/builds --artifact=azure
+                    """)
+                    pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
+                        shwrap("cosa decompress --build=${params.VERSION} --artifact=azure")
+                    }
+                    azure_image_filepath = shwrapCapture("""
+                    cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path azure
+                    """)
+                }
 
-            // Use a consistent image name for this stream in case it gets left behind
-            azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"
+                // Use a consistent image name for this stream in case it gets left behind
+                azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"
+            }
         }
 
         withCredentials([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
@@ -175,7 +177,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: ":azure: kola-azure #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")     
+            pipeutils.trySlackSend(message: ":azure: kola-azure #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }} // cosaPod and timeout finish here
