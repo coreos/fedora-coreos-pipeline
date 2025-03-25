@@ -61,32 +61,34 @@ lock(resource: "kola-openstack-${params.ARCH}") {
     try {
 
         def openstack_image_name, openstack_image_filepath
-        stage('Fetch Metadata/Image') {
-            def commitopt = ''
-            if (params.SRC_CONFIG_COMMIT != '') {
-                commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
-            }
-            // Grab the metadata. Also grab the image so we can upload it.
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-                shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
-                    --url=s3://${s3_stream_dir}/builds --artifact=openstack
-                """)
-                pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
-                    shwrap("cosa decompress --build=${params.VERSION} --artifact=openstack")
+        lock(resource: "kola-cloud-buildfetch") {
+            stage('Fetch Metadata/Image') {
+                def commitopt = ''
+                if (params.SRC_CONFIG_COMMIT != '') {
+                    commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
-                openstack_image_filepath = shwrapCapture("""
-                cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path openstack
-                """)
+                // Grab the metadata. Also grab the image so we can upload it.
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                    credentialsId: 'aws-build-upload-config')]) {
+                    def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                    def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+                    shwrap("""
+                    cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
+                    time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
+                        --url=s3://${s3_stream_dir}/builds --artifact=openstack
+                    """)
+                    pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
+                        shwrap("cosa decompress --build=${params.VERSION} --artifact=openstack")
+                    }
+                    openstack_image_filepath = shwrapCapture("""
+                    cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path openstack
+                    """)
+                }
+
+                // Use a consistent image name for this stream in case it gets left behind
+                openstack_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}"
+
             }
-
-            // Use a consistent image name for this stream in case it gets left behind
-            openstack_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}"
-
         }
 
         withCredentials([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
@@ -105,7 +107,7 @@ lock(resource: "kola-openstack-${params.ARCH}") {
                     --name=${openstack_image_name} --arch=${params.ARCH}
                 """)
             }
-        
+
             // In VexxHost we'll use the network called "private" for the
             // instance NIC, attach a floating IP from the "public" network and
             // use the v3-starter-4 instance (ram=8GiB, CPUs=4).

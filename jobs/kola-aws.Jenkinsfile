@@ -51,20 +51,22 @@ cosaPod(memory: "512Mi", kvm: false,
     timeout(time: 90, unit: 'MINUTES') {
     try {
 
-        stage('Fetch Metadata') {
-            def commitopt = ''
-            if (params.SRC_CONFIG_COMMIT != '') {
-                commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
-            }
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-                shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                time -v cosa buildfetch --artifact=ostree --build=${params.VERSION} \
-                    --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
-                """)
+        lock(resource: "kola-cloud-buildfetch") {
+            stage('Fetch Metadata') {
+                def commitopt = ''
+                if (params.SRC_CONFIG_COMMIT != '') {
+                    commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
+                }
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                    credentialsId: 'aws-build-upload-config')]) {
+                    def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                    def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+                    shwrap("""
+                    cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
+                    time -v cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                        --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
+                    """)
+                }
             }
         }
 
