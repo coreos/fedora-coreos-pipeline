@@ -119,7 +119,7 @@ plume cosa2stream --target ${RHCOS_METADATA_FILE}                 \\
     ppc64le=${params.BUILD_VERSION}
 
 ```
-                    """.stripIndent().trim()
+                    """.stripMargin()
                     shwrap ("""
                             cd installer
                             git add ${RHCOS_METADATA_FILE}
