@@ -65,7 +65,7 @@ lock(resource: "build-node-image") {
         // Get the list of requested architectures to build for
         def arches = params.ARCHES.split() as Set
         def archinfo = arches.collectEntries{[it, [:]]}
-        def (container_registry_staging_repo, container_registry_repo_and_tag) = utils.get_ocp_node_registry_repo(pipecfg, params.RELEASE)
+        def (container_registry_staging_repo, container_registry_repo_and_tag) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE)
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
@@ -73,7 +73,7 @@ lock(resource: "build-node-image") {
             shwrap("""git clone ${stream_info.yumrepo.url} yumrepos""")
         }
 
-        def tag = ${params.RELEASE}-${shortcommit}
+        def tag = "${params.RELEASE}-${shortcommit}"
         if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
             tag += "-hotfix-${pipecfg.hotfix.name}"
         }
