@@ -66,80 +66,62 @@ lock(resource: "build-node-image") {
         def arches = params.ARCHES.split() as Set
         def archinfo = arches.collectEntries{[it, [:]]}
         def (container_registry_staging_repo, container_registry_repo_and_tag) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE)
+        def container_registry_staging_manifest_tag = "${params.RELEASE}"
+        def container_registry_staging_image_tag = "${params.RELEASE}"
+        def container_registry_staging_manifest = "${container_registry_staging_repo}:${container_registry_staging_manifest_tag}"
+
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
+        def yumrepos_file
         stage('Init') {
-            shwrap("""git clone ${stream_info.yumrepo.url} yumrepos""")
+            shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
+            for (repo in stream_info.yumrepo.files) {
+                shwrap("cat yumrepos/${repo} >> all.repo")
+            }
+            yumrepos_file = shwrapCapture("realpath all.repo")
+            // let's archive it also so it's easy to see what the final repo file looked like
+            archiveArtifacts 'all.repo'
         }
 
-        def tag = "${params.RELEASE}-${shortcommit}"
         if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
-            tag += "-hotfix-${pipecfg.hotfix.name}"
+            container_registry_staging_image_tag += "-hotfix-${pipecfg.hotfix.name}"
         }
-        stage('Build Layered Image') {
-            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-                def build_from = params.FROM ?: stream_info.from
-                parallel arches.collectEntries{arch -> [arch, {
-                    pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                        shwrap("""
-                            cosa remote-build-container --arch $arch \
-                                --git-ref $commit --force \
-                                --git-url ${src_config_url} \
-                                --repo ${container_registry_staging_repo} \
-                                --push-to-registry --auth=\${REGISTRY_SECRET} \
-                                --secret id=yumrepos,src=\$(pwd)/yumrepos/${stream_info.yumrepo.file} \
-                                --mount-host-ca-certs \
-                                --security-opt label=disable \
-                                --from ${build_from} \
-                                --tag ${tag}-${arch}
-                        """)
-                    }
-                }]}
+        stage('Build Node Image') {
+            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                 def build_from = params.FROM ?: stream_info.from
+                 pipeutils.build_and_push_image(arches: arches,
+                                                src_commit: commit,
+                                                src_url: src_config_url,
+                                                staging_repository: container_registry_staging_repo,
+                                                image_tag_staging: container_registry_staging_image_tag,
+                                                manifest_tag_staging: container_registry_staging_manifest_tag,
+                                                secret: "id=yumrepos,src=${yumrepos_file}",
+                                                from: build_from,
+                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
             }
         }
-        withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-            stage("Push Manifest") {
-                def images = ""
-                for (arch in arches) {
-                    images += " --image=docker://${container_registry_staging_repo}:${tag}-${arch}"
-                }
-                // arbitrarily selecting the s390x builder; we don't run this
-                // locally because podman wants user namespacing (yes, even just
-                // to push a manifest...)
-                pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
-                    shwrap("""
-                    cosa push-container-manifest \
-                        --auth=\$REGISTRY_SECRET --tag ${tag} \
-                        --repo ${container_registry_staging_repo} ${images}
-                    """)
-                }
+        stage('Build Extensions Image') {
+            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                // Use the node image as from
+                def build_from = container_registry_staging_manifest
+                pipeutils.build_and_push_image(arches: arches,
+                                               src_commit: commit,
+                                               src_url: src_config_url,
+                                               staging_repository: container_registry_staging_repo,
+                                               image_tag_staging: "${container_registry_staging_image_tag}-extensions",
+                                               manifest_tag_staging: "${container_registry_staging_manifest_tag}-extensions",
+                                               secret: "id=yumrepos,src=${yumrepos_file}",
+                                               from: build_from,
+                                               extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
+                                                                  "--git-containerfile", "extensions/Dockerfile", "--force"])
             }
         }
-        withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-           stage("Release Manifest") {
-                // Release the manifest and container images
-                shwrap("""
-                    skopeo copy --all --authfile \$REGISTRY_SECRET \
-                        docker://${container_registry_staging_repo}:${tag} \
-                        docker://${container_registry_repo_and_tag}
-                """)
-            }
-        }
-        withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_SECRET')]) {
-            stage('Delete Intermediate Tags') {
-                shwrap("""
-                    export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                    skopeo delete --authfile=\$REGISTRY_SECRET \
-                        docker://${container_registry_staging_repo}:${tag}
-                """)
-                parallel archinfo.keySet().collectEntries{arch -> [arch, {
-                    shwrap("""
-                        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-                        skopeo delete --authfile=\$REGISTRY_SECRET \
-                            docker://${container_registry_staging_repo}:${tag}-${arch}
-                    """)
-                }]}
+        stage("Release Manifests") {
+            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                pipeutils.copy_image(container_registry_staging_manifest, container_registry_repo_and_tag)
+                pipeutils.copy_image("${container_registry_staging_manifest}-extensions",
+                                     "${container_registry_repo_and_tag}-extensions")
             }
         }
         currentBuild.result = 'SUCCESS'
