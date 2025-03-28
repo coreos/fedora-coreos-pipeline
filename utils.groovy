@@ -835,7 +835,7 @@ def matrixSend(message) {
 }
 
 def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
-                        extra_build_args=None) {
+                        extra_build_args = []) {
     def build_args = ["--git-ref", commit, "--git-url", url, "--repo", repo,
                       "--push-to-registry"]
     if (secret) {
@@ -876,25 +876,29 @@ def push_manifest(digests, repo, manifest_tag) {
     }
 }
 
-def copy_image(src_image, dest_image, registry_secret_path=None) {
+def copy_image(src_image, dest_image, authfile = "") {
+    if (authfile != "") {
+        authfile = "--authfile=${authfile}"
+    }
     shwrap("""
-        skopeo copy --all --authfile=${registry_secret_path} \
+        skopeo copy --all ${authfile} \
             docker://${src_image} \
             docker://${dest_image}
     """)
 }
 
-def delete_tags(digests, repo, manifest_tag, registry_secret_path=None) {
+def delete_tags(digests, repo, manifest_tag, authfile = "") {
+    if (authfile != "") {
+        authfile = "--authfile=${authfile}"
+    }
     shwrap("""
         export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-        skopeo delete --authfile=${registry_secret_path} \
-            docker://${repo}:${manifest_tag}
+        skopeo delete ${authfile} docker://${repo}:${manifest_tag}
     """)
     parallel digests.keySet().collectEntries{arch -> [digest, {
         shwrap("""
             export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
-            skopeo delete --authfile=${registry_secret_path} \
-                docker://${repo}:${digest}
+            skopeo delete ${authfile} docker://${repo}:${digest}
         """)
     }]}
 }
