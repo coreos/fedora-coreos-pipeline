@@ -73,14 +73,21 @@ lock(resource: "build-node-image") {
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
+        def yumrepos_file
         stage('Init') {
-            shwrap("""git clone ${stream_info.yumrepo.url} yumrepos""")
+            shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
+            for (repo in stream_info.yumrepo.files) {
+                shwrap("cat yumrepos/${repo} >> all.repo")
+            }
+            yumrepos_file = shwrapCapture("realpath all.repo")
+            // let's archive it also so it's easy to see what the final repo file looked like
+            archiveArtifacts 'all.repo'
         }
 
         if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
             container_registry_staging_image_tag += "-hotfix-${pipecfg.hotfix.name}"
         }
-        stage('Build Layered Image') {
+        stage('Build Node Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
                  pipeutils.build_and_push_image(arches: arches,
@@ -89,36 +96,32 @@ lock(resource: "build-node-image") {
                                                 staging_repository: container_registry_staging_repo,
                                                 image_tag_staging: container_registry_staging_image_tag,
                                                 manifest_tag_staging: container_registry_staging_manifest_tag,
-                                                secret: "id=yumrepos,src=\$(pwd)/yumrepos/${stream_info.yumrepo.files[0]}",
+                                                secret: "id=yumrepos,src=${yumrepos_file}",
                                                 from: build_from,
                                                 extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
             }
         }
-        stage('Build Extensions Container') {
+        stage('Build Extensions Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 // Use the node image as from
                 def build_from = container_registry_staging_manifest
-                def repos = stream_info.yumrepo.files
-                for (repo in repos) {
-                    shwrap(""" cat yumrepos/${repo} >> /tmp/final_repo """)
-                }
                 pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
                                                src_url: src_config_url,
                                                staging_repository: container_registry_staging_repo,
                                                image_tag_staging: "${container_registry_staging_image_tag}-extensions",
                                                manifest_tag_staging: "${container_registry_staging_manifest_tag}-extensions",
-                                               secret: "id=yumrepos,src=/tmp/final_repo",
+                                               secret: "id=yumrepos,src=${yumrepos_file}",
                                                from: build_from,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
-                                               "--git-containerfile", "extensions/Dockerfile", "--force"])
+                                                                  "--git-containerfile", "extensions/Dockerfile", "--force"])
             }
         }
         stage("Release Manifests") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                pipeutils.copy_image(container_registry_staging_manifest, container_registry_repo_and_tag, REGISTRY_AUTH_FILE)
+                pipeutils.copy_image(container_registry_staging_manifest, container_registry_repo_and_tag)
                 pipeutils.copy_image("${container_registry_staging_manifest}-extensions",
-                                     "${container_registry_repo_and_tag}-extensions", REGISTRY_AUTH_FILE)
+                                     "${container_registry_repo_and_tag}-extensions")
             }
         }
         currentBuild.result = 'SUCCESS'
