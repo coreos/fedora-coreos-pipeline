@@ -53,7 +53,7 @@ lock(resource: "build-node-image") {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "512Mi", kvm: false,
             serviceAccount: "jenkins") {
-    timeout(time: 15, unit: 'MINUTES') {
+    timeout(time: 45, unit: 'MINUTES') {
     try {
 
         def output = shwrapCapture("git ls-remote ${src_config_url} ${src_config_ref}")
