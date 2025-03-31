@@ -96,7 +96,7 @@ lock(resource: "build-node-image") {
                                                 staging_repository: container_registry_staging_repo,
                                                 image_tag_staging: container_registry_staging_image_tag,
                                                 manifest_tag_staging: container_registry_staging_manifest_tag,
-                                                secret: "id=yumrepos,src=${yumrepos_file}",
+                                                secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
                                                 extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
             }
@@ -111,7 +111,7 @@ lock(resource: "build-node-image") {
                                                staging_repository: container_registry_staging_repo,
                                                image_tag_staging: "${container_registry_staging_image_tag}-extensions",
                                                manifest_tag_staging: "${container_registry_staging_manifest_tag}-extensions",
-                                               secret: "id=yumrepos,src=${yumrepos_file}",
+                                               secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                from: build_from,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
                                                                   "--git-containerfile", "extensions/Dockerfile", "--force"])
