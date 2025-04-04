@@ -63,6 +63,9 @@ streams:
       # is equivalent to listing all live artifacts and cloud platforms in
       # `skip_artifacts`.
       skip_disk_images: true
+      # OPTIONAL: make the release job trigger build-node-image for the
+      # following OCP releases once successful
+      build_node_images: ["4.19-9.6"]
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream

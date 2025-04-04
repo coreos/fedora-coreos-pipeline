@@ -8,7 +8,6 @@ node {
 }
 
 properties([
-    pipelineTriggers([cron('H H * * *')]),
     parameters([
       choice(name: 'RELEASE',
              choices: pipeutils.get_streams_choices(pipecfg, true),
