@@ -126,6 +126,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             """)
         }
 
+        def missing_arches = false
         def builtarches = shwrapCapture("""
                           cosa shell -- cat builds/builds.json | \
                               jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]'
@@ -135,6 +136,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             if (params.ALLOW_MISSING_ARCHES) {
                 warn("Some requested architectures did not successfully build!")
                 basearches = builtarches.intersect(basearches)
+                missing_arches = true
             } else {
                 echo "ERROR: Some requested architectures did not successfully build"
                 echo "ERROR: Detected built architectures: $builtarches"
@@ -438,6 +440,15 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
         }
+
+        if (!missing_arches && stream_info['build_node_images']) {
+            for (release in stream_info['build_node_images']) {
+                build job: 'build-node-image', wait: false, parameters: ([
+                    string(name: 'RELEASE', value: release)
+                ])
+            }
+        }
+
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✓"
 
