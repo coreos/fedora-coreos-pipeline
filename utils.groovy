@@ -550,10 +550,10 @@ def get_registry_repos(pipecfg, stream, version) {
     return registry_repos
 }
 
-def get_ocp_node_registry_repo(pipecfg, release) {
+def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
     def staging_repo = pipecfg.ocp_node_builds.registries.staging
     def repo_and_tag = utils.substituteStr(pipecfg.ocp_node_builds.registries.prod,
-                                           [RELEASE: release])
+                                           [RELEASE: release, TIMESTAMP: timestamp])
 
     if (pipecfg.hotfix) {
         // this is a hotfix build; include the hotfix name
