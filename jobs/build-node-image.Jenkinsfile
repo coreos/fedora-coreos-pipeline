@@ -65,7 +65,9 @@ lock(resource: "build-node-image") {
         // Get the list of requested architectures to build for
         def arches = params.ARCHES.split() as Set
         def archinfo = arches.collectEntries{[it, [:]]}
-        def (container_registry_staging_repo, container_registry_repo_and_tag) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE)
+        def now = java.time.LocalDateTime.now()
+        def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
+        def (container_registry_staging_repo, container_registry_repo_and_tag) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
         def container_registry_staging_manifest_tag = "${params.RELEASE}"
         def container_registry_staging_image_tag = "${params.RELEASE}"
         def container_registry_staging_manifest = "${container_registry_staging_repo}:${container_registry_staging_manifest_tag}"
