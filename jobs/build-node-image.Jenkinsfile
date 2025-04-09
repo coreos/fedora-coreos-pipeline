@@ -67,7 +67,7 @@ lock(resource: "build-node-image") {
         def archinfo = arches.collectEntries{[it, [:]]}
         def now = java.time.LocalDateTime.now()
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
-        def (container_registry_staging_repo, container_registry_repo_and_tag) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
+        def (container_registry_staging_repo, container_registry_repo, prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
         def container_registry_staging_manifest_tag = "${params.RELEASE}"
         def container_registry_staging_image_tag = "${params.RELEASE}"
         def container_registry_staging_manifest = "${container_registry_staging_repo}:${container_registry_staging_manifest_tag}"
@@ -121,9 +121,20 @@ lock(resource: "build-node-image") {
         }
         stage("Release Manifests") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                pipeutils.copy_image(container_registry_staging_manifest, container_registry_repo_and_tag)
-                pipeutils.copy_image("${container_registry_staging_manifest}-extensions",
-                                     "${container_registry_repo_and_tag}-extensions")
+                // copy the extensions first as the node image existing is a signal
+                // that it's ready for release. So we want all the expected artifacts
+                // to be available when the ART tooling kicks in.
+                for ( tag in prod_tags ) {
+                    pipeutils.copy_image("${container_registry_staging_manifest}-extensions",
+                                     "${container_registry_repo}:${tag}-extensions")
+                }
+
+                // Skopeo does not support pushing multiple tags at the same time
+                // So we just recopy the same image multiple times.
+                // https://github.com/containers/skopeo/issues/513
+                for (tag in prod_tags) {
+                    pipeutils.copy_image(container_registry_staging_manifest, "${container_registry_repo}:${tag}")
+                }
             }
         }
         currentBuild.result = 'SUCCESS'

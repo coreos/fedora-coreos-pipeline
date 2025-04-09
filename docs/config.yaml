@@ -61,9 +61,16 @@ ocp_node_builds:
     # REQUIRED: knobs related to the source config
     registries:
         # REQUIRED: staging repo to push the final image built
-        staging: registry.ci.openshift.org/coreos/node-staginear
+        staging: registry.ci.openshift.org/coreos/node-staging
         # REQUIRED: prodution repo to push the final image built
-        prod: quay.io/openshift-release-dev/ocp-v4.0-art-dev:{RELEASE}-node-image
+        prod:
+          # REQUIRED: the image to push to
+          image: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+          # REQUIRED: one or more tags to attach to the image
+          tags:
+            - "{RELEASE}-node-image"
+            - "{RELEASE}-{TIMESTAMP}-node-image"
+
 
 # OPTIONAL: coreos-assembler image to build with. Supports ${STREAM} variable.
 # If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
