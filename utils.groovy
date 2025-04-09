@@ -552,16 +552,21 @@ def get_registry_repos(pipecfg, stream, version) {
 
 def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
     def staging_repo = pipecfg.ocp_node_builds.registries.staging
-    def repo_and_tag = utils.substituteStr(pipecfg.ocp_node_builds.registries.prod,
-                                           [RELEASE: release, TIMESTAMP: timestamp])
+    def repo = pipecfg.ocp_node_builds.registries.prod.image
+    def tags = pipecfg.ocp_node_builds.registries.prod.tags
 
-    if (pipecfg.hotfix) {
-        // this is a hotfix build; include the hotfix name
-        // in the tag suffix so we don't clobber official
-        // tags
-        repo_and_tag += "-hotfix-${pipecfg.hotfix.name}"
+    processed_tags = []
+    for (tag in tags) {
+        tag = utils.substituteStr(tag, [RELEASE: release, TIMESTAMP: timestamp])
+        if (pipecfg.hotfix) {
+            // this is a hotfix build; include the hotfix name
+            // in the tag suffix so we don't clobber official
+            // tags
+            tag += "-hotfix-${pipecfg.hotfix.name}"
+        }
+        processed_tags += tag
     }
-    return [staging_repo, repo_and_tag]
+    return [staging_repo, repo, processed_tags]
 }
 
 // Determine if the config.yaml has a test_architectures entry for
