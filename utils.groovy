@@ -551,22 +551,25 @@ def get_registry_repos(pipecfg, stream, version) {
 }
 
 def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
-    def staging_repo = pipecfg.ocp_node_builds.registries.staging
-    def repo = pipecfg.ocp_node_builds.registries.prod.image
-    def tags = pipecfg.ocp_node_builds.registries.prod.tags
-
-    processed_tags = []
-    for (tag in tags) {
-        tag = utils.substituteStr(tag, [RELEASE: release, TIMESTAMP: timestamp])
-        if (pipecfg.hotfix) {
-            // this is a hotfix build; include the hotfix name
-            // in the tag suffix so we don't clobber official
-            // tags
-            tag += "-hotfix-${pipecfg.hotfix.name}"
+    def staging_repo = pipecfg.ocp_node_builds.registries.staging.image
+    def staging_manifest_tags = pipecfg.ocp_node_builds.registries.staging.tags
+    def prod_repo = pipecfg.ocp_node_builds.registries.prod.image
+    def prod_tags = pipecfg.ocp_node_builds.registries.prod.tags
+    def processTags = { tagList ->
+        tagList.collect { tag ->
+            def substituted = utils.substituteStr(tag, [RELEASE: release, TIMESTAMP: timestamp])
+            if (pipecfg.hotfix) {
+                // this is a hotfix build; include the hotfix name
+                // in the tag suffix so we don't clobber official
+                // tags
+                substituted += "-hotfix-${pipecfg.hotfix.name}"
+            }
+            return substituted
         }
-        processed_tags += tag
     }
-    return [staging_repo, repo, processed_tags]
+    def final_staging_manifest_tags = processTags(staging_manifest_tags)
+    def final_prod_tags = processTags(prod_tags)
+    return [staging_repo, final_staging_manifest_tags, prod_repo, final_prod_tags]
 }
 
 // Determine if the config.yaml has a test_architectures entry for

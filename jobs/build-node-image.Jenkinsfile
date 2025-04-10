@@ -66,10 +66,12 @@ lock(resource: "build-node-image") {
         def archinfo = arches.collectEntries{[it, [:]]}
         def now = java.time.LocalDateTime.now()
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
-        def (container_registry_staging_repo, container_registry_repo, prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
-        def container_registry_staging_manifest_tag = "${params.RELEASE}"
-        def container_registry_staging_image_tag = "${params.RELEASE}"
-        def container_registry_staging_manifest = "${container_registry_staging_repo}:${container_registry_staging_manifest_tag}"
+        def (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
+
+        // `staging_tags` is a list to stay consistent with the `prod` objects,
+        // but we only need a single tag here since it's used solely for storing
+        // intermediary images before they are referenced in a multi-arch manifest.
+        def registry_staging_tag = registry_staging_tags[0]
 
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
@@ -85,18 +87,15 @@ lock(resource: "build-node-image") {
             archiveArtifacts 'all.repo'
         }
 
-        if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
-            container_registry_staging_image_tag += "-hotfix-${pipecfg.hotfix.name}"
-        }
         stage('Build Node Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
                  pipeutils.build_and_push_image(arches: arches,
                                                 src_commit: commit,
                                                 src_url: src_config_url,
-                                                staging_repository: container_registry_staging_repo,
-                                                image_tag_staging: container_registry_staging_image_tag,
-                                                manifest_tag_staging: container_registry_staging_manifest_tag,
+                                                staging_repository: registry_staging_repo,
+                                                image_tag_staging: registry_staging_tag,
+                                                manifest_tag_staging: "${registry_staging_tag}",
                                                 secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
                                                 extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
@@ -105,13 +104,13 @@ lock(resource: "build-node-image") {
         stage('Build Extensions Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 // Use the node image as from
-                def build_from = container_registry_staging_manifest
+                def build_from = "${registry_staging_repo}:${registry_staging_tag}"
                 pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
                                                src_url: src_config_url,
-                                               staging_repository: container_registry_staging_repo,
-                                               image_tag_staging: "${container_registry_staging_image_tag}-extensions",
-                                               manifest_tag_staging: "${container_registry_staging_manifest_tag}-extensions",
+                                               staging_repository: registry_staging_repo,
+                                               image_tag_staging: "${registry_staging_tag}-extensions",
+                                               manifest_tag_staging: "${registry_staging_tag}-extensions",
                                                secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                from: build_from,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
@@ -123,16 +122,17 @@ lock(resource: "build-node-image") {
                 // copy the extensions first as the node image existing is a signal
                 // that it's ready for release. So we want all the expected artifacts
                 // to be available when the ART tooling kicks in.
-                for ( tag in prod_tags ) {
-                    pipeutils.copy_image("${container_registry_staging_manifest}-extensions",
-                                     "${container_registry_repo}:${tag}-extensions")
-                }
 
                 // Skopeo does not support pushing multiple tags at the same time
                 // So we just recopy the same image multiple times.
                 // https://github.com/containers/skopeo/issues/513
-                for (tag in prod_tags) {
-                    pipeutils.copy_image(container_registry_staging_manifest, "${container_registry_repo}:${tag}")
+                for (tag in registry_prod_tags) {
+                    pipeutils.copy_image("${registry_staging_repo}:${registry_staging_tag}-extensions",
+                                     "${registry_prod_repo}:${tag}-extensions")
+                }
+                for (tag in registry_prod_tags) {
+                    pipeutils.copy_image("${registry_staging_repo}:${registry_staging_tag}",
+                                     "${registry_prod_repo}:${tag}")
                 }
             }
         }
