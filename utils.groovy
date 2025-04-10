@@ -551,7 +551,8 @@ def get_registry_repos(pipecfg, stream, version) {
 }
 
 def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
-    def staging_repo = pipecfg.ocp_node_builds.registries.staging
+    def staging_repo = pipecfg.ocp_node_builds.registries.staging.image
+    def staging_manifest_tag = utils.substituteStr(pipecfg.ocp_node_builds.registries.staging.tag, [RELEASE: release])
     def repo = pipecfg.ocp_node_builds.registries.prod.image
     def tags = pipecfg.ocp_node_builds.registries.prod.tags
 
@@ -566,7 +567,7 @@ def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
         }
         processed_tags += tag
     }
-    return [staging_repo, repo, processed_tags]
+    return [staging_repo, staging_manifest_tag, repo, processed_tags]
 }
 
 // Determine if the config.yaml has a test_architectures entry for

@@ -66,8 +66,8 @@ lock(resource: "build-node-image") {
         def archinfo = arches.collectEntries{[it, [:]]}
         def now = java.time.LocalDateTime.now()
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
-        def (container_registry_staging_repo, container_registry_repo, prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
-        def container_registry_staging_manifest_tag = "${params.RELEASE}"
+        def (container_registry_staging_repo, container_registry_staging_manifest_tag,
+             container_registry_repo, prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
         def container_registry_staging_image_tag = "${params.RELEASE}"
         def container_registry_staging_manifest = "${container_registry_staging_repo}:${container_registry_staging_manifest_tag}"
 
