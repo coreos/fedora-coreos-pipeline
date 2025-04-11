@@ -873,15 +873,24 @@ def push_manifest(digests, repo, manifest_tag) {
     for (digest in digests) {
         images += " --image=docker://${repo}@${digest}"
     }
+
+    def digest = ""
+    def digest_file = "${manifest_tag}.digestfile"
+    // save the digest to a file named after the tag we are pushing
+    push_args = ["--write-digest-to-file", digest_file]
     // arbitrarily selecting the s390x builder; we don't run this
     // locally because podman wants user namespacing (yes, even just
     // to push a manifest...)
     pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
         shwrap("""
         cosa push-container-manifest \
-            --tag ${manifest_tag} --repo ${repo} ${images}
+            --tag ${manifest_tag} --repo ${repo} ${images} ${push_args.join(' ')}
         """)
     }
+
+    digest = readFile(digest_file)
+    shwrap("rm ${digest_file}")
+    return digest
 }
 
 def copy_image(src_image, dest_image, authfile = "") {
@@ -930,7 +939,7 @@ def build_and_push_image(params = [:]) {
     def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
                                      params['image_tag_staging'], secret, from, extra_build_args)
     stage("Push Manifest") {
-        push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'])
+        return push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'])
     }
 }
 
