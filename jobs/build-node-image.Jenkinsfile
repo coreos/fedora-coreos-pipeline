@@ -77,6 +77,8 @@ lock(resource: "build-node-image") {
         pipeutils.addOptionalRootCA()
 
         def yumrepos_file
+        def node_image_manifest_digest
+        def extensions_image_manifest_digest
         stage('Init') {
             shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
             for (repo in stream_info.yumrepo.files) {
@@ -90,7 +92,7 @@ lock(resource: "build-node-image") {
         stage('Build Node Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
-                 pipeutils.build_and_push_image(arches: arches,
+                 node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                 src_commit: commit,
                                                 src_url: src_config_url,
                                                 staging_repository: registry_staging_repo,
@@ -104,8 +106,8 @@ lock(resource: "build-node-image") {
         stage('Build Extensions Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 // Use the node image as from
-                def build_from = "${registry_staging_repo}:${registry_staging_tag}"
-                pipeutils.build_and_push_image(arches: arches,
+                def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
+                extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
                                                src_url: src_config_url,
                                                staging_repository: registry_staging_repo,
@@ -127,11 +129,11 @@ lock(resource: "build-node-image") {
                 // So we just recopy the same image multiple times.
                 // https://github.com/containers/skopeo/issues/513
                 for (tag in registry_prod_tags) {
-                    pipeutils.copy_image("${registry_staging_repo}:${registry_staging_tag}-extensions",
+                    pipeutils.copy_image("${registry_staging_repo}@${extensions_image_manifest_digest}",
                                      "${registry_prod_repo}:${tag}-extensions")
                 }
                 for (tag in registry_prod_tags) {
-                    pipeutils.copy_image("${registry_staging_repo}:${registry_staging_tag}",
+                    pipeutils.copy_image("${registry_staging_repo}@${node_image_manifest_digest}",
                                      "${registry_prod_repo}:${tag}")
                 }
             }
