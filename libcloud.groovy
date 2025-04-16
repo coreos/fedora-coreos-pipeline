@@ -97,6 +97,14 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
 // Upload artifacts to clouds
 def upload_to_clouds(pipecfg, basearch, buildID, stream) {
 
+    // In 4.19+ we switched the command to upload to clouds to
+    // `cosa imageupload-<cloud>`
+    // https://github.com/coreos/coreos-assembler/pull/4074
+    def image_upload_cmd = "imageupload"
+    if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-imageupload-aws") != 0) {
+        image_upload_cmd = "buildextend"
+    }
+
     // Get a list of the artifacts that are currently built.
     def images_json = readJSON(text: shwrapCapture("""
         cosa meta --build=${buildID} --arch=${basearch} --get-value images
@@ -125,7 +133,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     extraArgs += "--public"
                 }
                 shwrap("""
-                cosa buildextend-aliyun \
+                cosa ${image_upload_cmd}-aliyun \
                     --upload \
                     --arch=${basearch} \
                     --build=${buildID} \
@@ -157,7 +165,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 extraArgs += "--public"
             }
             shwrap("""
-            cosa buildextend-aws \
+            cosa ${image_upload_cmd}-aws \
                 --upload \
                 --arch=${basearch} \
                 --build=${buildID} \
@@ -197,7 +205,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.azure
-                shwrap("""cosa buildextend-azure \
+                shwrap("""cosa ${image_upload_cmd}-azure \
                     --upload \
                     --credentials \${AZURE_IMAGE_UPLOAD_CONFIG} \
                     --build=${buildID} \
@@ -248,7 +256,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 shwrap("""
                 # pick up the project to use from the config
                 gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
-                cosa buildextend-gcp \
+                cosa ${image_upload_cmd}-gcp \
                     --log-level=INFO \
                     --build=${buildID} \
                     --arch=${basearch} \
@@ -275,7 +283,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 // region that is uniquely named with the region as a suffix
                 // i.e. `rhcos-powervs-images-us-east`
                 def bucket = "${c.bucket}-${c.primary_region}"
-                shwrap("""cosa buildextend-powervs \
+                shwrap("""cosa ${image_upload_cmd}-powervs \
                     --upload \
                     --cloud-object-storage ${c.cloud_object_storage_service_instance} \
                     --bucket ${bucket} \
