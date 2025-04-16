@@ -73,6 +73,7 @@ lock(resource: "build-node-image") {
         // intermediary images before they are referenced in a multi-arch manifest.
         def registry_staging_tag = registry_staging_tags[0]
 
+        def v2s2 = pipecfg.ocp_node_builds.registries.prod.v2s2 ?: false
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
@@ -100,6 +101,7 @@ lock(resource: "build-node-image") {
                                                 manifest_tag_staging: "${registry_staging_tag}",
                                                 secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
+                                                v2s2: v2s2,
                                                 extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
             }
         }
@@ -115,6 +117,7 @@ lock(resource: "build-node-image") {
                                                manifest_tag_staging: "${registry_staging_tag}-extensions",
                                                secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                from: build_from,
+                                               v2s2: v2s2,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
                                                                   "--git-containerfile", "extensions/Dockerfile", "--force"])
             }
