@@ -316,12 +316,18 @@ ocp_node_builds:
     # REQUIRED: knobs related to the source config
     registries:
         # REQUIRED: staging repo to push the final image built
-        staging: registry.ci.openshift.org/coreos/node-staginear
+        staging:
+          image: registry.ci.openshift.org/coreos/node-staging
+          # REQUIRED: one or more tags to attach to the image
+          tags: ["${RELEASE}-node-image"]
         # REQUIRED: prodution repo to push the final image built
         prod:
           # REQUIRED: the image to push to
           image: quay.io/openshift-release-dev/ocp-v4.0-art-dev
           # REQUIRED: one or more tags to attach to the image
           tags:
-            - "{RELEASE}-node-image"
-            - "{RELEASE}-{TIMESTAMP}-node-image"
+            - "${RELEASE}-node-image"
+            - "${RELEASE}-${TIMESTAMP}-node-image"
+          # OPTIONAL: whether to push in v2s2 format rather than OCI
+          # Default to false if not specified
+          v2s2: false

@@ -868,7 +868,7 @@ def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
     return digest_list
 }
 
-def push_manifest(digests, repo, manifest_tag) {
+def push_manifest(digests, repo, manifest_tag, v2s2) {
     def images = ""
     for (digest in digests) {
         images += " --image=docker://${repo}@${digest}"
@@ -876,7 +876,10 @@ def push_manifest(digests, repo, manifest_tag) {
     def digest = ""
     def digest_file = "${manifest_tag}.digestfile"
     // save the digest to a file named after the tag we are pushing
-    push_args = ["--write-digest-to-file", digest_file]
+    def push_args = ["--write-digest-to-file", digest_file]
+    if (v2s2) {
+        push_args += ["--v2s2"]
+    }
     // arbitrarily selecting the s390x builder; we don't run this
     // locally because podman wants user namespacing (yes, even just
     // to push a manifest...)
@@ -929,16 +932,18 @@ def build_and_push_image(params = [:]) {
     // src_commit:           string  -- Source Git commit.
     // src_url:              string  -- Source Git URL.
     // staging_repository:   string  -- Repository URL for the staging repo.
+    // v2s2:                 bool    -- Use docker v2s2 format rather than OCI. Default to false.
 
     def secret = params.get('secret', "");
     def from = params.get('from', "");
     def manifest_digest = ""
     def extra_build_args = params.get('extra_build_args', "");
+    def v2s2 = params.get('v2s2', false);
 
     def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
                                      params['image_tag_staging'], secret, from, extra_build_args)
     stage("Push Manifest") {
-        manifest_digest = push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'])
+        manifest_digest = push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'], v2s2)
     }
     return manifest_digest
 }
