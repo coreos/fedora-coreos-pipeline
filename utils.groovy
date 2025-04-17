@@ -899,7 +899,7 @@ def copy_image(src_image, dest_image, authfile = "") {
         authfile = "--authfile=${authfile}"
     }
     shwrap("""
-        skopeo copy --retry-times 5 --all ${authfile} \
+        skopeo copy --preserve-digests --retry-times 5 --all ${authfile} \
             docker://${src_image} \
             docker://${dest_image}
     """)
