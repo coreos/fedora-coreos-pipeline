@@ -68,6 +68,17 @@ lock(resource: "build-node-image") {
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
         def (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
 
+        // Get the tag that's unique
+        def unique_tag = ""
+        for (tag in registry_prod_tags) {
+            if (tag.contains(timestamp)) {
+                if (unique_tag != "") {
+                    error("Multiple unique tags found: ${registry_prod_tags}")
+                }
+                unique_tag = tag
+            }
+        }
+
         // `staging_tags` is a list to stay consistent with the `prod` objects,
         // but we only need a single tag here since it's used solely for storing
         // intermediary images before they are referenced in a multi-arch manifest.
@@ -93,6 +104,11 @@ lock(resource: "build-node-image") {
         stage('Build Node Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
+                 def label_args = []
+                 if (unique_tag != "") {
+                     label_args = ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
+                 }
+
                  node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                 src_commit: commit,
                                                 src_url: src_config_url,
@@ -102,13 +118,17 @@ lock(resource: "build-node-image") {
                                                 secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
                                                 v2s2: v2s2,
-                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
+                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"] + label_args)
             }
         }
         stage('Build Extensions Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 // Use the node image as from
                 def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
+                def label_args = []
+                if (unique_tag != "") {
+                    label_args = ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
+                }
                 extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
                                                src_url: src_config_url,
@@ -119,7 +139,7 @@ lock(resource: "build-node-image") {
                                                from: build_from,
                                                v2s2: v2s2,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
-                                                                  "--git-containerfile", "extensions/Dockerfile", "--force"])
+                                                                  "--git-containerfile", "extensions/Dockerfile", "--force"] + label_args)
             }
         }
         stage("Release Manifests") {
