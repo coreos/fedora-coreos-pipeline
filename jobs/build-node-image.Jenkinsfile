@@ -68,6 +68,20 @@ lock(resource: "build-node-image") {
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
         def (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
 
+        // Get the tag that's unique
+        def unique_tag = ""
+        for (tag in registry_prod_tags) {
+            if (tag.contains(timestamp)) {
+                if (unique_tag != "") {
+                    error("Multiple unique tags found: ${registry_prod_tags}")
+                }
+                unique_tag = tag
+            }
+        }
+        if (unique_tag == "") {
+            error("No unique tag found: ${registry_prod_tags}")
+        }
+
         // `staging_tags` is a list to stay consistent with the `prod` objects,
         // but we only need a single tag here since it's used solely for storing
         // intermediary images before they are referenced in a multi-arch manifest.
@@ -102,7 +116,8 @@ lock(resource: "build-node-image") {
                                                 secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
                                                 v2s2: v2s2,
-                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"])
+                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force",
+                                                                   "--label", "coreos.build.manifest-list-tag=${unique_tag}"])
             }
         }
         stage('Build Extensions Image') {
@@ -119,7 +134,8 @@ lock(resource: "build-node-image") {
                                                from: build_from,
                                                v2s2: v2s2,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
-                                                                  "--git-containerfile", "extensions/Dockerfile", "--force"])
+                                                                  "--git-containerfile", "extensions/Dockerfile", "--force",
+                                                                  "--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"])
             }
         }
         stage("Release Manifests") {
