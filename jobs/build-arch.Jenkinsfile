@@ -309,6 +309,22 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                  skipKolaTags: stream_info.skip_kola_tags)
         }
 
+        // Run Kola CEX tests on s390x if device exists
+        // Hardcoded the mediated device that configure through multi-arch-builder/create-cex-device.sh
+        // and domain that assigned to the builder lpar.
+        def med_device = "68cd2d83-3eef-4e45-b22c-534f90b16cb9"
+        def cex_domain = "00.0014"
+        if (basearch == "s390x" && shwrapCapture("cat /sys/devices/vfio_ap/matrix/${med_device}/matrix)") == cex_domain) {
+            stage("Kola:s390x:cex") {
+            kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
+                 skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
+                 allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
+                 skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack,
+                 skipKolaTags: stream_info.skip_kola_tags,
+                 extraArgs: "--qemu-cex --tags cex")
+            }
+        }
+
         // Build the remaining artifacts
         stage("Build Artifacts") {
             pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
