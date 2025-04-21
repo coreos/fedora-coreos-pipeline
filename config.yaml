@@ -1,25 +1,21 @@
 streams:
   stable:
     type: production
+    osbuild_experimental: true
   testing:
     type: production
-    osbuild_experimental: true
   next:
     type: production
-    osbuild_experimental: true
   testing-devel:
     type: development
     default: true
-    osbuild_experimental: true
   next-devel:         # do not touch; line managed by `next-devel/manage.py`
     type: development # do not touch; line managed by `next-devel/manage.py`
-    osbuild_experimental: true
   rawhide:
     type: mechanical
     osbuild_experimental: true
- #branched:
- #  type: mechanical
- #  osbuild_experimental: true
+  #branched:
+  #  type: mechanical
   # bodhi-updates:
   #   type: mechanical
   # bodhi-updates-testing:
