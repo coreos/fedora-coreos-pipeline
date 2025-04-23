@@ -119,6 +119,8 @@ streams:
       # When mechanical streams have `scheduled` on, then
       # `build-mechanical` will only build those streams
       scheduled: true
+      # OPTIONAL: Create and replicate AWS Windows License Included images for this stream.
+      create_and_replicate_winli_ami: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
