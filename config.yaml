@@ -4,6 +4,7 @@ streams:
     osbuild_experimental: true
   testing:
     type: production
+    osbuild_experimental: true
   next:
     type: production
   testing-devel:
