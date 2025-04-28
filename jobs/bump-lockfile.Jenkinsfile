@@ -63,7 +63,7 @@ def getLockfileInfo(lockfile) {
 // Keep in sync with build.Jenkinsfile
 def cosa_memory_request_mb = 10.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
-def timeout_mins = 240
+def timeout_mins = 300
 
 lock(resource: "bump-${params.STREAM}") {
 echo "Waiting for bump-lockfile lock"
