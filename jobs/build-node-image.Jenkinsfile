@@ -118,6 +118,7 @@ lock(resource: "build-node-image") {
                                                 secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
                                                 v2s2: v2s2,
+                                               check_base_match: true,
                                                 extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"] + label_args)
             }
         }

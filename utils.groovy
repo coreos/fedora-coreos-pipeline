@@ -933,19 +933,54 @@ def build_and_push_image(params = [:]) {
     // src_url:              string  -- Source Git URL.
     // staging_repository:   string  -- Repository URL for the staging repo.
     // v2s2:                 bool    -- Use docker v2s2 format rather than OCI. Default to false.
+    // check_base_match      bool    -- Wether to check if the base image is the same accross all arches. Default to false.
 
     def secret = params.get('secret', "");
     def from = params.get('from', "");
     def manifest_digest = ""
     def extra_build_args = params.get('extra_build_args', "");
     def v2s2 = params.get('v2s2', false);
+    def arches = params['arches']
+    def check_base_match = params.get('check_base_match', false)
 
-    def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
+    def from_manifest = skopeo_inspect(from)
+    if (!from.contains('@')) {
+        // pin the FROM with the manifest digest, to avoid arch remote builders reusing stale images
+        from = "${from.split(':')[0]}@${from_manifest["Digest"]}"
+    }
+    // also save the base image buildid
+    def base_build_id = from_manifest["Labels"]["org.opencontainers.image.version"]
+
+    def digests = build_remote_image(arches, params['src_commit'], params['src_url'], params['staging_repository'],
                                      params['image_tag_staging'], secret, from, extra_build_args)
+
     stage("Push Manifest") {
         manifest_digest = push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'], v2s2)
     }
+
+    // sanity check: all the images should have the same base image
+    if (check_base_match) {
+        for (arch in arches) {
+            def manifest = skopeo_inspect("${params['staging_repository']}@${manifest_digest}", arch=arch)
+            def id = manifest["Labels"]["org.opencontainers.image.version"]
+            if (id != base_build_id) {
+                throw new Exception("Mismatched base image build id for ${arch}. Expected ${base_build_id}, got ${id}")
+            }
+        }
+    }
     return manifest_digest
+}
+
+def skopeo_inspect(image, arch = "") {
+
+    // goarch -> podman arches
+    def podarch  = ["aarch64":"arm64", "x86_64":"amd64", "s390x":"s390x", "ppc64le":"ppc64le"]
+    def arch_arg = ""
+    if (arch != "") {
+        arch_arg = "--override-arch ${podarch[arch]}"
+    }
+
+    return readJSON(text: shwrapCapture("skopeo inspect --authfile \$REGISTRY_AUTH_FILE --no-tags ${arch_arg} docker://${image}"))
 }
 
 return this
