@@ -921,6 +921,16 @@ def delete_tags(digests, repo, manifest_tag, authfile = "") {
     }]}
 }
 
+def get_manifest_digest(image) {
+    if (image != '' && !image.contains('@')) {
+        shwrap("skopeo inspect --raw -n docker://${image} > manifest.json")
+        def digest = shwrapCapture("skopeo manifest-digest manifest.json")
+        shwrap("rm -f manifest.json")
+        image = "${image.split(':')[0]}@${digest}"
+    }
+    return image
+}
+
 def build_and_push_image(params = [:]) {
 // Available parameters:
     // arches:               list    -- List of architectures to run against
@@ -940,6 +950,7 @@ def build_and_push_image(params = [:]) {
     def extra_build_args = params.get('extra_build_args', "");
     def v2s2 = params.get('v2s2', false);
 
+    from = get_manifest_digest(from)
     def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
                                      params['image_tag_staging'], secret, from, extra_build_args)
     stage("Push Manifest") {
