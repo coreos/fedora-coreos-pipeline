@@ -959,4 +959,45 @@ def build_and_push_image(params = [:]) {
     return manifest_digest
 }
 
+def get_arch_image_digest(from) {
+    return readJSON(text: shwrapCapture("""
+        skopeo inspect --raw docker://${from} | \
+            jq -r '.manifests | map({(.platform.architecture): .digest}) | add'
+    """))
+}
+
+def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_digest, version, pipecfg) {
+    def node_digest_arch_map = get_arch_image_digest("${repo}@${manifest_digest}")
+    def extensions_node_digest_arch_map  = get_arch_image_digest("${repo}@${extensions_manifest_digest}")
+    def archAliasMap = [
+        "x86_64"  : "amd64",
+        "aarch64" : "arm64",
+        "s390x"   : "s390x",
+        "ppc64le" : "ppc64le"
+    ]
+    for (arch in arches) {
+        def inspect_arch = archAliasMap[arch]
+        def node_image = "${repo}@${node_digest_arch_map[inspect_arch]}"
+        def extensions_node_image = "${repo}@${extensions_node_digest_arch_map[inspect_arch]}"
+
+        // Get metadata files with package information
+        shwrap("""oc image extract $node_image[-1] --file /usr/share/openshift/base/meta.json
+                  oc image extract $extensions_node_image[-1] --file usr/share/rpm-ostree/extensions.json
+        """)
+        shwrap("""
+            coreos-assembler koji-upload \
+                upload --reserve-id \
+                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                --build $release-${version} \
+                --retry-attempts 6 \
+                --buildroot . \
+                --owner ${pipecfg.brew.principal} \
+                --profile ${pipecfg.brew.profile} \
+                --tag ${pipecfg.streams[release].brew_tag} \
+                --arch ${arch} \
+                --node-image
+        """)
+    }
+}
+
 return this
