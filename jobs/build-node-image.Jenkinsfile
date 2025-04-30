@@ -51,7 +51,10 @@ def src_config_url = stream_info.source_config.url
 lock(resource: "build-node-image") {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "512Mi", kvm: false,
-            serviceAccount: "jenkins") {
+            serviceAccount: "jenkins",
+            secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
+                      "koji-conf:koji.conf:/etc/koji.conf",
+                      "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
     timeout(time: 45, unit: 'MINUTES') {
     try {
 
@@ -141,6 +144,11 @@ lock(resource: "build-node-image") {
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
                                                                   "--git-containerfile", "extensions/Dockerfile", "--force"] + label_args)
             }
+        }
+        stage("Brew Upload") {
+            // Use the staging since we already have the disgests
+            pipeutils.brew_upload(arches, params.RELEASE, registry_staging_repo, node_image_manifest_digest,
+                                  extensions_image_manifest_digest, timestamp, pipecfg)
         }
         stage("Release Manifests") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
