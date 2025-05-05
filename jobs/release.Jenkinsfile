@@ -115,10 +115,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+            def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
+            cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \

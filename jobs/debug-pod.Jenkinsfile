@@ -87,19 +87,19 @@ cosaPod(cpu: "${ncpus}",
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
-        def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+        def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
         def src_config_commit
         if (params.SRC_CONFIG_COMMIT) {
             src_config_commit = params.SRC_CONFIG_COMMIT
         } else {
-            src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} refs/heads/${ref} | cut -d \$'\t' -f 1")
+            src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
         }
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             shwrap("""
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${variant} ${pipecfg.source_config.url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${variant} ${url}
             """)
         }
 

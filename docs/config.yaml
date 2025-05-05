@@ -53,6 +53,8 @@ streams:
       # OPTIONAL: set a stream as the default one
       # This will be the default stream for jobs that take a 'STREAMS' parameter
       default: true
+      # OPTIONAL: override source config URL to use for this stream
+      source_config_url: https://github.com/jlebon/fedora-coreos-config
       # OPTIONAL: override source config ref to use for this stream
       source_config_ref: main
       # OPTIONAL: override OS variant to use for this stream

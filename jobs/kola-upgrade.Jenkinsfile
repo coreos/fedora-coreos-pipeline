@@ -155,9 +155,9 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                 if (params.SRC_CONFIG_COMMIT != '') {
                     commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa init --force --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
+                cosa init --force --branch ${ref} ${commitopt} ${url}
                 cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_version} --arch=${params.ARCH}
                 cosa decompress --build=${start_version}
                 """)
