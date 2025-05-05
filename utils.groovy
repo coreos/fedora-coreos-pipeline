@@ -131,14 +131,20 @@ def add_hotfix_parameters_if_supported() {
     return []
 }
 
-def get_source_config_ref_for_stream(pipecfg, stream) {
-    if (pipecfg.streams[stream].source_config_ref) {
-        return pipecfg.streams[stream].source_config_ref
-    } else if (pipecfg.source_config.ref) {
-        return utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
-    } else {
-        return stream
+def get_source_config_for_stream(pipecfg, stream) {
+    def url = pipecfg.source_config.url
+    if (pipecfg.streams[stream].source_config_url) {
+        url = pipecfg.streams[stream].source_config_url
     }
+
+    def ref = stream
+    if (pipecfg.streams[stream].source_config_ref) {
+        ref = pipecfg.streams[stream].source_config_ref
+    } else if (pipecfg.source_config.ref) {
+        ref = utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
+    }
+
+    return [url, ref]
 }
 
 def get_env_vars_for_stream(pipecfg, stream) {
