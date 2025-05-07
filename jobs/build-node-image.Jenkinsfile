@@ -174,12 +174,15 @@ lock(resource: "build-node-image") {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
+        message = ":openshift:"
         if (currentBuild.result == 'SUCCESS') {
-            currentBuild.description = ":sparkles: ${build_description}"
+            currentBuild.description = "${build_description} ⚡"
+            message = "${message} :sparkles:"
         } else {
-            currentBuild.description = ":fire: ${build_description}"
+            currentBuild.description = "${build_description} ❌"
+            message = "${message} :fire:"
         }
-        message = ":openshift: build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${currentBuild.description}"
+        message = "${message} build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${build_description}"
         pipeutils.trySlackSend(message: message)
     }
 }}} // cosaPod, timeout, and lock finish here
