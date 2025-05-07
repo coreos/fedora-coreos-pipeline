@@ -999,7 +999,7 @@ def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_dige
                 --buildroot . \
                 --owner ${pipecfg.brew.principal} \
                 --profile ${pipecfg.brew.profile} \
-                --tag ${pipecfg.streams[release].brew_tag} \
+                --tag ${pipecfg.ocp_node_builds[release].brew_tag} \
                 --arch ${arch} \
                 --node-image
         """)
