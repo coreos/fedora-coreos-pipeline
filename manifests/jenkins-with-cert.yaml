@@ -31,9 +31,8 @@ objects:
       strategy:
         dockerStrategy:
           from:
-            kind: ImageStreamTag
-            name: jenkins:scheduled-upgrade-redeploy
-            namespace: openshift
+            kind: DockerImage
+            name: registry.redhat.io/ocp-tools-4/jenkins-rhel9:v4.17.0
           forcePull: true
       output:
         to:
@@ -62,9 +61,8 @@ objects:
       strategy:
         dockerStrategy:
           from:
-            kind: ImageStreamTag
-            name: jenkins-agent-base:scheduled-upgrade
-            namespace: openshift
+            kind: DockerImage
+            name: registry.redhat.io/ocp-tools-4/jenkins-agent-base-rhel9:v4.17.0
           forcePull: true
       output:
         to:
