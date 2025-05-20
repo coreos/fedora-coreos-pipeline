@@ -47,7 +47,7 @@ def get_username():
 
 
 def process_template(args):
-    templates = ['pipeline.yaml', 'jenkins-s2i.yaml']
+    templates = ['pipeline.yaml', 'jenkins-images.yaml', 'jenkins-s2i.yaml']
 
     params = {}
     if args.pipeline:
@@ -57,8 +57,6 @@ def process_template(args):
         params.update(params_from_git_refspec(args.pipecfg, 'PIPECFG'))
     if has_additional_root_ca(args):
         templates += ['jenkins-with-cert.yaml']
-        params['JENKINS_S2I_SRC_IMAGESTREAM_NAME'] = "jenkins:latest"
-        params['JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE'] = get_current_namespace(args)
 
     print("Parameters:")
     for k, v in params.items():

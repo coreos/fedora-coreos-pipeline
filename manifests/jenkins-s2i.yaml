@@ -12,45 +12,21 @@ parameters:
   - description: Git branch/tag reference for Jenkins S2I
     name: JENKINS_S2I_REF
     value: main
-  - description: Source imagestream
-    name: JENKINS_S2I_SRC_IMAGESTREAM_NAME
-    value: jenkins:scheduled-upgrade-redeploy
-  - description: Namespace of source imagestream
-    name: JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE
-    value: openshift
 
-# Here's what the flow looks like when no cert is required:
 #
-# ┌──────────────────────────────────────────────┐   ┌─────────────┐   ┌─────────────┐
-# │ imagestream                                  │   │ buildconfig │   │ imagestream │
-# │ openshift/jenkins:scheduled-upgrade-redeploy ├──►│ jenkins-s2i ├──►│ jenkins:2   │
-# └──────────────────────────────────────────────┘   └─────────────┘   └─────────────┘
+# ┌──────────────────┐   ┌───────────────────┐   ┌──────────────────┐   ┌─────────────┐   ┌────────────────┐
+# │ imagestream      │   │ buildconfig       │   │ imagestream      │   │ buildconfig │   │ imagestream    │
+# │ jenkins:upstream ├──►│ jenkins-with-cert ├──►│ jenkins:withcert ├──►│ jenkins-s2i ├──►│ jenkins:latest │
+# └──────────────────┘   └───────────────────┘   └──────────────────┘   └─────────────┘   └────────────────┘
 #
-# ┌────────────────────────────────────────────────┐
-# │ imagestream                                    │
-# │ openshift/jenkins-agent-base:scheduled-upgrade │
-# └────────────────────────────────────────────────┘
-#
-# And with cert required (see `jenkins-with-cert.yaml`):
-#
-# ┌──────────────────────────────────────────────┐   ┌───────────────────┐   ┌────────────────┐   ┌─────────────┐   ┌─────────────┐
-# │ imagestream                                  │   │ buildconfig       │   │ imagestream    │   │ buildconfig │   │ imagestream │
-# │ openshift/jenkins:scheduled-upgrade-redeploy ├──►│ jenkins-with-cert ├──►│ jenkins:latest ├──►│ jenkins-s2i ├──►│ jenkins:2   │
-# └──────────────────────────────────────────────┘   └───────────────────┘   └────────────────┘   └─────────────┘   └─────────────┘
-#
-# ┌────────────────────────────────────────────────┐   ┌──────────────────────────────┐   ┌───────────────────────────┐
-# │ imagestream                                    │   │ buildconfig                  │   │ imagestream               │
-# │ openshift/jenkins-agent-base:scheduled-upgrade ├──►│ jenkins-agent-base-with-cert ├──►│ jenkins-agent-base:latest │
-# └────────────────────────────────────────────────┘   └──────────────────────────────┘   └───────────────────────────┘
+# ┌─────────────────────────────┐   ┌──────────────────────────────┐   ┌───────────────────────────┐
+# │ imagestream                 │   │ buildconfig                  │   │ imagestream               │
+# │ jenkins-agent-base:upstream ├──►│ jenkins-agent-base-with-cert ├──►│ jenkins-agent-base:latest │
+# └─────────────────────────────┘   └──────────────────────────────┘   └───────────────────────────┘
 
 objects:
 
   ### JENKINS CONTROLLER ###
-
-  - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      name: jenkins
   - kind: BuildConfig
     apiVersion: v1
     metadata:
@@ -70,8 +46,7 @@ objects:
         sourceStrategy:
           from:
             kind: ImageStreamTag
-            name: ${JENKINS_S2I_SRC_IMAGESTREAM_NAME}
-            namespace: ${JENKINS_S2I_SRC_IMAGESTREAM_NAMESPACE}
+            name: jenkins:withcert
           env:
             - name: JENKINS_UC_DOWNLOAD
               value: 'https://archives.jenkins.io'
@@ -79,13 +54,6 @@ objects:
       output:
         to:
           kind: ImageStreamTag
-          name: jenkins:2
+          name: jenkins:latest
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
-
-  ### JENKINS AGENT ###
-
-  - apiVersion: v1
-    kind: ImageStream
-    metadata:
-      name: jenkins-agent-base
