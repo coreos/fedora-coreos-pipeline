@@ -454,10 +454,21 @@ oc annotate secret/github-coreosbot-token-username-password  \
     jenkins.io/credentials-description="GitHub coreosbot token as username/password"
 ```
 
-### [PROD, OPTIONAL] Create additional root CA certificate secret
+### Create root CA certificate secret
 
-If an additional root CA certificate is needed, create it as
-a secret. This assumes `ca.crt` is a file in the working directory:
+The root CA certificate (ca.crt) is required and should be created as a secret.
+This example assumes that the ca.crt file is present in your current working
+directory.
+
+If you are working in an environment that doesn't need a custom root CA, you
+still need to create a dummy configuration file as shown below:
+
+```
+cat <<'EOF' > ca.crt
+dummy
+EOF
+```
+Then create the secret:
 
 ```
 oc create secret generic additional-root-ca-cert \
@@ -517,7 +528,6 @@ oc create secret generic krb5-conf \
 
 ```
 oc new-app --file=manifests/jenkins.yaml \
-  --param=NAMESPACE=fedora-coreos-pipeline \
   --param=STORAGE_CLASS_NAME=ocs-storagecluster-ceph-rbd
 ```
 
@@ -532,12 +542,6 @@ using a development cluster, it normally isn't, and you can drop it. For
 the Fedora prod cluster, use `ocs-storagecluster-ceph-rbd` as shown
 above.
 
-If using an additional root CA certificate, then you will also need to
-specify the `AGENT_NAMESPACE` parameter to yours, e.g.:
-
-```
-  --param=AGENT_NAMESPACE=fedora-coreos-pipeline \
-```
 
 Now, create the Jenkins configmap:
 
@@ -583,11 +587,12 @@ This will create:
 
 1. the Jenkins controller imagestream,
 2. the Jenkins agent imagestream,
-3. the Jenkins agent BuildConfig (if a root CA cert was provided),
+3. the Jenkins agent BuildConfig,
 4. the jenkins-config configmap.
 
-If a root CA cert was provided, we need to build the base images that
-will bake in the cert in the controller and agent:
+Note: If you are working with the Fedora staging pipeline, specify the
+`staging` branch for the pipecfg: `--pipecfg
+https://github.com/coreos/fedora-coreos-pipeline@staging`.
 
 ```
 oc start-build --follow jenkins-with-cert
