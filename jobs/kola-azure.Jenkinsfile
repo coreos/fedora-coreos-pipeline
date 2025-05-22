@@ -94,6 +94,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
             def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
             def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
             def azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
+            def azure_testing_gallery = pipecfg.clouds?.azure?.test_gallery
 
             stage('Upload/Create Image') {
                 // Create the image in Azure
@@ -129,23 +130,79 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 """)
             }
 
+            stage('Upload/Create Gallery Image') {
+                // use the existing blob to create the
+                // Shared Image Gallery image in Azure
+                // using Hyper-V Gen2 (V2)
+                shwrap("""
+                # First delete the gallery image
+                ore azure delete-gallery-image --log-level=INFO         \
+                    --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
+                    --azure-location $region                            \
+                    --resource-group $azure_testing_resource_group      \
+                    --gallery-name $azure_testing_gallery               \
+                    --gallery-image-name $azure_image_name
+                # Then create a fresh gallery image. Note that this will
+                # create the testing gallery if it does not exist, but
+                # it will be a no-op on gallery creation given the
+                # gallery exists in the specified region.
+                ore azure create-gallery-image --log-level=INFO
+                    --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
+                    --azure-location $region                            \
+                    --resource-group $azure_testing_resource_group      \
+                    --azure-hyper-v-generation "V2"                     \
+                    --gallery-image-name $azure_image_name              \
+                    --source-image /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}
+                """)
+            }
+
             // Since we don't have permanent images uploaded to Azure we'll
             // skip the upgrade test.
             try {
                 def azure_subscription = shwrapCapture("jq -r .subscription \${AZURE_KOLA_TESTS_CONFIG}")
-                kola(cosaDir: env.WORKSPACE, parallel: 10,
-                     build: params.VERSION, arch: params.ARCH,
-                     extraArgs: params.KOLA_TESTS,
-                     skipUpgrade: true,
-                     skipKolaTags: stream_info.skip_kola_tags,
-                     platformArgs: """-p=azure                               \
-                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
-                         --azure-location $region                            \
-                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
+
+                // Run tests on the traditional managed image.
+                // The NVMe test is explicitly denied because it requires
+                // Hyper-V Gen2 Gallery images with NVMe support.
+                stage('Managed Image Kola Tests') {
+                    kola(cosaDir: env.WORKSPACE, parallel: 10,
+                         build: params.VERSION, arch: params.ARCH,
+                         extraArgs: params.KOLA_TESTS,
+                         skipUpgrade: true,
+                         skipKolaTags: stream_info.skip_kola_tags,
+                         platformArgs: """-p=azure                               \
+                             --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
+                             --azure-location $region                            \
+                             --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name} \
+                             --denylist-test ext.config.platforms.azure.nvme""")
+                }
+
+                // run kola tests on Hyper-V Gen2 Gallery Images.
+                // Gen2 images require a VM size that supports UEFI boot;
+                // Standard_D2s_v3 is set here to override the default size.
+                stage ('Gallery Image Kola Tests') {
+                    kola(cosaDir: env.WORKSPACE, parallel: 10,
+                         build: params.VERSION, arch: params.ARCH,
+                         extraArgs: params.KOLA_TESTS,
+                         skipUpgrade: true,
+                         skipKolaTags: stream_info.skip_kola_tags,
+                         platformArgs: """-p=azure                               \
+                             --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
+                             --azure-location $region                            \
+                             --azure-size "Standard_D2s_v3"                      \
+                             --azure-hyper-v-generation "V2"                     \
+                             --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0""")
+                }
             } finally {
-                parallel "Delete Image": {
-                    // Delete the image in Azure
+                parallel "Delete Images": {
+                    // Delete the images in Azure
                     shwrap("""
+                    ore azure delete-gallery-image --log-level=INFO         \
+                        --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
+                        --azure-location $region                            \
+                        --resource-group $azure_testing_resource_group      \
+                        --gallery-name $azure_testing_gallery               \
+                        --gallery-image-name $azure_image_name
                     ore azure delete-image --log-level=INFO                 \
                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                         --azure-location $region                            \
