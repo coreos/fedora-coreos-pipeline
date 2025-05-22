@@ -57,6 +57,7 @@ default_artifacts:
     - powervs
   s390x:
     - ibmcloud
+    - kubevirt
   x86_64:
     - aliyun
     - applehv
