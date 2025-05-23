@@ -94,6 +94,7 @@ clouds:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
+    test_gallery: fedora-coreos-testing-gallery
     test_architectures: [x86_64]
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import
