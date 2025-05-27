@@ -173,6 +173,9 @@ objects:
         from:
           kind: ImageStreamTag
           name: jenkins:latest
+          # DELTA: No need to use namespace here because we are
+          # using the ImageStream inside our own namespace.
+          # namespace: ${NAMESPACE}
         lastTriggeredImage: ""
       type: ImageChange
     - type: ConfigChange
@@ -251,12 +254,24 @@ parameters:
   required: true
   # DELTA: changed from 1Gi
   value: 25Gi
+# DELTA: No need for this parameter because we are using ImageStream inside
+#        our own namespace.
+#- description: The OpenShift Namespace where the Jenkins ImageStream resides.
+#  displayName: Jenkins ImageStream Namespace
+#  name: NAMESPACE
+#  value: openshift
 - description: Whether to perform memory intensive, possibly slow, synchronization
     with the Jenkins Update Center on start.  If true, the Jenkins core update monitor
     and site warnings monitor are disabled.
   displayName: Disable memory intensive administrative monitors
   name: DISABLE_ADMINISTRATIVE_MONITORS
   value: "false"
+# DELTA: No need for this parameter because we are using custom ImageStream
+#        definitions with hardcoded tag values.
+#- description: Name of the ImageStreamTag to be used for the Jenkins image.
+#  displayName: Jenkins ImageStreamTag
+#  name: JENKINS_IMAGE_STREAM_TAG
+#  value: jenkins:2
 - description: When a fatal error occurs, an error log is created with information
     and the state obtained at the time of the fatal error.
   displayName: Fatal Error Log File
