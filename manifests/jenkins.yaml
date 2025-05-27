@@ -39,21 +39,20 @@ objects:
         storage: ${VOLUME_CAPACITY}
     # DELTA: support specifying storage class
     storageClassName: "${STORAGE_CLASS_NAME}"
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: apps/v1
+  kind: Deployment
   metadata:
     annotations:
+      image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"${JENKINS_IMAGE_STREAM_TAG}"},"namespace":"${NAMESPACE}","fieldPath":"spec.template.spec.containers[?(@.name==\"${JENKINS_SERVICE_NAME}\")].image","paused":false}]'
       template.alpha.openshift.io/wait-for-ready: "true"
     name: ${JENKINS_SERVICE_NAME}
   spec:
     replicas: 1
     selector:
-      name: ${JENKINS_SERVICE_NAME}
+      matchLabels:
+        name: ${JENKINS_SERVICE_NAME}
     strategy:
       type: Recreate
-      # DELTA: allow 20 mins for pod to be ready to account for slow NFS
-      recreateParams:
-        timeoutSeconds: 1200
     template:
       metadata:
         labels:
@@ -126,6 +125,14 @@ objects:
             periodSeconds: 360
             timeoutSeconds: 240
           name: jenkins
+          # As we migrated away from DeploymentConfig towards Deployment, startupProbe takes over the functionality 
+          # of previously used `recreateParams.timeoutSeconds: 1200`.
+          startupProbe:
+            httpGet:
+              path: /login
+              port: 8080
+            periodSeconds: 30
+            failureThreshold: 40
           readinessProbe:
             httpGet:
               path: /login
@@ -165,17 +172,6 @@ objects:
           secret:
             secretName: splunk-casc-cfg
             optional: true
-    triggers:
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - jenkins
-        from:
-          kind: ImageStreamTag
-          name: jenkins:latest
-        lastTriggeredImage: ""
-      type: ImageChange
-    - type: ConfigChange
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
