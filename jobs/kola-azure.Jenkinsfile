@@ -94,16 +94,18 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
             def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
             def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
             def azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
+            def azure_testing_gallery = pipecfg.clouds?.azure?.test_gallery
 
             stage('Upload/Create Image') {
                 // Create the image in Azure
                 shwrap("""
                 # First delete the blob/image since we re-use it.
-                ore azure delete-image --log-level=INFO                 \
+                ore azure delete-gallery-image --log-level=INFO         \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
-                    --resource-group ${azure_testing_resource_group}    \
-                    --image-name ${azure_image_name}
+                    --resource-group $azure_testing_resource_group      \
+                    --gallery-name $azure_testing_gallery               \
+                    --gallery-image-name $azure_image_name
                 ore azure delete-blob --log-level=INFO                  \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
@@ -120,11 +122,15 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     --container $azure_testing_storage_container        \
                     --blob-name $azure_image_name                       \
                     --file ${azure_image_filepath}
-                ore azure create-image --log-level=INFO                 \
+                # Create a fresh gallery image. Note that this will
+                # create the testing gallery if it does not exist, but
+                # it will be a no-op on gallery creation given the
+                # gallery exists in the specified region.
+                ore azure create-gallery-image --log-level=INFO
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
-                    --resource-group $azure_testing_resource_group      \
                     --azure-location $region                            \
-                    --image-name $azure_image_name                      \
+                    --resource-group $azure_testing_resource_group      \
+                    --gallery-image-name $azure_image_name              \
                     --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_image_name}"
                 """)
             }
@@ -141,16 +147,17 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                      platformArgs: """-p=azure                               \
                          --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                          --azure-location $region                            \
-                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
+                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0""")
             } finally {
                 parallel "Delete Image": {
                     // Delete the image in Azure
                     shwrap("""
-                    ore azure delete-image --log-level=INFO                 \
+                    ore azure delete-gallery-image --log-level=INFO         \
                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                         --azure-location $region                            \
                         --resource-group $azure_testing_resource_group      \
-                        --image-name $azure_image_name
+                        --gallery-name $azure_testing_gallery               \
+                        --gallery-image-name $azure_image_name
                     ore azure delete-blob --log-level=INFO                  \
                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                         --azure-location $region                            \
