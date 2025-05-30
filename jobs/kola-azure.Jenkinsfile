@@ -130,6 +130,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
+                    --gallery-name $azure_testing_gallery               \
                     --gallery-image-name $azure_image_name              \
                     --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_image_name}"
                 """)
