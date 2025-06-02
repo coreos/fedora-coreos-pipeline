@@ -121,7 +121,8 @@ lock(resource: "build-node-image") {
                                                 secret: "id=yumrepos,src=${yumrepos_file}", // notsecret (for secret scanners)
                                                 from: build_from,
                                                 v2s2: v2s2,
-                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force"] + label_args)
+                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force",
+                                                                   "--add-openshift-build-labels"] + label_args)
             }
         }
         stage('Build Extensions Image') {
@@ -142,7 +143,8 @@ lock(resource: "build-node-image") {
                                                from: build_from,
                                                v2s2: v2s2,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
-                                                                  "--git-containerfile", "extensions/Dockerfile", "--force"] + label_args)
+                                                                  "--git-containerfile", "extensions/Dockerfile", "--force",
+                                                                  "--add-openshift-build-labels"] + label_args)
             }
         }
         stage("Brew Upload") {
