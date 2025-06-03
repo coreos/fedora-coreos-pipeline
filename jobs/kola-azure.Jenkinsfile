@@ -127,6 +127,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 # it will be a no-op on gallery creation given the
                 # gallery exists in the specified region.
                 ore azure create-gallery-image --log-level=INFO         \
+                    --arch $params.ARCH                                 \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
