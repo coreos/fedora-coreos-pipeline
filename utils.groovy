@@ -131,14 +131,20 @@ def add_hotfix_parameters_if_supported() {
     return []
 }
 
-def get_source_config_ref_for_stream(pipecfg, stream) {
-    if (pipecfg.streams[stream].source_config_ref) {
-        return pipecfg.streams[stream].source_config_ref
-    } else if (pipecfg.source_config.ref) {
-        return utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
-    } else {
-        return stream
+def get_source_config_for_stream(pipecfg, stream) {
+    def url = pipecfg.source_config.url
+    if (pipecfg.streams[stream].source_config_url) {
+        url = pipecfg.streams[stream].source_config_url
     }
+
+    def ref = stream
+    if (pipecfg.streams[stream].source_config_ref) {
+        ref = pipecfg.streams[stream].source_config_ref
+    } else if (pipecfg.source_config.ref) {
+        ref = utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
+    }
+
+    return [url, ref]
 }
 
 def get_env_vars_for_stream(pipecfg, stream) {
@@ -391,9 +397,11 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
-def get_streams_choices(config) {
-    def default_stream = config.streams.find{k, v -> v['default'] == true}?.key
-    def other_streams = config.streams.keySet().minus(default_stream) as List
+def get_streams_choices(config, node = null) {
+    def stream_source = node ? config.ocp_node_builds.release : config.streams
+
+    def default_stream = stream_source.find { k, v -> v['default'] == true }?.key
+    def other_streams = stream_source.keySet().minus(default_stream) as List
     return [default_stream] + other_streams
 }
 
@@ -414,18 +422,22 @@ def get_push_trigger() {
 // Gets desired artifacts to build from pipeline config
 def get_artifacts_to_build(pipecfg, stream, basearch) {
     // Explicit stream-level override takes precedence
-    def artifacts = pipecfg.streams[stream].artifacts?."${basearch}"
-    if (artifacts == null) {
-        // calculate artifacts from defaults + additional - skip
-        artifacts = []
-        artifacts += pipecfg.default_artifacts.all ?: []
-        artifacts += pipecfg.default_artifacts."${basearch}" ?: []
-        artifacts += pipecfg.streams[stream].additional_artifacts?.all ?: []
-        artifacts += pipecfg.streams[stream].additional_artifacts?."${basearch}" ?: []
-        artifacts -= pipecfg.streams[stream].skip_artifacts?.all ?: []
-        artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
+    def artifacts = (pipecfg.streams[stream].artifacts?."${basearch}" ?: []) as Set
+    if (artifacts.isEmpty()) {
+        // calculate artifacts from defaults, add additional, remove skip
+        artifacts.addAll(pipecfg.default_artifacts.all ?: [])
+        artifacts.addAll(pipecfg.default_artifacts."${basearch}" ?: [])
+        artifacts.addAll(pipecfg.streams[stream].additional_artifacts?.all ?: [])
+        artifacts.addAll(pipecfg.streams[stream].additional_artifacts?."${basearch}" ?: [])
+        artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?.all ?: [])
+        artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: [])
     }
-    return artifacts.unique()
+    if (pipecfg.streams[stream].skip_disk_images) {
+        // Only keep the extensions container. Note that the ostree container
+        // and QEMU image are always built and not skippable artifacts.
+        artifacts = artifacts.intersect(["extensions-container"])
+    }
+    return artifacts.toList()
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
@@ -516,29 +528,54 @@ def build_artifacts(pipecfg, stream, basearch) {
 
 def get_registry_repos(pipecfg, stream, version) {
     def registry_repos = pipecfg.registry_repos ?: [:]
-    // merge top-level registry_repos with stream-specific bits
-    registry_repos += pipecfg.streams[stream].additional_registry_repos ?: [:]
-    for (repo in (registry_repos.keySet() as List)) {
-        if (repo == 'v2s2') {
-            // this is a boolean option, not a registry repo
-            continue
-        }
-        if (registry_repos[repo].tags) {
-            def processed_tags = []
-            for (tag in registry_repos."${repo}".tags) {
-                tag = utils.substituteStr(tag, [STREAM: stream, VERSION: version])
-                if (pipecfg.hotfix) {
-                    // this is a hotfix build; include the hotfix name
-                    // in the tag suffix so we don't clobber official
-                    // tags
-                    tag += "-hotfix-${pipecfg.hotfix.name}"
+    // get stream-specific bits additional repos
+    def additional_repos = pipecfg.streams[stream].additional_registry_repos ?: [:]
+    for (repo_id in (additional_repos.keySet() as List)) {
+        // merge top-level registry_repos with additional repos
+        def merged_registry_repos = registry_repos[repo_id] ?: []
+        registry_repos[repo_id] = merged_registry_repos + (additional_repos[repo_id] ?: [])
+     }
+    for (repo_id in (registry_repos.keySet() as List)) {
+        for (repo in registry_repos[repo_id]) {
+            if (repo.tags) {
+                def processed_tags = []
+                for (tag in repo.tags) {
+                    tag = utils.substituteStr(tag, [STREAM: stream, VERSION: version])
+                    if (pipecfg.hotfix) {
+                        // this is a hotfix build; include the hotfix name
+                        // in the tag suffix so we don't clobber official
+                        // tags
+                        tag += "-hotfix-${pipecfg.hotfix.name}"
+                    }
+                    processed_tags += tag
                 }
-                processed_tags += tag
+                repo.tags = processed_tags
             }
-            registry_repos[repo]['tags'] = processed_tags
         }
     }
     return registry_repos
+}
+
+def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
+    def staging_repo = pipecfg.ocp_node_builds.registries.staging.image
+    def staging_manifest_tags = pipecfg.ocp_node_builds.registries.staging.tags
+    def prod_repo = pipecfg.ocp_node_builds.registries.prod.image
+    def prod_tags = pipecfg.ocp_node_builds.registries.prod.tags
+    def processTags = { tagList ->
+        tagList.collect { tag ->
+            def substituted = utils.substituteStr(tag, [RELEASE: release, TIMESTAMP: timestamp])
+            if (pipecfg.hotfix) {
+                // this is a hotfix build; include the hotfix name
+                // in the tag suffix so we don't clobber official
+                // tags
+                substituted += "-hotfix-${pipecfg.hotfix.name}"
+            }
+            return substituted
+        }
+    }
+    def final_staging_manifest_tags = processTags(staging_manifest_tags)
+    def final_prod_tags = processTags(prod_tags)
+    return [staging_repo, final_staging_manifest_tags, prod_repo, final_prod_tags]
 }
 
 // Determine if the config.yaml has a test_architectures entry for
@@ -808,6 +845,164 @@ def matrixSend(message) {
              "body": "$message"
             }'
     """)
+    }
+}
+
+def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
+                        extra_build_args = []) {
+    def build_args = ["--git-ref", commit, "--git-url", url, "--repo", repo,
+                      "--push-to-registry"]
+    if (secret) {
+         build_args += ["--secret", secret]
+    }
+    if (from) {
+        build_args += ["--from", from]
+    }
+    build_args += extra_build_args
+    def digest_list = []
+    parallel arches.collectEntries { arch ->
+        [arch, {
+            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                def final_args = build_args + ["--arch", arch, "--tag", "${tag}-${arch}"]
+                final_args += ["--write-digest-to-file", "${tag}-${arch}"]
+                shwrap("cosa remote-build-container ${final_args.join(' ')}")
+                digest_list += readFile("${tag}-${arch}")
+                shwrap("""rm -f ${tag}-${arch} """)
+            }
+        }]
+    }
+    return digest_list
+}
+
+def push_manifest(digests, repo, manifest_tag, v2s2) {
+    def images = ""
+    for (digest in digests) {
+        images += " --image=docker://${repo}@${digest}"
+    }
+    def digest = ""
+    def digest_file = "${manifest_tag}.digestfile"
+    // save the digest to a file named after the tag we are pushing
+    def push_args = ["--write-digest-to-file", digest_file]
+    if (v2s2) {
+        push_args += ["--v2s2"]
+    }
+    // arbitrarily selecting the s390x builder; we don't run this
+    // locally because podman wants user namespacing (yes, even just
+    // to push a manifest...)
+    pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
+        shwrap("""
+        cosa push-container-manifest \
+            --tag ${manifest_tag} --repo ${repo} ${images} ${push_args.join(' ')}
+        """)
+    }
+    digest = readFile(digest_file)
+    shwrap("rm ${digest_file}")
+    return digest
+}
+
+def copy_image(src_image, dest_image, authfile = "") {
+    if (authfile != "") {
+        authfile = "--authfile=${authfile}"
+    }
+    shwrap("""
+        skopeo copy --preserve-digests --retry-times 5 --all ${authfile} \
+            docker://${src_image} \
+            docker://${dest_image}
+    """)
+}
+
+def delete_tags(digests, repo, manifest_tag, authfile = "") {
+    if (authfile != "") {
+        authfile = "--authfile=${authfile}"
+    }
+    shwrap("""
+        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+        skopeo delete ${authfile} docker://${repo}:${manifest_tag}
+    """)
+    parallel digests.keySet().collectEntries{arch -> [digest, {
+        shwrap("""
+            export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+            skopeo delete ${authfile} docker://${repo}:${digest}
+        """)
+    }]}
+}
+
+def get_manifest_digest(image) {
+    if (image != '' && !image.contains('@')) {
+        shwrap("skopeo inspect --raw -n docker://${image} > manifest.json")
+        def digest = shwrapCapture("skopeo manifest-digest manifest.json")
+        shwrap("rm -f manifest.json")
+        image = "${image.split(':')[0]}@${digest}"
+    }
+    return image
+}
+
+def build_and_push_image(params = [:]) {
+// Available parameters:
+    // arches:               list    -- List of architectures to run against
+    // extra_build_args:     list    -- List of extra commands to pass to `cosa remote` cmd
+    // from:                 string  -- Value to replace in the Containerfile
+    // image_tag_staging:    string  -- Image tag for the staging repo.
+    // manifest_tag_staging: string  -- Manifest tag for the staging repo.
+    // secret:               string  -- File path for the `podman --secret`
+    // src_commit:           string  -- Source Git commit.
+    // src_url:              string  -- Source Git URL.
+    // staging_repository:   string  -- Repository URL for the staging repo.
+    // v2s2:                 bool    -- Use docker v2s2 format rather than OCI. Default to false.
+
+    def secret = params.get('secret', "");
+    def from = params.get('from', "");
+    def manifest_digest = ""
+    def extra_build_args = params.get('extra_build_args', "");
+    def v2s2 = params.get('v2s2', false);
+
+    from = get_manifest_digest(from)
+    def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
+                                     params['image_tag_staging'], secret, from, extra_build_args)
+    stage("Push Manifest") {
+        manifest_digest = push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'], v2s2)
+    }
+    return manifest_digest
+}
+
+def get_arch_image_digest(from) {
+    return readJSON(text: shwrapCapture("""
+        skopeo inspect --raw docker://${from} | \
+            jq -r '.manifests | map({(.platform.architecture): .digest}) | add'
+    """))
+}
+
+def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_digest, version, pipecfg) {
+    def node_digest_arch_map = get_arch_image_digest("${repo}@${manifest_digest}")
+    def extensions_node_digest_arch_map  = get_arch_image_digest("${repo}@${extensions_manifest_digest}")
+    def archAliasMap = [
+        "x86_64"  : "amd64",
+        "aarch64" : "arm64",
+        "s390x"   : "s390x",
+        "ppc64le" : "ppc64le"
+    ]
+    for (arch in arches) {
+        def inspect_arch = archAliasMap[arch]
+        def node_image = "${repo}@${node_digest_arch_map[inspect_arch]}"
+        def extensions_node_image = "${repo}@${extensions_node_digest_arch_map[inspect_arch]}"
+
+        // Get metadata files with package information
+        shwrap("""oc image extract $node_image[-1] --file /usr/share/openshift/base/meta.json
+                  oc image extract $extensions_node_image[-1] --file usr/share/rpm-ostree/extensions.json
+        """)
+        shwrap("""
+            coreos-assembler koji-upload \
+                upload --reserve-id \
+                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                --build $release-${version} \
+                --retry-attempts 6 \
+                --buildroot . \
+                --owner ${pipecfg.brew.principal} \
+                --profile ${pipecfg.brew.profile} \
+                --tag ${pipecfg.ocp_node_builds.release[release].brew_tag} \
+                --arch ${arch} \
+                --node-image
+        """)
     }
 }
 

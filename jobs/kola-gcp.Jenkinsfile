@@ -51,20 +51,22 @@ cosaPod(memory: "512Mi", kvm: false,
     timeout(time: 30, unit: 'MINUTES') {
     try {
 
-        stage('Fetch Metadata') {
-            def commitopt = ''
-            if (params.SRC_CONFIG_COMMIT != '') {
-                commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
-            }
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-                shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                time -v cosa buildfetch --artifact=ostree --build=${params.VERSION} \
-                    --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
-                """)
+        lock(resource: "kola-cloud-buildfetch") {
+            stage('Fetch Metadata') {
+                def commitopt = ''
+                if (params.SRC_CONFIG_COMMIT != '') {
+                    commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
+                }
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                    credentialsId: 'aws-build-upload-config')]) {
+                    def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
+                    def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+                    shwrap("""
+                    cosa init --branch ${ref} ${commitopt} ${variant} ${url}
+                    time -v cosa buildfetch --artifact=ostree --build=${params.VERSION} \
+                        --arch=${params.ARCH} --url=s3://${s3_stream_dir}/builds
+                    """)
+                }
             }
         }
 
@@ -84,30 +86,48 @@ cosaPod(memory: "512Mi", kvm: false,
                         --gcp-project=${gcp_project}""")
             }
             if (params.ARCH == "x86_64") {
-                parallelruns['Kola:Confidential'] = {
-                    def tests = params.KOLA_TESTS
-                    if (tests == "") {
-                        tests = "basic"
-                    }
+                def tests = params.KOLA_TESTS
+                if (tests == "") {
+                    tests = "basic"
+                }
+                parallelruns['Kola:Confidential-SNP'] = {
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1202
                     def confidential_tests = tests
                     if (confidential_tests == "basic") {
-                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-nvme-symlink"
+                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-snp-nvme-symlink"
                     }
                     // https://github.com/coreos/coreos-assembler/issues/3556
                     kola(cosaDir: env.WORKSPACE,
                         build: params.VERSION, arch: params.ARCH,
-                        extraArgs: confidential_tests,
+                        extraArgs: "--tag confidential-snp " + confidential_tests,
                         skipUpgrade: true,
                         skipKolaTags: stream_info.skip_kola_tags,
-                        marker: "confidential",
+                        marker: "confidential-snp",
                         platformArgs: """-p=gcp \
                             --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                             --gcp-project=${gcp_project} \
                             --gcp-confidential-type sev_snp""")
                 }
+                parallelruns['Kola:Confidential-TDX'] = {
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1202
+                    def confidential_tests = tests
+                    if (confidential_tests == "basic") {
+                        confidential_tests = "basic ext.config.platforms.gcp.confidential-vm-tdx-nvme-symlink"
+                    }
+                    // https://github.com/coreos/coreos-assembler/issues/3556
+                    kola(cosaDir: env.WORKSPACE,
+                        build: params.VERSION, arch: params.ARCH,
+                        extraArgs: "--tag confidential-tdx " + confidential_tests,
+                        skipUpgrade: true,
+                        skipKolaTags: stream_info.skip_kola_tags,
+                        marker: "confidential-tdx",
+                        platformArgs: """-p=gcp \
+                            --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                            --gcp-project=${gcp_project} \
+                            --gcp-confidential-type tdx""")
+                }
             }
-            
+
             // process this batch
             parallel parallelruns
 

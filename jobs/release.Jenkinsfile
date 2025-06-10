@@ -115,10 +115,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+            def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
+            cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
@@ -126,6 +126,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             """)
         }
 
+        def missing_arches = false
         def builtarches = shwrapCapture("""
                           cosa shell -- cat builds/builds.json | \
                               jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]'
@@ -135,6 +136,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             if (params.ALLOW_MISSING_ARCHES) {
                 warn("Some requested architectures did not successfully build!")
                 basearches = builtarches.intersect(basearches)
+                missing_arches = true
             } else {
                 echo "ERROR: Some requested architectures did not successfully build"
                 echo "ERROR: Detected built architectures: $builtarches"
@@ -259,26 +261,28 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         if (push_containers) {
             stage("Push Containers") {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
-                    if (!registry_repos?."${configname}"?.'repo') {
+                    if (!registry_repos?."${configname}") {
                         echo "No registry repo config for ${configname}. Skipping"
                         return
                     }
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
-                        def repo = registry_repos[configname]['repo']
+                        def repos = registry_repos[configname]
                         def (artifact, metajsonname) = val
-                        def tag_args = registry_repos[configname].tags.collect{"--tag=$it"}
-                        def v2s2_arg = registry_repos.v2s2 ? "--v2s2" : ""
-                        shwrap("""
-                        export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
-                        cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
-                        cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
-                            --auth=tmp/push-secret-${metajsonname} \
-                            --repo=${repo} ${tag_args.join(' ')} \
-                            --artifact=${artifact} --metajsonname=${metajsonname} \
-                            --build=${params.VERSION} ${v2s2_arg}
-                        rm tmp/push-secret-${metajsonname}
-                        """)
+                        for (repo in repos) {
+                            def tag_args = repo.tags.collect{"--tag=$it"}
+                            def v2s2_arg = repo.v2s2 ? "--v2s2" : ""
+                            shwrap("""
+                            export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
+                            cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
+                            cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
+                                --auth=tmp/push-secret-${metajsonname} \
+                                --repo=${repo.repo} ${tag_args.join(' ')} \
+                                --artifact=${artifact} --metajsonname=${metajsonname} \
+                                --build=${params.VERSION} ${v2s2_arg}
+                            rm tmp/push-secret-${metajsonname}
+                            """)
+                        }
                     }
                 }]}
             }
@@ -436,6 +440,15 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 }
             }
         }
+
+        if (!missing_arches && stream_info['build_node_images']) {
+            for (release in stream_info['build_node_images']) {
+                build job: 'build-node-image', wait: false, parameters: ([
+                    string(name: 'RELEASE', value: release)
+                ])
+            }
+        }
+
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✓"
 

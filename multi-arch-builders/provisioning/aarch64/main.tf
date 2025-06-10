@@ -64,8 +64,7 @@ check "health_check_rhcos_splunk_vars" {
   assert {
     condition = !(var.distro == "rhcos" && anytrue([
                         var.splunk_hostname == "",
-                        var.splunk_sidecar_repo == "",
-                        var.itpaas_splunk_repo == ""
+                        var.splunk_sidecar_repo == ""
                     ]))
     error_message = "Must define splunk env vars for RCHOS builders"
   }
@@ -81,7 +80,6 @@ locals {
       templatefile("../../builder-splunk.bu", {
         SPLUNK_HOSTNAME = var.splunk_hostname
         SPLUNK_SIDECAR_REPO = var.splunk_sidecar_repo
-        ITPAAS_SPLUNK_REPO = var.itpaas_splunk_repo
       })
     ]
 }

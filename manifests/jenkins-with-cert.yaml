@@ -1,4 +1,5 @@
-# This template is instantiated only if an additional root CA is needed. Note it
+# This template is always required to create the jenkins and jenkins-agent-base
+# ImageStreams with the new tags that will be used later.
 # doesn't actually need to be a template (there are no parameters), but the way
 # `deploy` currently works expects it as a template.
 
@@ -20,7 +21,11 @@ objects:
           FROM overridden
           COPY cert/data /etc/pki/ca-trust/source/anchors/root-ca.crt
           USER root
-          RUN update-ca-trust
+          RUN if grep -q 'dummy' /etc/pki/ca-trust/source/anchors/root-ca.crt; then \
+              rm /etc/pki/ca-trust/source/anchors/root-ca.crt; \
+          else \
+              update-ca-trust; \
+          fi
           # restore previous user ID
           # https://github.com/openshift/jenkins/blob/7bae76f4412d28c18ed2b33aaf73306734b7f6d5/2/Dockerfile.rhel8#L107
           USER 1001
@@ -32,13 +37,12 @@ objects:
         dockerStrategy:
           from:
             kind: ImageStreamTag
-            name: jenkins:scheduled-upgrade-redeploy
-            namespace: openshift
+            name: jenkins:upstream
           forcePull: true
       output:
         to:
           kind: ImageStreamTag
-          name: jenkins:latest
+          name: jenkins:withcert
       successfulBuildsHistoryLimit: 2
       failedBuildsHistoryLimit: 2
       triggers:
@@ -54,7 +58,11 @@ objects:
         dockerfile: |
           FROM overridden
           COPY cert/data /etc/pki/ca-trust/source/anchors/root-ca.crt
-          RUN update-ca-trust
+          RUN if grep -q 'dummy' /etc/pki/ca-trust/source/anchors/root-ca.crt; then \
+              rm /etc/pki/ca-trust/source/anchors/root-ca.crt; \
+          else \
+              update-ca-trust; \
+          fi
         secrets:
           - destinationDir: cert
             secret:
@@ -63,8 +71,7 @@ objects:
         dockerStrategy:
           from:
             kind: ImageStreamTag
-            name: jenkins-agent-base:scheduled-upgrade
-            namespace: openshift
+            name: jenkins-agent-base:upstream
           forcePull: true
       output:
         to:

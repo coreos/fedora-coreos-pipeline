@@ -7,7 +7,6 @@
 # The following env variables need to be set before creating the ignition config:
 #
 # - ${SPLUNK_HOSTNAME}
-# - ${ITPAAS_SPLUNK_REPO}
 # - ${SPLUNK_SIDECAR_REPO}
 #
 variant: fcos
@@ -112,14 +111,10 @@ storage:
           ExecStartPost=-podman image prune --force --filter until=720h
           [Install]
           WantedBy=default.target
-    # Add in Red Hat Root CA Certificates so we can podman build from a
-    # git repo that relies on TLS from one of these CAs. These files will be
+    # Add in Red Hat Root CA Certificate so we can podman build from a
+    # git repo that relies on TLS from one of these CAs. The cert will be
     # processed by coreos-update-ca-trust.service on first boot.
     # See https://certs.corp.redhat.com/ for more information.
-    - path: /etc/pki/ca-trust/source/anchors/2015-IT-Root-CA.pem
-      mode: 0644
-      contents:
-        source: https://certs.corp.redhat.com/certs/2015-IT-Root-CA.pem
     - path: /etc/pki/ca-trust/source/anchors/2022-IT-Root-CA.pem
       mode: 0644
       contents:

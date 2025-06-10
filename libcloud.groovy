@@ -6,7 +6,9 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         cosa meta --build=${buildID} --arch=${basearch} --dump
     """))
     def replicators = [:]
+    def builders = [:]
     def credentials
+    def stream_info = pipecfg.streams[stream]
 
     credentials = [file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "aliyun-image-upload-config")]
@@ -46,10 +48,95 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
             """)
         }
     }
+    // A closure to build the aws-winli AMI. This will be called before replicating to 
+    // all regions, if the option is set for the current stream. `cosa aws-replicate` 
+    // will handle both traditional AMIs and aws-winli AMIs if present in the metadata. 
+    // aws-winli is only supported on x86_64.
+    def awsWinLIBuildClosure = { config, aws_image_name, credentialId ->
+        def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
+        withCredentials(creds) {
+            utils.syncCredentialsIfInRemoteSession(["AWS_CONFIG_FILE"])
+            def c = config
+
+            // Since we are not uploading anything, let's just touch the vmdk image
+            // file to satisfy the cosa ore wrapper, which still requires the file 
+            // in the cosa working dir.
+            def aws_image_path = "builds/${buildID}/${basearch}/${aws_image_name}"
+            shwrap("""
+                touch ${aws_image_path}
+            """)
+
+            // Discover the latest Windows Server AMI to use as the winli-builder instance.
+            // The AMI rotates frequently with Windows updates and is not persistant in AWS
+            // for very long, so we need to find the most recent AMI ID.
+            // Windows Server 2022 was selected here because the Windows Server 2025 AMI does
+            // not allow legacy bios. WS2022 has an EOL date of 2026-10-13.
+            // https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2022
+            // If WS2022 becomes inaccessible in the future and we still need BIOS for our
+            // winli images then we can just use one of our own previously created winli
+            // images and pass that to `--windows-ami` below.
+            def windows_server_ami_name = ""
+            windows_server_ami_name = "Windows_Server-2022-English-Full-Base-*"
+            def windows_server_ami = shwrapCapture("""
+                aws ec2 describe-images   \
+                    --region=${c.primary_region}   \
+                    --owners="amazon"   \
+                    --filters="Name=name,Values=${windows_server_ami_name}"   \
+                    --query="sort_by(Images, &CreationDate)[-1].ImageId"   \
+                    --output text
+            """)
+
+            // validate that we did actually get an AMI ID returned.
+            if (!(windows_server_ami_name != /^ami-[0-9][a-f]{17}$/)) {
+                error("Invalid Windows Server AMI ID: ${windows_server_ami}")
+            }
+
+            def extraArgs = []
+            if (c.grant_users) {
+                extraArgs += c.grant_users.collect{"--grant-user=${it}"}
+                extraArgs += c.grant_users.collect{"--grant-user-snapshot=${it}"}
+            }
+            if (c.tags) {
+                extraArgs += c.tags.collect { "--tags=${it}" }
+            }
+            if (c.public) {
+                extraArgs += "--public"
+            }
+            shwrap("""
+                cosa imageupload-aws \
+                    --upload \
+                    --winli \
+                    --windows-ami=${windows_server_ami} \
+                    --arch=${basearch} \
+                    --build=${buildID} \
+                    --region=${c.primary_region} \
+                    --credentials-file=\${AWS_CONFIG_FILE} \
+                    ${extraArgs.join(' ')}
+            """)
+
+            // remove the false vmdk file from the builds directory so it doesn't get
+            // uploaded by some other process
+            shwrap("""
+                rm ${aws_image_path}
+            """)
+        }
+    }
     if (meta.amis) {
         credentials = [file(variable: "UNUSED", credentialsId: "aws-build-upload-config")]
         if (pipecfg.clouds?.aws &&
             utils.credentialsExist(credentials)) {
+
+            // grab the aws vmdk image name from the metadata to pass to the winli closure.
+            // the cosa ore wrapper still requires the image to exist, but we dont upload 
+            // anything so we'll just touch the file in the cosa working dir.
+            def aws_image_name = meta.images.aws.path
+            // aws-winli is only supported on x86_64
+            if ((basearch == "x86_64") && (stream_info.create_and_replicate_winli_ami)) {
+                builders["☁️ 🔨:aws-winli"] = {
+                    awsWinLIBuildClosure.call(pipecfg.clouds.aws, aws_image_name,
+                                        "aws-build-upload-config")
+                }
+            }
             replicators["☁️ 🔄:aws"] = {
                 awsReplicateClosure.call(pipecfg.clouds.aws,
                                          "aws-build-upload-config")
@@ -92,10 +179,19 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         }
     }
 
+    parallel builders
     parallel replicators
 }
 // Upload artifacts to clouds
 def upload_to_clouds(pipecfg, basearch, buildID, stream) {
+
+    // In 4.19+ we switched the command to upload to clouds to
+    // `cosa imageupload-<cloud>`
+    // https://github.com/coreos/coreos-assembler/pull/4074
+    def image_upload_cmd = "imageupload"
+    if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-imageupload-aws") != 0) {
+        image_upload_cmd = "buildextend"
+    }
 
     // Get a list of the artifacts that are currently built.
     def images_json = readJSON(text: shwrapCapture("""
@@ -125,7 +221,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     extraArgs += "--public"
                 }
                 shwrap("""
-                cosa buildextend-aliyun \
+                cosa ${image_upload_cmd}-aliyun \
                     --upload \
                     --arch=${basearch} \
                     --build=${buildID} \
@@ -157,7 +253,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 extraArgs += "--public"
             }
             shwrap("""
-            cosa buildextend-aws \
+            cosa ${image_upload_cmd}-aws \
                 --upload \
                 --arch=${basearch} \
                 --build=${buildID} \
@@ -197,7 +293,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.azure
-                shwrap("""cosa buildextend-azure \
+                shwrap("""cosa ${image_upload_cmd}-azure \
                     --upload \
                     --credentials \${AZURE_IMAGE_UPLOAD_CONFIG} \
                     --build=${buildID} \
@@ -248,7 +344,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 shwrap("""
                 # pick up the project to use from the config
                 gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
-                cosa buildextend-gcp \
+                cosa ${image_upload_cmd}-gcp \
                     --log-level=INFO \
                     --build=${buildID} \
                     --arch=${basearch} \
@@ -275,7 +371,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 // region that is uniquely named with the region as a suffix
                 // i.e. `rhcos-powervs-images-us-east`
                 def bucket = "${c.bucket}-${c.primary_region}"
-                shwrap("""cosa buildextend-powervs \
+                shwrap("""cosa ${image_upload_cmd}-powervs \
                     --upload \
                     --cloud-object-storage ${c.cloud_object_storage_service_instance} \
                     --bucket ${bucket} \

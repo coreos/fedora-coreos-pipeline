@@ -38,7 +38,6 @@ properties([
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
-echo "Waiting for bump-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
@@ -64,8 +63,10 @@ def getLockfileInfo(lockfile) {
 // Keep in sync with build.Jenkinsfile
 def cosa_memory_request_mb = 10.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
-def timeout_mins = 240
+def timeout_mins = 300
 
+lock(resource: "bump-${params.STREAM}") {
+echo "Waiting for bump-lockfile lock"
 lock(resource: "bump-lockfile") {
     cosaPod(image: cosa_img, env: container_env,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi",
@@ -215,19 +216,17 @@ lock(resource: "bump-lockfile") {
                         stage("${arch}:Fetch") {
                             shwrap("cosa fetch --strict")
                         }
-                        stage("${arch}:Build") {
-                            shwrap("cosa build --force --strict")
+                        stage("${arch}:Build OSTree") {
+                            shwrap("cosa build ostree --force --strict")
+                        }
+                        stage("${arch}:OSBuild") {
+                            shwrap("cosa osbuild qemu metal metal4k live")
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
                              marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
                              skipKolaTags: stream_info.skip_kola_tags)
-                        stage("${arch}:Build Metal") {
-                            shwrap("cosa buildextend-metal")
-                            shwrap("cosa buildextend-metal4k")
-                        }
-                        stage("${arch}:Build Live") {
-                            shwrap("cosa buildextend-live --fast")
+                        stage("${arch}:Compress Metal") {
                             // Test metal4k with an uncompressed image and
                             // metal with a compressed one. Limit to 4G to be
                             // good neighbours and reduce chances of getting
@@ -299,6 +298,13 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
         } else {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
+            stage("Trigger Build") {
+                echo "Triggering build for stream: ${params.STREAM}"
+                build job: 'build', wait: false, propagate: false, parameters: [
+                  string(name: 'STREAM', value: params.STREAM),
+                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+                ]
+            }
         }
         currentBuild.result = 'SUCCESS'
 
@@ -310,4 +316,4 @@ lock(resource: "bump-lockfile") {
             pipeutils.trySlackSend(message: "bump-lockfile #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}]")
         }
     }
-}}} // cosaPod, timeout, and lock finish here
+}}}} // cosaPod, timeout, and locks finish here

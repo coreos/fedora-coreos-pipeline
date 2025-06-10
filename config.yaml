@@ -8,18 +8,12 @@ streams:
   testing-devel:
     type: development
     default: true
-    env:
-      COSA_TESTISO_DEBUG: true
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
-    env:
-      COSA_TESTISO_DEBUG: true
-    osbuild_experimental: true
-  branched:
-    type: mechanical
-    osbuild_experimental: true
+  #branched:
+  #  type: mechanical
   # bodhi-updates:
   #   type: mechanical
   # bodhi-updates-testing:
@@ -40,11 +34,11 @@ s3:
 
 registry_repos:
   oscontainer:
-    repo: quay.io/fedora/fedora-coreos
-    tags: ["${STREAM}", "${VERSION}"]
+    - repo: quay.io/fedora/fedora-coreos
+      tags: ["${STREAM}", "${VERSION}"]
   kubevirt:
-    repo: quay.io/fedora/fedora-coreos-kubevirt
-    tags: ["${STREAM}"]
+    - repo: quay.io/fedora/fedora-coreos-kubevirt
+      tags: ["${STREAM}"]
 
 default_artifacts:
   all:
@@ -57,11 +51,13 @@ default_artifacts:
     - aws
     - azure
     - gcp
+    - hetzner
     - hyperv
   ppc64le:
     - powervs
   s390x:
     - ibmcloud
+    - kubevirt
   x86_64:
     - aliyun
     - applehv
@@ -71,6 +67,7 @@ default_artifacts:
     - digitalocean
     - exoscale
     - gcp
+    - hetzner
     - hyperv
     - ibmcloud
     - kubevirt
@@ -97,6 +94,7 @@ clouds:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
+    test_gallery: fedoracoreostestinggallery
     test_architectures: [x86_64]
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import

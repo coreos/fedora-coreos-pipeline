@@ -155,9 +155,9 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                 if (params.SRC_CONFIG_COMMIT != '') {
                     commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa init --force --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
+                cosa init --force --branch ${ref} ${commitopt} ${url}
                 cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_version} --arch=${params.ARCH}
                 cosa decompress --build=${start_version}
                 """)
@@ -200,10 +200,8 @@ EOF
                     // SecureBoot doesn't work on older FCOS builds with latest qemu
                     // so we must run it conditionally.
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1452
-                    def secureboot_start_version = 34
-                    if (start_stream == 'next') {
-                        secureboot_start_version = 35
-                    }
+                    // https://github.com/coreos/fedora-coreos-tracker/issues/1452#issuecomment-2835130860
+                    def secureboot_start_version = 37
                     if ((start_version[0..1] as Integer) >= secureboot_start_version) {
                         k2 = kolaparams.clone()
                         k2.extraArgs += " --qemu-firmware=uefi-secure"

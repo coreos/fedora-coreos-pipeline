@@ -1,7 +1,7 @@
 properties([
     pipelineTriggers([
-        // we don't need to bump lockfiles any more often than daily
-        cron("H H * * *")
+        // run every 24h at 04:00 UTC
+        cron("0 4 * * *")
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
