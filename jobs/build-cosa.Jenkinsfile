@@ -25,7 +25,7 @@ properties([
          printPostContent: true,
          silentResponse: false,
          regexpFilterText: '$COREOS_ASSEMBLER_GIT_REF',
-         regexpFilterExpression: 'main|rhcos-.*'
+         regexpFilterExpression: '^main|^rhcos-.*'
         ], 
         cron('H H * * 1,3')
     ]),
