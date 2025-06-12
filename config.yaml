@@ -99,7 +99,7 @@ clouds:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
-    test_architectures: [x86_64]
+    test_gallery: fedoracoreostestinggallery
   gcp:
     bucket: fedora-coreos-devel-image-uploads/image-import
     description: "Fedora, Fedora CoreOS Devel ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
