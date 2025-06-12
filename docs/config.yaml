@@ -317,6 +317,8 @@ ocp_node_builds:
                ref: master
                # REQUIRED: repo file name to build
                file: rhel-9.6.repo
+           # OPTIONAL: skip upload to brew. Defaults to false
+           skip_brew_upload: false
     # REQUIRED: knobs related to the source config
     registries:
         # REQUIRED: staging repo to push the final image built
