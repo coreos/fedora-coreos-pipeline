@@ -32,7 +32,7 @@ splunk-devops-extend:1.10.2
 splunk-devops:1.10.2
 antisamy-markup-formatter:173.v680e3a_b_69ff3
 jms-messaging:1.1.28
-pipeline-graph-view:406.v06871361eb_2d
+pipeline-graph-view:423.v765c49ca_da_3f
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
