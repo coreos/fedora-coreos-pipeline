@@ -91,10 +91,10 @@ storage:
           Description=Prune Dangling and Expired Container Resources
           [Service]
           Type=oneshot
-          ExecStart=podman image prune --force
-          ExecStart=podman image prune --all --external --force --filter until=48h
           ExecStart=podman container prune --force
           ExecStart=podman volume prune --force --filter="label!=persistent"
+          ExecStart=podman image prune --force
+          ExecStart=podman image prune --all --external --force --filter until=48h
     - path: /home/builder/.config/systemd/user/prune-container-resources.timer
       mode: 0644
       user:
