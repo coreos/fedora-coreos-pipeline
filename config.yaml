@@ -72,6 +72,7 @@ default_artifacts:
     - ibmcloud
     - kubevirt
     - nutanix
+    - proxmoxve
     - virtualbox
     - vmware
     - vultr
