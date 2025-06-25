@@ -6,7 +6,7 @@ import org.yaml.snakeyaml.Yaml
 
 // map of Jenkins URL to (S3 bucket, S3 bucket builds key, hotfix allowed)
 PROTECTED_JENKINSES = [
-    'https://jenkins-fedora-coreos-pipeline.apps.ocp.fedoraproject.org/':
+    'https://jenkins-fedora-coreos-pipeline.apps.ocp-rdu3.fedoraproject.org/':
         ['fcos-builds', 'prod/streams/${STREAM}', false],
     'https://jenkins-rhcos--devel-pipeline.apps.int.preprod-stable-spoke1-dc-iad2.itup.redhat.com/':
         ['rhcos-ci', 'prod/streams/${STREAM}', true],
