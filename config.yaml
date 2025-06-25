@@ -22,7 +22,7 @@ streams:
   # bodhi-updates-testing:
   #   type: mechanical
 
-additional_arches: [aarch64, ppc64le, s390x]
+additional_arches: [aarch64, s390x]
 
 source_config:
   url: https://github.com/coreos/fedora-coreos-config
