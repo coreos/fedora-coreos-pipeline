@@ -56,6 +56,7 @@ default_artifacts:
     - gcp
     - hetzner
     - hyperv
+    - oraclecloud
   ppc64le:
     - powervs
   s390x:
@@ -75,6 +76,7 @@ default_artifacts:
     - ibmcloud
     - kubevirt
     - nutanix
+    - oraclecloud
     - proxmoxve
     - virtualbox
     - vmware
