@@ -531,11 +531,9 @@ oc new-app --file=manifests/jenkins.yaml \
   --param=STORAGE_CLASS_NAME=ocs-storagecluster-ceph-rbd
 ```
 
-Notice the `NAMESPACE` parameter. This makes the Jenkins controller use the
-image from our namespace, which we'll create in the next step. (The
-reason we create the app first is that otherwise OpenShift will
+The reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
-the Jenkins pipeline).
+the Jenkins pipeline.
 
 The `STORAGE_CLASS_NAME` may be required depending on the cluster. If
 using a development cluster, it normally isn't, and you can drop it. For
