@@ -49,6 +49,8 @@ def skip_brew_upload = stream_info.skip_brew_upload ?: false
 def src_config_ref = stream_info.source_config.ref
 def src_config_url = stream_info.source_config.url
 
+def basearches = params.ARCHES.split() as Set
+
 lock(resource: "build-node-image") {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
             memory: "2Gi", kvm: true,
@@ -154,28 +156,31 @@ lock(resource: "build-node-image") {
                 def openshift_stream = params.RELEASE.split("-")[0]
                 def rhel_stream = params.RELEASE.split("-")[1]
 
-                // TODO: handle multiple architectures
-                pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    mkdir tmp
-                    cosa buildfetch \
-                        --arch=x86_64 --artifact qemu --url=s3://art-rhcos-ci/prod/streams/rhel-${rhel_stream}/builds \
-                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
-                    cp builds/latest/x86_64/*.gz rhcos.qcow2.gz
-                    gunzip rhcos.qcow2.gz
-                """)
-
-
-                shwrap("skopeo copy --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift.ociarchive")
-
-                shwrap("""
-                    set +o pipefail
-                    mkdir openshift
-                    cd openshift
-                    cosa init https://github.com/openshift/os --branch release-${openshift_stream} | true
-                    mkdir -p tmp
-                    kola run -b rhcos --tag 'openshift' --qemu-image ../rhcos.qcow2 --oscontainer ../openshift.ociarchive --denylist-stream ${params.RELEASE}
-                    kola run -E src/config "ext.*" --qemu-image ../rhcos.qcow2 --oscontainer ../openshift.ociarchive --denylist-stream ${params.RELEASE}
-                """)
+                parallel basearches.collectEntries{arch -> [arch, {
+                    pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                            mkdir -p tmp
+                            cosa buildfetch \
+                                --arch=$arch --artifact qemu --url=s3://art-rhcos-ci/prod/streams/rhel-${rhel_stream}/builds \
+                                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --find-build-for-arch
+                        """)
+                        shwrap("skopeo copy --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift.ociarchive")
+                        shwrap("""
+                            set +o pipefail
+                            qcow_path=\$(find builds -type f -name "*${arch}.qcow2.gz")
+                            cp "\$qcow_path" rhcos-${arch}.qcow2.gz
+                            gunzip rhcos-${arch}.qcow2.gz
+                            mkdir openshift-${arch}
+                            cd openshift-${arch}
+                            cosa init https://github.com/openshift/os --branch release-${openshift_stream} | true
+                            mkdir -p tmp
+                            kola run -b rhcos --tag 'openshift' --qemu-image ../rhcos-${arch}.qcow2 --output-dir output-${arch} --oscontainer ../openshift.ociarchive --denylist-stream ${params.RELEASE}
+                            kola run -E src/config "ext.*" --qemu-image ../rhcos-${arch}.qcow2 --output-dir output-${arch} --oscontainer ../openshift.ociarchive --denylist-stream ${params.RELEASE}
+                            tar czf output-${arch}.tar.gz --directory=output-${arch} .
+                        """)
+                        archiveArtifacts allowEmptyArchive: true, artifacts: "openshift-${arch}/output-${arch}.tar.gz"
+                    }
+                }]}
             }
         }
         if (!skip_brew_upload){
