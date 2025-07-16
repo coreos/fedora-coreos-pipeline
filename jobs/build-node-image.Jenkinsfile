@@ -49,9 +49,11 @@ def skip_brew_upload = stream_info.skip_brew_upload ?: false
 def src_config_ref = stream_info.source_config.ref
 def src_config_url = stream_info.source_config.url
 
+def basearches = params.ARCHES.split() as Set
+
 lock(resource: "build-node-image") {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "512Mi", kvm: false,
+            memory: "2Gi", kvm: true,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
@@ -126,6 +128,7 @@ lock(resource: "build-node-image") {
                                                                    "--add-openshift-build-labels"] + label_args)
             }
         }
+
         stage('Build Extensions Image') {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 // Use the node image as from
@@ -146,6 +149,36 @@ lock(resource: "build-node-image") {
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
                                                                   "--git-containerfile", "extensions/Dockerfile", "--force",
                                                                   "--add-openshift-build-labels"] + label_args)
+            }
+        }
+        stage("Run Tests"){
+            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                def openshift_stream = params.RELEASE.split("-")[0]
+                def rhel_stream = params.RELEASE.split("-")[1]
+
+                parallel basearches.collectEntries{arch -> [arch, {
+                    pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                            mkdir -p tmp
+                            cosa buildfetch \
+                                --arch=$arch --artifact qemu --url=s3://art-rhcos-ci/prod/streams/rhel-${rhel_stream}/builds \
+                                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --find-build-for-arch
+                        """)
+                        shwrap("skopeo copy --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift.ociarchive")
+                        shwrap("""
+                            set +o pipefail
+                            qcow_path=\$(find builds -type f -name "*${arch}.qcow2.gz")
+                            cp "\$qcow_path" rhcos-${arch}.qcow2.gz
+                            gunzip rhcos-${arch}.qcow2.gz
+                            mkdir openshift-${arch}
+                            cd openshift-${arch}
+                            cosa init https://github.com/openshift/os --branch release-${openshift_stream} | true
+                            mkdir -p tmp
+                            kola run -b rhcos --tag 'openshift' --qemu-image ../rhcos-${arch}.qcow2 --oscontainer ../openshift.ociarchive --denylist-stream ${params.RELEASE}
+                            kola run -E src/config "ext.*" --qemu-image ../rhcos-${arch}.qcow2 --oscontainer ../openshift.ociarchive --denylist-stream ${params.RELEASE}
+                        """)
+                    }
+                }]}
             }
         }
         if (!skip_brew_upload){
