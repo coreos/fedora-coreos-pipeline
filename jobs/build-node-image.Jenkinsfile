@@ -50,8 +50,9 @@ def src_config_ref = stream_info.source_config.ref
 def src_config_url = stream_info.source_config.url
 
 lock(resource: "build-node-image") {
+    // building actually happens on builders so we don't need much resources
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "512Mi", kvm: false,
+            memory: "512Mi", cpu: "1", kvm: false,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
