@@ -1,9 +1,6 @@
 streams:
   stable:
     type: production
-    skip_artifacts:
-      x86_64:
-        - proxmoxve
   testing:
     type: production
   next:
