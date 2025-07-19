@@ -212,6 +212,20 @@ oc annotate secret/azure-kola-tests-config \
     jenkins.io/credentials-description="Azure kola tests credentials config"
 ```
 
+#### [OPTIONAL] Using shared Azure managed identity for kola tests
+If you want to establish an authorized identity to pre-emptively grant access
+to other Azure resources, enabling the startup process to leverage Azure's default
+credentials, use the azure-kola-managed-identity:
+
+```
+oc create secret generic azure-kola-managed-identity \
+    --from-file=text=/run/user/$UID/azureManagedIdentity.txt
+oc label secret/azure-kola-managed-identity \
+    jenkins.io/credentials-type=secretText
+oc annotate secret/azure-kola-managed-identity \
+    jenkins.io/credentials-description="Azure managed identity credentials"
+```
+
 NOTE: For the prod pipeline these secrets can be found in BitWarden
 
 ### [OPTIONAL] Creating OpenStack credentials configs
