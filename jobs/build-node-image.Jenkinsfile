@@ -157,7 +157,7 @@ lock(resource: "build-node-image") {
         stage("Run Tests") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 def openshift_stream = params.RELEASE.split("-")[0]
-                def rhel_stream = params.RELEASE.split("-")[1]
+                def rhel_stream = "rhel-" + params.RELEASE.split("-")[1]
 
                 parallel basearches.collectEntries { arch ->
                     [arch, {
