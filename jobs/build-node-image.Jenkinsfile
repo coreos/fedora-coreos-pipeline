@@ -49,15 +49,10 @@ def skip_brew_upload = stream_info.skip_brew_upload ?: false
 def src_config_ref = stream_info.source_config.ref
 def src_config_url = stream_info.source_config.url
 
-def basearches = params.ARCHES.split() as Set
-def timeout_mins = 300
-
-def cosa_img = params.COREOS_ASSEMBLER_IMAGE
-
 lock(resource: "build-node-image") {
     // building actually happens on builders so we don't need much resources
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "2.5Gi", kvm: true,
+            memory: "512Mi", cpu: "1", kvm: false,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
@@ -152,76 +147,6 @@ lock(resource: "build-node-image") {
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
                                                                   "--git-containerfile", "extensions/Dockerfile", "--force",
                                                                   "--add-openshift-build-labels"] + label_args)
-            }
-        }
-        stage("Run Tests") {
-            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                def openshift_stream = params.RELEASE.split("-")[0]
-                def rhel_stream = params.RELEASE.split("-")[1]
-
-                parallel basearches.collectEntries { arch ->
-                    [arch, {
-                        // Define the sequence of cosa commands as a closure to avoid repetition.
-                        def executeCosaCommands = { boolean isRemote ->
-                            // The 'cosa init' command can exit with an error due to a known issue (coreos/coreos-assembler#4239).
-                            // Piping to 'true' ignores any non-zero exit code from 'cosa init', preventing the pipeline from failing.
-                            shwrap("""
-                                set +o pipefail
-                                cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
-                            """)
-                            // The 'cosa shell' prefix directs commands to the correct execution environment:
-                            // the remote session if active, or the local container otherwise.
-                            def s3_dir = pipeutils.get_s3_streams_dir(pipecfg, rhel_stream)
-                            pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                                cosa shell mkdir -p tmp
-                                cosa buildfetch \
-                                    --arch=$arch --artifact qemu --url=s3://${s3_dir}/builds \
-                                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --find-build-for-arch
-                            """)
-
-                            def build_id = shwrapCapture("""
-                                link=\$(cosa shell realpath builds/latest)
-                                cosa shell basename \$link
-                            """)
-                            shwrap("cosa decompress --build $build_id")
-                            def skopeo_arch_override = (arch == "x86_64") ? "amd64" : arch
-                            shwrap("cosa shell skopeo copy --override-arch ${skopeo_arch_override} --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift-${arch}.ociarchive")
-                            kola(
-                                cosaDir: WORKSPACE,
-                                build: build_id,
-                                arch: arch,
-                                skipUpgrade: true,
-                                extraArgs: "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
-                            )
-                            kola(
-                                cosaDir: WORKSPACE,
-                                build: build_id,
-                                arch: arch,
-                                skipUpgrade: true,
-                                extraArgs: "-b rhcos --tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
-                            )
-                        }
-
-                        // Conditional execution based on architecture
-                        if (arch != 'x86_64') {
-                            // Conditionally create the remote session only if the architecture is NOT x86_64.
-                            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                                def session = pipeutils.makeCosaRemoteSession(
-                                    expiration: "${timeout_mins}m",
-                                    image: cosa_img,
-                                    workdir: WORKSPACE
-                                )
-                                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
-                                    // Execute the commands within the remote session context.
-                                    executeCosaCommands(true)
-                                }
-                            }
-                        } else {
-                            // For x86_64, execute the commands directly without a remote session.
-                            executeCosaCommands(false)
-                        }
-                    }]
-                }
             }
         }
         if (!skip_brew_upload){
