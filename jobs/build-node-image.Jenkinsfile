@@ -184,7 +184,7 @@ lock(resource: "build-node-image") {
                                 cosa shell basename \$link
                             """)
                             shwrap("cosa decompress --build $build_id")
-                            def skopeo_arch_override = rpm_to_go_arch(arch)
+                            def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
                             shwrap("cosa shell skopeo copy --override-arch ${skopeo_arch_override} --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift-${arch}.ociarchive")
                             kola(
                                 cosaDir: WORKSPACE,
