@@ -975,14 +975,8 @@ def get_arch_image_digest(from) {
 def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_digest, version, pipecfg) {
     def node_digest_arch_map = get_arch_image_digest("${repo}@${manifest_digest}")
     def extensions_node_digest_arch_map  = get_arch_image_digest("${repo}@${extensions_manifest_digest}")
-    def archAliasMap = [
-        "x86_64"  : "amd64",
-        "aarch64" : "arm64",
-        "s390x"   : "s390x",
-        "ppc64le" : "ppc64le"
-    ]
     for (arch in arches) {
-        def inspect_arch = archAliasMap[arch]
+        def inspect_arch = rpm_to_go_arch(arch)
         def node_image = "${repo}@${node_digest_arch_map[inspect_arch]}"
         def extensions_node_image = "${repo}@${extensions_node_digest_arch_map[inspect_arch]}"
 
@@ -1004,6 +998,18 @@ def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_dige
                 --node-image
         """)
     }
+}
+
+// maps RPM-style architecture names to Go-style architecture names
+// used by skopeo and container manifests.
+def rpm_to_go_arch(arch) {
+    def archAliasMap = [
+        "x86_64"  : "amd64",
+        "aarch64" : "arm64",
+        "s390x"   : "s390x",
+        "ppc64le" : "ppc64le"
+    ]
+    return archAliasMap[arch]
 }
 
 return this
