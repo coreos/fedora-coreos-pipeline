@@ -122,6 +122,7 @@ streams:
       # `build-mechanical` will only build those streams
       scheduled: true
       # OPTIONAL: Create and replicate AWS Windows License Included images for this stream.
+      # requires winli_billing_code under the 'aws' mapping
       create_and_replicate_winli_ami: true
 
 # REQUIRED: architectures to build for other than x86_64
@@ -212,6 +213,9 @@ clouds:
       # OPTIONAL: boolean: whether or not to set the image/snapshot as public on
       # initial upload (AMIs of released builds are always made public)
       public: true
+    # OPTIONAL: billing code to create a Windows License Included Image
+    # required if using 'create_and_replicate_winli_ami' under the stream mappings
+    winli_billing_code: "bp-12345abcde"
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.
