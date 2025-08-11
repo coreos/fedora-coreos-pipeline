@@ -66,31 +66,6 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                 touch ${aws_image_path}
             """)
 
-            // Discover the latest Windows Server AMI to use as the winli-builder instance.
-            // The AMI rotates frequently with Windows updates and is not persistant in AWS
-            // for very long, so we need to find the most recent AMI ID.
-            // Windows Server 2022 was selected here because the Windows Server 2025 AMI does
-            // not allow legacy bios. WS2022 has an EOL date of 2026-10-13.
-            // https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2022
-            // If WS2022 becomes inaccessible in the future and we still need BIOS for our
-            // winli images then we can just use one of our own previously created winli
-            // images and pass that to `--windows-ami` below.
-            def windows_server_ami_name = ""
-            windows_server_ami_name = "Windows_Server-2022-English-Full-Base-*"
-            def windows_server_ami = shwrapCapture("""
-                aws ec2 describe-images   \
-                    --region=${c.primary_region}   \
-                    --owners="amazon"   \
-                    --filters="Name=name,Values=${windows_server_ami_name}"   \
-                    --query="sort_by(Images, &CreationDate)[-1].ImageId"   \
-                    --output text
-            """)
-
-            // validate that we did actually get an AMI ID returned.
-            if (!(windows_server_ami_name != /^ami-[0-9][a-f]{17}$/)) {
-                error("Invalid Windows Server AMI ID: ${windows_server_ami}")
-            }
-
             def extraArgs = []
             if (c.grant_users) {
                 extraArgs += c.grant_users.collect{"--grant-user=${it}"}
@@ -106,7 +81,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                 cosa imageupload-aws \
                     --upload \
                     --winli \
-                    --windows-ami=${windows_server_ami} \
+                    --winli-billing-product ${c.winli_billing_code}\
                     --arch=${basearch} \
                     --build=${buildID} \
                     --region=${c.primary_region} \
