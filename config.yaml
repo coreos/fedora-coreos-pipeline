@@ -17,6 +17,7 @@ streams:
     env:
       COSA_TESTISO_DEBUG: true
       RUNVM_CACHE_SIZE: "30G"
+      COSA_BUILD_WITH_BUILDAH: true
     osbuild_experimental: true
   # branched:
   #   type: mechanical
