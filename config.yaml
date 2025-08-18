@@ -12,6 +12,9 @@ streams:
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
+    env:
+      # https://github.com/coreos/fedora-coreos-tracker/issues/1969
+      COSA_BUILD_WITH_BUILDAH: true
   branched:
    type: mechanical
   # bodhi-updates:
