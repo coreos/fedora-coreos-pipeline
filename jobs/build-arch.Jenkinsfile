@@ -373,8 +373,15 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 parallelruns['Sign Images'] = {
                     pipeutils.signImages(params.STREAM, newBuildID, basearch, s3_stream_dir)
                 }
-                parallelruns['OSTree Import: Compose Repo'] = {
-                    pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
+                // Import into the OSTree repo if we are F42. We stopped
+                // doing this for F43+ because we distribute updates from
+                // the container registry now.
+                if (newBuildID.tokenize('.')[0] == '42') {
+                    parallelruns['OSTree Import: Compose Repo'] = {
+                        pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
+                    }
+                } else {
+                    echo "Skipping OSTree repo import for F43+"
                 }
                 // process this batch
                 parallel parallelruns

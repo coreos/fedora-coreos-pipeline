@@ -178,17 +178,24 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             // For production streams, import the OSTree into the prod
             // OSTree repo.
             if (stream_info.type == 'production') {
-                pipeutils.tryWithMessagingCredentials() {
-                    stage("OSTree Import ${basearch}: Prod Repo") {
-                        shwrap("""
-                        /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                            --build=${params.VERSION} --arch=${basearch} \
-                            --s3=${s3_stream_dir} --repo=prod \
-                            --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                        """)
-                    }
+                // Import into the OSTree repo if we are F42. We stopped
+                // doing this for F43+ because we distribute updates from
+                // the container registry now.
+                if (params.VERSION.tokenize('.')[0] == '42') {
+                    pipeutils.tryWithMessagingCredentials() {
+                        stage("OSTree Import ${basearch}: Prod Repo") {
+                            shwrap("""
+                            /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
+                                --build=${params.VERSION} --arch=${basearch} \
+                                --s3=${s3_stream_dir} --repo=prod \
+                                --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
+                            """)
+                        }
 
-                    ostree_prod_refs[meta.ref] = meta["ostree-commit"]
+                        ostree_prod_refs[meta.ref] = meta["ostree-commit"]
+                    }
+                } else {
+                    echo "Skipping OSTree repo import for F43+"
                 }
             }
 
