@@ -1,6 +1,6 @@
 # This butane config will do the following:
 #
-# - Merge in the builder-common.ign Ignition file
+# - Merge in the builder-common.bu Butane file
 # - Allow the builder user to log in with the associated ssh key
 # - Set a hostname
 #
@@ -8,8 +8,7 @@ variant: fcos
 version: 1.4.0
 ignition:
   config:
-    merge:
-      - local: builder-common.ign
+      - source: https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/builder-common.bu
 passwd:
   users:
     - name: builder

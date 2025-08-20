@@ -1,7 +1,7 @@
 # This butane config will do the following:
 #
-# - Merge in the coreos-s390x-builder.ign Ignition file
-# - Merge in the builder-splunk.ign Ignition file
+# - Merge in the coreos-s390x-builder.bu Butane file
+# - Merge in the builder-splunk.bu Butane file
 # - Enable the Secure Execution Host
 # - Create and initialize the secex-data volume
 # - Enable the Cex hardware based luks encryption
@@ -10,9 +10,8 @@ variant: fcos
 version: 1.4.0
 ignition:
   config:
-    merge:
-      - local: coreos-s390x-builder.ign
-      - local: builder-splunk.ign
+      - source: https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-s390x-builder.bu
+      - source: https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/builder-splunk.bu
 kernel_arguments:
   should_exist:
     # enables Secure Execution Host
@@ -111,4 +110,4 @@ storage:
       group:
         name: root
       contents:
-        local: create-cex-device.sh
+        source: https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/create-cex-device.sh
