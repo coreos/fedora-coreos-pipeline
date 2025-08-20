@@ -54,6 +54,9 @@ def timeout_mins = 300
 
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 
+// Get the tag that's unique
+def unique_tag = ""
+
 lock(resource: "build-node-image") {
     // building actually happens on builders so we don't need much resources
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
@@ -63,7 +66,15 @@ lock(resource: "build-node-image") {
                       "koji-conf:koji.conf:/etc/koji.conf",
                       "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
     timeout(time: 45, unit: 'MINUTES') {
-    try {
+
+        def registry_staging_repo
+        def registry_staging_tags
+        def registry_prod_repo
+        def registry_prod_tags
+        def node_image_manifest_digest
+        def extensions_image_manifest_digest
+
+        try {
 
         def output = shwrapCapture("git ls-remote ${src_config_url} ${src_config_ref}")
         commit = output.substring(0,40)
@@ -76,10 +87,8 @@ lock(resource: "build-node-image") {
         def archinfo = arches.collectEntries{[it, [:]]}
         def now = java.time.LocalDateTime.now()
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
-        def (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
+        (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
 
-        // Get the tag that's unique
-        def unique_tag = ""
         for (tag in registry_prod_tags) {
             if (tag.contains(timestamp)) {
                 if (unique_tag != "") {
@@ -99,8 +108,6 @@ lock(resource: "build-node-image") {
         pipeutils.addOptionalRootCA()
 
         def yumrepos_file
-        def node_image_manifest_digest
-        def extensions_image_manifest_digest
         stage('Init') {
             shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
             for (repo in stream_info.yumrepo.files) {
@@ -255,7 +262,7 @@ lock(resource: "build-node-image") {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        message = ":openshift:"
+        def message = ":openshift:"
         if (currentBuild.result == 'SUCCESS') {
             currentBuild.description = "${build_description} ⚡"
             message = "${message} :sparkles:"
@@ -263,8 +270,22 @@ lock(resource: "build-node-image") {
             currentBuild.description = "${build_description} ❌"
             message = "${message} :fire:"
         }
-        message = "${message} build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${build_description}"
+
+        def unique_tag_display = unique_tag ? "(${unique_tag})" : ""
+
+        if (unique_tag != "") {
+            node_ref = ":${unique_tag}"
+            extensions_ref = ":${unique_tag}-extensions"
+            registry_repo = registry_prod_repo
+        } else {
+            node_ref = "@${node_image_manifest_digest}"
+            extensions_ref = "@${extensions_image_manifest_digest}"
+            registry_repo = registry_staging_repo
+        }
+
+        def pullspec_links = " <https://${registry_repo}${node_ref}|:node:> <https://${registry_repo}${extensions_ref}|:puzzle-piece:>"
+
+        message = "${message} build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${build_description}${unique_tag_display} ${pullspec_links}"
         pipeutils.trySlackSend(message: message)
     }
 }}} // cosaPod, timeout, and lock finish here
-
