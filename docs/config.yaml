@@ -61,10 +61,6 @@ streams:
       variant: rhcos-9.0
       # OPTIONAL: override whether to use a versionary for this stream
       versionary: false
-      # OPTIONAL: Whether to skip disk image generation and upload. This
-      # is equivalent to listing all live artifacts and cloud platforms in
-      # `skip_artifacts`.
-      skip_disk_images: true
       # OPTIONAL: Whether to skip building ostree in the build pipeline.
       # The build would be imported using `cosa import` with the specified image uri.
       import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
