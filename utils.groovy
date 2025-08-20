@@ -577,6 +577,11 @@ def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
 // this cloud which is intended to limit the architectures that
 // are tested for the given cloud.
 def cloud_testing_enabled_for_arch(pipecfg, cloud, basearch) {
+    if (! utils.credentialsExist([file(variable: 'UNUSED',
+                                 credentialsId: "${cloud}-kola-tests-config")])) {
+        // If the credential doesn't exist for it then we can't test
+        return false
+    }
     if (pipecfg.clouds."${cloud}"?.test_architectures) {
         // The list exists. Return true/false if the arch is in the list.
         return basearch in pipecfg.clouds."${cloud}".test_architectures
@@ -600,9 +605,7 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
 
     // Kick off the Kola AWS job if we have an uploaded image, credentials, and testing is enabled.
     if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value amis") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch) &&
-        utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'aws-kola-tests-config')])) {
+        cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch)) {
         testruns['Kola:AWS'] = { build job: 'kola-aws', wait: false, parameters: params }
       // XXX: This is failing right now. Disable until the New
       // Year when someone can dig into the problem.
@@ -611,25 +614,19 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
 
     // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
     if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.azure") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
-        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'azure-kola-tests-config')])) {
+        cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch)) {
         testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
     }
 
     // Kick off the Kola GCP job if we have an uploaded image, credentials, and testing is enabled.
     if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value gcp") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch) &&
-        utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'gcp-kola-tests-config')])) {
+        cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch)) {
         testruns['Kola:GCP'] = { build job: 'kola-gcp', wait: false, parameters: params }
     }
 
     // Kick off the Kola OpenStack job if we have an artifact, credentials, and testing is enabled.
     if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.openstack") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
-        utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'openstack-kola-tests-config')])) {
+        cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch)) {
         testruns['Kola:OpenStack'] = { build job: 'kola-openstack', wait: false, parameters: params }
     }
 
