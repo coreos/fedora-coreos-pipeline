@@ -113,11 +113,13 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         def gcp_image = ""
         def ostree_prod_refs = [:]
 
+        def uploading_to_brew = (brew_profile && !stream_info.skip_brew_upload)
+
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
             def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-            def fetch_config_git = stream_info.skip_brew_upload ? "" : "--file coreos-assembler-config-git.json"
+            def fetch_config_git = uploading_to_brew ? "--file coreos-assembler-config-git.json" : ""
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
             cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
@@ -296,7 +298,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
-        if (brew_profile && !stream_info.skip_brew_upload) {
+        if (uploading_to_brew) {
             stage('Brew Upload') {
                 def tag = pipecfg.streams[params.STREAM].brew_tag
                 for (arch in basearches) {
