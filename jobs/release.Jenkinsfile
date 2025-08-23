@@ -117,12 +117,13 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         stage('Fetch Metadata') {
             def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+            def fetch_config_git = stream_info.skip_brew_upload ? "" : "--file coreos-assembler-config-git.json"
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
             cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                --file "coreos-assembler-config-git.json"
+                ${fetch_config_git}
             """)
         }
 
