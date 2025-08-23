@@ -106,6 +106,14 @@ def cosa_memory_request_mb = 10.5 * 1024 as Integer
 // cleaner
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
+def source_oci_image = null
+boolean skip_build = false
+
+if (stream_info.source_oci_image) {
+    skip_build = true
+    source_oci_image = stream_info.source_oci_image
+}
+
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "${build_description} Waiting"
 
@@ -247,84 +255,94 @@ lock(resource: "build-${params.STREAM}") {
 
         def overrides_fetch_param = ""
 
-        // fetch from repos for the current build
-        stage('Fetch') {
-            // Dont run this for production builds
-            if (recent_commits_to_lockfiles() == 0 && stream_info.type != "production" ) {
-                shwrap("python3 /usr/lib/coreos-assembler/download-overrides.py")
-                overrides_fetch_param = "--with-cosa-overrides"
-            }
-            shwrap("cosa fetch ${overrides_fetch_param} ${strict_build_param}")            
-        }
-
-        stage('Build OSTree') {
-            def parent_arg = ""
-            if (parent_version != "") {
-                parent_arg = "--parent-build ${parent_version}"
-            }
-            def version_arg = ""
-            if (params.VERSION) {
-                version_arg = "--version ${params.VERSION}"
-            } else {
-                def use_versionary = pipecfg.misc?.versionary
-                if (stream_info.containsKey('versionary')) {
-                    // stream override always wins
-                    use_versionary = stream_info.versionary
+        if (!skip_build) {
+            // fetch from repos for the current build
+            stage('Fetch') {
+                // Dont run this for production builds
+                if (recent_commits_to_lockfiles() == 0 && stream_info.type != "production" ) {
+                    shwrap("python3 /usr/lib/coreos-assembler/download-overrides.py")
+                    overrides_fetch_param = "--with-cosa-overrides"
                 }
-                if (use_versionary) {
-                    version_arg = "--versionary"
+                shwrap("cosa fetch ${overrides_fetch_param} ${strict_build_param}")            
+            }
+
+            stage('Build OSTree') {
+                def parent_arg = ""
+                if (parent_version != "") {
+                    parent_arg = "--parent-build ${parent_version}"
                 }
-            }
-            def force = params.FORCE ? "--force" : ""
-            shwrap("""
-            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
-            """)
-
-            // Insert the parent info into meta.json so we can display it in
-            // the release browser and for sanity checking
-            if (parent_commit && parent_version) {
-                shwrap("""
-                cosa meta \
-                    --set fedora-coreos.parent-commit=${parent_commit} \
-                    --set fedora-coreos.parent-version=${parent_version}
-                """)
-            }
-        }
-
-        def buildID = shwrapCapture("readlink builds/latest")
-        if (prevBuildID == buildID) {
-            currentBuild.result = 'SUCCESS'
-            currentBuild.description = "${build_description} 💤 (no new build)"
-
-            // Nothing changed since the latest build. Check if it's missing
-            // some arches and retrigger `build-arch` only for the missing
-            // arches, and the follow-up `release` job. Match the exact src
-            // config commit that was used. But only do this if there isn't
-            // already outstanding work in progress for that build ID. Skip if
-            // not uploading since it's required for multi-arch.
-            if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
-                def builds = readJSON file: "builds/builds.json"
-                assert buildID == builds.builds[0].id
-                def missing_arches = additional_arches - builds.builds[0].arches
-                if (missing_arches) {
-                    def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
-                    def rev = meta["coreos-assembler.config-gitrev"]
-                    currentBuild.description = "${build_description} 🔨 ${buildID}"
-                    // Run the mArch jobs and wait. We wait here because if they fail
-                    // we don't want to bother running the release job again since the
-                    // goal is to get a complete build.
-                    run_multiarch_jobs(missing_arches, rev, buildID, cosa_img, true)
-                    if (stream_info.type != "production") {
-                        run_release_job(buildID)
+                def version_arg = ""
+                if (params.VERSION) {
+                    version_arg = "--version ${params.VERSION}"
+                } else {
+                    def use_versionary = pipecfg.misc?.versionary
+                    if (stream_info.containsKey('versionary')) {
+                        // stream override always wins
+                        use_versionary = stream_info.versionary
+                    }
+                    if (use_versionary) {
+                        version_arg = "--versionary"
                     }
                 }
+                def force = params.FORCE ? "--force" : ""
+                shwrap("""
+                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
+                """)
+
+                // Insert the parent info into meta.json so we can display it in
+                // the release browser and for sanity checking
+                if (parent_commit && parent_version) {
+                    shwrap("""
+                    cosa meta \
+                        --set fedora-coreos.parent-commit=${parent_commit} \
+                        --set fedora-coreos.parent-version=${parent_version}
+                    """)
+                }
             }
 
-            // And we're done!
-            return
+            def buildID = shwrapCapture("readlink builds/latest")
+            if (prevBuildID == buildID) {
+                currentBuild.result = 'SUCCESS'
+                currentBuild.description = "${build_description} 💤 (no new build)"
+
+                // Nothing changed since the latest build. Check if it's missing
+                // some arches and retrigger `build-arch` only for the missing
+                // arches, and the follow-up `release` job. Match the exact src
+                // config commit that was used. But only do this if there isn't
+                // already outstanding work in progress for that build ID. Skip if
+                // not uploading since it's required for multi-arch.
+                if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
+                    def builds = readJSON file: "builds/builds.json"
+                    assert buildID == builds.builds[0].id
+                    def missing_arches = additional_arches - builds.builds[0].arches
+                    if (missing_arches) {
+                        def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
+                        def rev = meta["coreos-assembler.config-gitrev"]
+                        currentBuild.description = "${build_description} 🔨 ${buildID}"
+                        // Run the mArch jobs and wait. We wait here because if they fail
+                        // we don't want to bother running the release job again since the
+                        // goal is to get a complete build.
+                        run_multiarch_jobs(missing_arches, rev, buildID, cosa_img, true)
+                        if (stream_info.type != "production") {
+                            run_release_job(buildID)
+                        }
+                    }
+                }
+
+                // And we're done!
+                return
+            }
+        newBuildID = buildID
+        } else{
+            stage("Import OCI image"){
+                echo "Skiping Build"
+                echo "Source OCI Image: $source_oci_image"
+                shwrap("cosa import docker://${source_oci_image}")
+                def builds = readJSON file: "builds/builds.json"
+                newBuildID = builds.builds[0].id
+            }
         }
 
-        newBuildID = buildID
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
 
         pipeutils.tryWithMessagingCredentials() {

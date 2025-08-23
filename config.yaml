@@ -7,6 +7,8 @@ streams:
     type: production
   testing-devel:
     type: development
+    # temporarily using sha256 tag as konflux builds do not have the latest tag
+    source_oci_image: docker://quay.io/konflux-fedora/coreos-tenant/fedora-coreos-rawhide@sha256:a0268014587489cbf36564c9a70948fb16bbaede01dc68cbf6bddc17e41e3f6b
     default: true
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
@@ -28,7 +30,9 @@ source_config:
   url: https://github.com/coreos/fedora-coreos-config
 
 s3:
-  bucket: fcos-builds
+  # TODO: change the bucket url once finished
+  # bucket: fcos-builds
+  bucket: prod-account-match-fcos-builds
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
   # just upload as public-read for now, but see discussions in
@@ -118,3 +122,6 @@ misc:
   versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
+
+hotfix:
+  name: rchandar-import-konflux-build
