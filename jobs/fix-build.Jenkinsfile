@@ -122,9 +122,8 @@ lock(resource: "sign-${params.VERSION}") {
         build_description = "[${params.STREAM}][${basearches.join(' ')}][${params.VERSION}]"
         currentBuild.description = "${build_description} Running"
 
-        def src_config_commit = shwrapCapture("""
-            jq '.[\"coreos-assembler.config-gitrev\"]' builds/${params.VERSION}/${basearches[0]}/meta.json
-        """)
+        def meta = readJSON(file: "builds/${params.VERSION}/${basearches[0]}/meta.json")
+        def src_config_commit = meta["coreos-assembler.container-config-git"]["commit"]
 
         for (basearch in basearches) {
             pipeutils.tryWithMessagingCredentials() {

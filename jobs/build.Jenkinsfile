@@ -308,7 +308,7 @@ lock(resource: "build-${params.STREAM}") {
                 def missing_arches = additional_arches - builds.builds[0].arches
                 if (missing_arches) {
                     def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
-                    def rev = meta["coreos-assembler.config-gitrev"]
+                    def rev = meta["coreos-assembler.container-config-git"]["commit"]
                     currentBuild.description = "${build_description} 🔨 ${buildID}"
                     // Run the mArch jobs and wait. We wait here because if they fail
                     // we don't want to bother running the release job again since the
