@@ -131,6 +131,10 @@ def add_hotfix_parameters_if_supported() {
     return []
 }
 
+def is_rhcos_jenkins() {
+    return env.JENKINS_URL && env.JENKINS_URL.contains('rhcos')
+}
+
 def get_source_config_for_stream(pipecfg, stream) {
     def url = pipecfg.source_config.url
     if (pipecfg.streams[stream].source_config_url) {
