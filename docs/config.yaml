@@ -295,6 +295,8 @@ misc:
   generate_release_index: true
   # OPTIONAL: whether to run extended upgrade test kola job
   run_extended_upgrade_test_fcos: true
+  # OPTIONAL: Allow missing arches when auto-triggering the release job from build. Defaults to false
+  allow_missing_architectures_when_autotriggering_release_job: true
 
 # OPTIONAL: Node image keys
 ocp_node_builds:

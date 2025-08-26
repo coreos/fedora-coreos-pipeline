@@ -570,14 +570,15 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
 
 def run_release_job(buildID) {
     stage('Publish') {
-        // Since we are only running this stage for non-production (i.e.
-        // mechanical and development) builds we'll default to allowing failures
-        // for additional architectures.
+        // For FCOS development/mechanical builds, we will allow missing architectures for flexibility.
+        // However, for RHCOS, we can keep the default behavior of not allowing missing architectures.
+        def allow_missing = (pipecfg.misc?.allow_missing_architectures_when_autotriggering_release_job) ?: false
+        
         build job: 'release', wait: params.WAIT_FOR_RELEASE_JOB, parameters: [
             string(name: 'STREAM', value: params.STREAM),
             string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
             string(name: 'VERSION', value: buildID),
-            booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
+            booleanParam(name: 'ALLOW_MISSING_ARCHES', value: allow_missing),
             booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
             string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
             string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
