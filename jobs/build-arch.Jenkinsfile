@@ -44,6 +44,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
+                   defaultValue: false,
+                   description: 'Skip building and pushing any artifacts we do not CI test'),
       string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',
              defaultValue: '',
@@ -73,6 +76,10 @@ def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
+
+if (params.SKIP_UNTESTED_ARTIFACTS && stream_info.type == "production" ) {
+    error("Cannot specify SKIP_UNTESTED_ARTIFACTS parameter for production streams")
+}
 
 def cosa_controller_img = stream_info.cosa_controller_img ?: "quay.io/coreos-assembler/coreos-assembler:main"
 
@@ -311,7 +318,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Build the remaining artifacts
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, params.SKIP_UNTESTED_ARTIFACTS)
         }
 
         // secex specific tests. 
