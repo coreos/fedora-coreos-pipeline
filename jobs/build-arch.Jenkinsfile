@@ -247,7 +247,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             def version = "--version ${params.VERSION}"
             def force = params.FORCE ? "--force" : ""
             shwrap("""
-            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
+            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg} ${autolock_arg}
             """)
 
             // Insert the parent info into meta.json so we can display it in
