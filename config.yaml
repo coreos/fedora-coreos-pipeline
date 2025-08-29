@@ -16,7 +16,7 @@ streams:
       # https://github.com/coreos/fedora-coreos-tracker/issues/1969
       COSA_BUILD_WITH_BUILDAH: true
   branched:
-   type: mechanical
+    type: mechanical
     env:
       # https://github.com/coreos/fedora-coreos-tracker/issues/1969
       COSA_BUILD_WITH_BUILDAH: true
