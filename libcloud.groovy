@@ -101,10 +101,11 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         if (pipecfg.clouds?.aws &&
             utils.credentialsExist(credentials)) {
 
-            // grab the aws vmdk image name from the metadata to pass to the winli closure.
-            // the cosa ore wrapper still requires the image to exist, but we dont upload 
-            // anything so we'll just touch the file in the cosa working dir.
-            def aws_image_name = meta.images.aws.path
+            // grab the aws vmdk image name, without the `.gz` file extension, from the
+            // metadata to pass to the winli closure. The cosa ore wrapper still requires
+            // the image to exist, but we dont upload anything so we'll just touch the
+            // file in the cosa working dir.
+            def aws_image_name = meta.images.aws.path.replace(/\.gz$/, "")
             // aws-winli is only supported on x86_64
             if ((basearch == "x86_64") && (stream_info.create_and_replicate_winli_ami)) {
                 builders["☁️ 🔨:aws-winli"] = {
