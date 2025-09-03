@@ -124,6 +124,9 @@ streams:
       # OPTIONAL: Create and replicate AWS Windows License Included images for this stream.
       # requires winli_billing_code under the 'aws' mapping
       create_and_replicate_winli_ami: true
+      # OPTIONAL: Do not not upload results to S3
+      # Default to false if not specified
+      no_upload: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]

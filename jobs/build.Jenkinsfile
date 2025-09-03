@@ -83,6 +83,10 @@ if (params.ADDITIONAL_ARCHES != "none") {
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+// Default to false, override with runtime param or stream_info
+// runtime parameter always wins
+def no_upload = params.NO_UPLOAD ?: stream_info.get('no_upload', false)
+
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
@@ -166,7 +170,7 @@ lock(resource: "build-${params.STREAM}") {
         // Now, determine if we should do any uploads to remote s3 buckets or clouds
         // Don't upload if the user told us not to or we're debugging with KOLA_RUN_SLEEP
         def uploading = false
-        if (s3_stream_dir && (!params.NO_UPLOAD || params.KOLA_RUN_SLEEP)) {
+        if (s3_stream_dir && (!no_upload || params.KOLA_RUN_SLEEP)) {
             uploading = true
         }
 
