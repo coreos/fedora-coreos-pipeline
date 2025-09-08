@@ -289,12 +289,27 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                                 --auth=tmp/push-secret-${metajsonname} \
                                 --repo=${repo.repo} ${tag_args.join(' ')} \
                                 --artifact=${artifact} --metajsonname=${metajsonname} \
-                                --build=${params.VERSION} ${v2s2_arg}
+                                --build=${params.VERSION} ${v2s2_arg} \
+                                --write-digest-to-file=tmp/${metajsonname}-manifest-list-digest
                             rm tmp/push-secret-${metajsonname}
                             """)
                         }
                     }
                 }]}
+            }
+            stage("Sign OS Container") {
+                pipeutils.tryWithMessagingCredentials() {
+                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                    manifest_list_digest=\$(cat tmp/base-oscontainer-manifest-list-digest)
+                    cosa sign --build=${newBuildID} \
+                        robosignatory --s3-sigstore ${s3_stream_dir}/sigs/oci \
+                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                        --extra-fedmsg-keys stream=${params.STREAM} \
+                        --oci --gpgkeypath /etc/pki/rpm-gpg \
+                        --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                        --manifest-list-digest=\${manifest_list_digest}
+                    """)
+                }
             }
         }
 
