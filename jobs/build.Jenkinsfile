@@ -185,7 +185,14 @@ lock(resource: "build-${params.STREAM}") {
         pipeutils.addOptionalRootCA()
 
         def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
-        def src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
+        def src_config_commit = ""
+        if (source_oci_image != "") {
+        // TODO: use standard label 'org.opencontainers.image.revision' once available instead of 'vcs-ref' one
+        // c.f https://github.com/konflux-ci/build-definitions/pull/2770
+            src_config_commit = shwrapCapture("skopeo inspect --retry-times 3 docker://$source_oci_image | jq -r '.Labels.\"vcs-ref\"'")
+        } else {
+            src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
+        }
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
