@@ -32,7 +32,7 @@ up wanting that.
 
 The easiest way to set up your own local OCP4 cluster for developing on
 the pipeline is using
-[CodeReady Containers](https://code-ready.github.io/crc),
+[CodeReady Containers](https://crc.dev/docs/introducing),
 though the author has not yet tried setting up the pipeline on that
 footprint yet. (You'll need to allocate the VM at least ~14G of RAM.)
 
