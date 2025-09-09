@@ -289,27 +289,12 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                                 --auth=tmp/push-secret-${metajsonname} \
                                 --repo=${repo.repo} ${tag_args.join(' ')} \
                                 --artifact=${artifact} --metajsonname=${metajsonname} \
-                                --build=${params.VERSION} ${v2s2_arg} \
-                                --write-digest-to-file=tmp/${metajsonname}-manifest-list-digest
+                                --build=${params.VERSION} ${v2s2_arg}
                             rm tmp/push-secret-${metajsonname}
                             """)
                         }
                     }
                 }]}
-            }
-            stage("Sign OS Container") {
-                pipeutils.tryWithMessagingCredentials() {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    manifest_list_digest=\$(cat tmp/base-oscontainer-manifest-list-digest)
-                    cosa sign --build=${params.VERSION} \
-                        robosignatory --s3-sigstore ${s3_stream_dir}/sigs/oci \
-                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                        --extra-fedmsg-keys stream=${params.STREAM} \
-                        --oci --gpgkeypath /etc/pki/rpm-gpg \
-                        --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                        --manifest-list-digest=\${manifest_list_digest}
-                    """)
-                }
             }
         }
 
@@ -424,14 +409,28 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     """)
                 }
             }
+        }
 
+        stage("Sign OS Container") {
             pipeutils.tryWithMessagingCredentials() {
-                def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                    stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa sign --build=${params.VERSION} \
+                    robosignatory --s3-sigstore ${s3_stream_dir}/sigs/oci \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --oci --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
                 """)
             }
+        }
+
+        // and now that the release is published and signed, announce it!
+        pipeutils.tryWithMessagingCredentials() {
+            def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
+            shwrap("""
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+            """)
         }
 
         if (ostree_prod_refs.size() > 0) {
