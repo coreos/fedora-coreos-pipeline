@@ -301,7 +301,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                 pipeutils.tryWithMessagingCredentials() {
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     manifest_list_digest=\$(cat tmp/base-oscontainer-manifest-list-digest)
-                    cosa sign --build=${newBuildID} \
+                    cosa sign --build=${params.VERSION} \
                         robosignatory --s3-sigstore ${s3_stream_dir}/sigs/oci \
                         --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                         --extra-fedmsg-keys stream=${params.STREAM} \
