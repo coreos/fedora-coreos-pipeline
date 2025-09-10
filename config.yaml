@@ -34,6 +34,7 @@ s3:
   bucket: fcos-builds
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
+  oci_sigs_key: "prod/signatures/oci"
   # just upload as public-read for now, but see discussions in
   # https://github.com/coreos/fedora-coreos-tracker/issues/189
   acl: public-read

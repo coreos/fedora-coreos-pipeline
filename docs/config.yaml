@@ -143,6 +143,8 @@ s3:
   bucket: rhcos-jlebon
   # OPTIONAL: S3 bucket subkey. Supports `${STREAM}` variable.
   builds_key: "streams/${STREAM}"
+  # OPTIONAL: S3 bucket subkey in which to put OCI GPG signatures.
+  oci_sigs_key: "prod/signatures/oci"
   # OPTIONAL: object ACL to use when uploading
   acl: private
 

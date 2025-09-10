@@ -413,9 +413,10 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         stage("Sign OS Container") {
             pipeutils.tryWithMessagingCredentials() {
+                def s3_sigs_dir = "${pipecfg.s3.bucket}/${pipecfg.s3.oci_sigs_key}"
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
                 cosa sign --build=${params.VERSION} \
-                    robosignatory --s3-sigstore ${s3_stream_dir}/sigs/oci \
+                    robosignatory --s3-sigstore ${s3_sigs_dir} \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                     --extra-fedmsg-keys stream=${params.STREAM} \
                     --oci --gpgkeypath /etc/pki/rpm-gpg \
