@@ -25,7 +25,9 @@ source_config:
   url: https://github.com/coreos/fedora-coreos-config
 
 s3:
-  bucket: fcos-builds
+  # TODO: change the bucket url once finished
+  # bucket: fcos-builds
+  bucket: prod-account-match-fcos-builds
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
   oci_sigs_key: "prod/signatures/oci"
@@ -117,3 +119,6 @@ misc:
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
   allow_missing_architectures_when_autotriggering_release_job: true
+
+hotfix:
+  name: rchandar-arch-import-konflux-build
