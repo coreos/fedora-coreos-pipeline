@@ -411,8 +411,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
-        stage("Sign OS Container") {
-            pipeutils.tryWithMessagingCredentials() {
+        pipeutils.tryWithMessagingCredentials() {
+            stage("Sign OS Container") {
                 def s3_sigs_dir = "${pipecfg.s3.bucket}/${pipecfg.s3.oci_sigs_key}"
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
                 cosa sign --build=${params.VERSION} \
@@ -423,10 +423,8 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
                 """)
             }
-        }
 
-        // and now that the release is published and signed, announce it!
-        pipeutils.tryWithMessagingCredentials() {
+            // and now that the release is published and signed, announce it!
             def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
             shwrap("""
             /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
