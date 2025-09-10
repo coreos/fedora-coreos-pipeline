@@ -65,6 +65,9 @@ streams:
       # is equivalent to listing all live artifacts and cloud platforms in
       # `skip_artifacts`.
       skip_disk_images: true
+      # OPTIONAL: Whether to skip building ostree in the build pipeline.
+      # The build would be imported using `cosa import` with the specified image uri.
+      source_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
       # OPTIONAL: make the release job trigger build-node-image for the
       # following OCP releases once successful
       build_node_images: ["4.19-9.6"]
