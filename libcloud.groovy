@@ -52,20 +52,11 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
     // all regions, if the option is set for the current stream. `cosa aws-replicate` 
     // will handle both traditional AMIs and aws-winli AMIs if present in the metadata. 
     // aws-winli is only supported on x86_64.
-    def awsWinLIBuildClosure = { config, aws_image_name, credentialId ->
+    def awsWinLIBuildClosure = { config, credentialId ->
         def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
         withCredentials(creds) {
             utils.syncCredentialsIfInRemoteSession(["AWS_CONFIG_FILE"])
             def c = config
-
-            // Since we are not uploading anything, let's just touch the vmdk image
-            // file to satisfy the cosa ore wrapper, which still requires the file 
-            // in the cosa working dir.
-            def aws_image_path = "builds/${buildID}/${basearch}/${aws_image_name}"
-            shwrap("""
-                touch ${aws_image_path}
-            """)
-
             def extraArgs = []
             if (c.grant_users) {
                 extraArgs += c.grant_users.collect{"--grant-user=${it}"}
@@ -101,15 +92,10 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         if (pipecfg.clouds?.aws &&
             utils.credentialsExist(credentials)) {
 
-            // grab the aws vmdk image name from the metadata to pass to the winli closure.
-            // the cosa ore wrapper still requires the image to exist, but we dont upload 
-            // anything so we'll just touch the file in the cosa working dir.
-            def aws_image_name = meta.images.aws.path
             // aws-winli is only supported on x86_64
             if ((basearch == "x86_64") && (stream_info.create_and_replicate_winli_ami)) {
                 builders["☁️ 🔨:aws-winli"] = {
-                    awsWinLIBuildClosure.call(pipecfg.clouds.aws, aws_image_name,
-                                        "aws-build-upload-config")
+                    awsWinLIBuildClosure.call(pipecfg.clouds.aws, "aws-build-upload-config")
                 }
             }
             replicators["☁️ 🔄:aws"] = {
