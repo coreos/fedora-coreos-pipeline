@@ -14,6 +14,7 @@ streams:
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
+    source_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
     env:
       COSA_TESTISO_DEBUG: true
       RUNVM_CACHE_SIZE: "30G"
