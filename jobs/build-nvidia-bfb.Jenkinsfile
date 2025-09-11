@@ -190,7 +190,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 cd -
 
                 artifactjson=$(readlink -f tmp/artifactjson.json)
-                checksum=$(sha256sum $outfile)
+                checksum=$(sha256sum $outfile | cut -d ' ' -f 1)
                 size=$(stat -c '%s' $outfile)
                 cat <<EOM > "$artifactjson"
                 {
