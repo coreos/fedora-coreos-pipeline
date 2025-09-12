@@ -64,6 +64,14 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+def import_oci_image= params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
+boolean import_oci = import_oci_image != ""
+// If we import an OCI image, the stream specified in the parameters should match what we import
+if (import_oci) {
+    def stream_label = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"fedora-coreos.stream\"'")
+    assert (stream_label == params.STREAM): "The STREAM parameter does not match the OCI image to import."
+}
+
 def build_description = "[${params.STREAM}][x86_64]"
 
 // Reload pipecfg if a hotfix build was provided. The reason we do this here
@@ -113,9 +121,6 @@ def cosa_memory_request_mb = 10.5 * 1024 as Integer
 // XXX: https://github.com/coreos/coreos-assembler/issues/3118 will make this
 // cleaner
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
-
-def import_oci_image = params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
-boolean import_oci = import_oci_image != ""
 
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "${build_description} Waiting"
