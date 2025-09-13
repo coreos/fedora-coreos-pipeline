@@ -76,6 +76,13 @@ if (params.ARCH == 'x86_64') {
     cosa_memory_request_mb = 1024 + 1024 + 1536 + 512
 }
 
+
+echo "Waiting for release job to finish (release-${params.STREAM} lock)"
+sleep 10 // to prevent race with release job starting up
+lock(resource: "release-${params.STREAM}") {
+    echo "release-${params.STREAM} lock acquired"
+}
+echo "release-${params.STREAM} lock released"
 lock(resource: "kola-upgrade-${params.ARCH}") {
     cosaPod(memory: "${cosa_memory_request_mb}Mi",
             image: params.COREOS_ASSEMBLER_IMAGE,

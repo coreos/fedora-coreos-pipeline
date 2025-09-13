@@ -499,6 +499,16 @@ lock(resource: "build-${params.STREAM}") {
             }
         }
 
+        // For now, we auto-release all non-production streams builds. That
+        // way, we can e.g. test testing-devel AMIs easily. NOTE: this
+        // was moved to go before triggering upgrade tests because
+        // the upgrade tests wait for a the release job lock to be
+        // released before continuing so that they can test upgrading
+        // from the actual containers pushed to the registry and signed.
+        if (uploading && stream_info.type != "production") {
+            run_release_job(newBuildID)
+        }
+
         // Now that the metadata is uploaded go ahead and kick off some followup tests.
         if (uploading) {
             stage('Cloud Tests') {
@@ -511,12 +521,6 @@ lock(resource: "build-${params.STREAM}") {
                                                      cosa_img, basearch, src_config_commit)
                 }
             }
-        }
-
-        // For now, we auto-release all non-production streams builds. That
-        // way, we can e.g. test testing-devel AMIs easily.
-        if (uploading && stream_info.type != "production") {
-            run_release_job(newBuildID)
         }
 
         currentBuild.result = 'SUCCESS'
