@@ -85,12 +85,14 @@ def stream_info = pipecfg.streams[params.STREAM]
 build_description += "[${basearches.join(' ')}][${params.VERSION}]"
 currentBuild.description = "${build_description} Waiting"
 
-// We just lock here out of an abundance of caution in case somehow two release
-// jobs run for the same stream, but that really shouldn't happen. Anyway, if it
-// *does*, this makes sure they're run serially.
+// Take a lock for the stream to make sure only one of these run at a
+// time and also synchronize with the kola-upgrade job. Take this lock
+// early (i.e. don't wait for all the arch specific locks) and hold it
+// so we can synchronize with the kola-upgrade job.
+lock(resource: "release-${params.STREAM}") {
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
-lock(resource: "release-${params.STREAM}", extra: locks) {
+lock(resource: locks[0], extra: locks[1..-1]) {
     // We should probably try to change this behavior in the coreos-ci-lib
     // So we won't need to handle the secret case here.
     // Request 4.5Gi: in the worst case, we need to upload 4 container images in
@@ -485,4 +487,4 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         stream += "-${pipecfg.hotfix.name}"
     }
     pipeutils.trySlackSend(message: ":bullettrain_front: release #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
-}}} // try-catch-finally, cosaPod and lock finish here
+}}}} // try-catch-finally, cosaPod and lock and lock finish here
