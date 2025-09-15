@@ -14,12 +14,12 @@ streams:
     type: mechanical
     env:
       # https://github.com/coreos/fedora-coreos-tracker/issues/1969
-      COSA_BUILD_WITH_BUILDAH: true
+      COSA_BUILD_WITH_BUILDAH: 1
   branched:
     type: mechanical
     env:
       # https://github.com/coreos/fedora-coreos-tracker/issues/1969
-      COSA_BUILD_WITH_BUILDAH: true
+      COSA_BUILD_WITH_BUILDAH: 1
   # bodhi-updates:
   #   type: mechanical
   # bodhi-updates-testing:
