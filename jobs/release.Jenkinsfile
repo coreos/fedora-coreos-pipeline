@@ -92,7 +92,7 @@ currentBuild.description = "${build_description} Waiting"
 lock(resource: "release-${params.STREAM}") {
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
-lock(resource: locks[0], extra: locks[1..-1]) {
+lock(resource: locks[0].resource, extra: locks[1..-1]) {
     // We should probably try to change this behavior in the coreos-ci-lib
     // So we won't need to handle the secret case here.
     // Request 4.5Gi: in the worst case, we need to upload 4 container images in
