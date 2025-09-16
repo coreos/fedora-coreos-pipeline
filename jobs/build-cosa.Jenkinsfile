@@ -93,7 +93,7 @@ def basearches = params.ARCHES.split() as Set
 
 lock(resource: "build-${containername}") {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "512Mi", kvm: false,
+            memory: "1024Mi", kvm: false,
             serviceAccount: "jenkins") {
     timeout(time: 60, unit: 'MINUTES') {
     try {
