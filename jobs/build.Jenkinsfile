@@ -187,9 +187,7 @@ lock(resource: "build-${params.STREAM}") {
         def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
         def src_config_commit = ""
         if (import_oci) {
-        // TODO: use standard label 'org.opencontainers.image.revision' once available instead of 'vcs-ref' one
-        // c.f https://github.com/konflux-ci/build-definitions/pull/2770
-            src_config_commit = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"vcs-ref\"'")
+            src_config_commit = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"org.opencontainers.image.revision\"'")
         } else {
             src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
         }
