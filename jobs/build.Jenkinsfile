@@ -17,8 +17,8 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to build'),
-      string(name: 'SOURCE_OCI_IMAGE',
-             description: 'Override source_oci_image image to use. If set, the STREAM parameter will be ignored.',
+      string(name: 'IMPORT_OCI_IMAGE',
+             description: 'Override import_oci_image image to use. If set, the STREAM parameter must match the image labels.',
              defaultValue: "",
              trim: true),
       string(name: 'VERSION',
@@ -114,8 +114,8 @@ def cosa_memory_request_mb = 10.5 * 1024 as Integer
 // cleaner
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
-def source_oci_image = params.SOURCE_OCI_IMAGE ?: stream_info.get("source_oci_image", "")
-boolean import_oci = source_oci_image != ""
+def import_oci_image = params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
+boolean import_oci = import_oci_image != ""
 
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "${build_description} Waiting"
@@ -186,10 +186,8 @@ lock(resource: "build-${params.STREAM}") {
 
         def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
         def src_config_commit = ""
-        if (source_oci_image != "") {
-        // TODO: use standard label 'org.opencontainers.image.revision' once available instead of 'vcs-ref' one
-        // c.f https://github.com/konflux-ci/build-definitions/pull/2770
-            src_config_commit = shwrapCapture("skopeo inspect --retry-times 3 docker://$source_oci_image | jq -r '.Labels.\"vcs-ref\"'")
+        if (import_oci) {
+            src_config_commit = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"org.opencontainers.image.revision\"'")
         } else {
             src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
         }
@@ -345,8 +343,8 @@ lock(resource: "build-${params.STREAM}") {
             newBuildID = buildID
         } else {
             stage("Import OCI image") {
-                echo "Skipping build : Importing OCI : $source_oci_image"
-                shwrap("cosa import docker://${source_oci_image} --skip-prune")
+                echo "Skipping build : Importing OCI : $import_oci_image"
+                shwrap("cosa import docker://${import_oci_image} --skip-prune")
                 def builds = readJSON file: "builds/builds.json"
                 newBuildID = builds.builds[0].id
             }
