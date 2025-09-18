@@ -7,8 +7,8 @@ node {
 
 properties([
     pipelineTriggers([
-        // run every 24h at 10:00 UTC
-        cron("0 10 * * *")
+        // run every 24h at 04:00 UTC
+        cron("0 4 * * *")
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
