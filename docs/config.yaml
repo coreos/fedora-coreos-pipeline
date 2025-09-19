@@ -61,10 +61,6 @@ streams:
       variant: rhcos-9.0
       # OPTIONAL: override whether to use a versionary for this stream
       versionary: false
-      # OPTIONAL: Whether to skip disk image generation and upload. This
-      # is equivalent to listing all live artifacts and cloud platforms in
-      # `skip_artifacts`.
-      skip_disk_images: true
       # OPTIONAL: Whether to skip building ostree in the build pipeline.
       # The build would be imported using `cosa import` with the specified image uri.
       import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
@@ -309,6 +305,9 @@ misc:
   run_extended_upgrade_test_fcos: true
   # OPTIONAL: Allow missing arches when auto-triggering the release job from build. Defaults to false
   allow_missing_architectures_when_autotriggering_release_job: true
+  # OPTIONAL: whether to allow the pipeline to skip building untested
+  #           artifacts on CI (development/mechanical) runs
+  allow_skip_of_untested_artifacts: true
 
 # OPTIONAL: Node image keys
 ocp_node_builds:

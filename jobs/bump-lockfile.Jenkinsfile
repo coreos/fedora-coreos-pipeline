@@ -302,7 +302,9 @@ lock(resource: "bump-lockfile") {
                 echo "Triggering build for stream: ${params.STREAM}"
                 build job: 'build', wait: false, propagate: false, parameters: [
                   string(name: 'STREAM', value: params.STREAM),
-                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false),
+                  booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
+                               value: pipeutils.should_we_skip_untested_artifacts(pipecfg))
                 ]
             }
         }
