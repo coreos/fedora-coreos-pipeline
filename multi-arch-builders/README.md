@@ -170,8 +170,8 @@ Assign the backup floating IP to the instance so we can log in to it
 and then log in:
 
 ```bash
-NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update coreos-s390x-builder-backup --nic $NIC
+VNIC=$(jq --raw-output .primary_network_attachment.virtual_network_interface.id out.json)
+ibmcloud is virtual-network-interface-floating-ip-add $VNIC coreos-s390x-builder-backup
 
 INSTANCE=$(jq --raw-output .id out.json)
 IP=$(ibmcloud is instance $INSTANCE --output json \
@@ -194,8 +194,9 @@ by checking to make sure Jenkins is idle (i.e. no build-cosa or multi-arch
 s390x jobs are running).
 
 ```bash
-NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update coreos-s390x-builder --nic $NIC
+VNIC=$(jq --raw-output .primary_network_attachment.virtual_network_interface.id out.json)
+ibmcloud is virtual-network-interface-floating-ip-remove $VNIC coreos-s390x-builder-backup
+ibmcloud is virtual-network-interface-floating-ip-add $VNIC coreos-s390x-builder
 
 INSTANCE=$(jq --raw-output .id out.json)
 IP=$(ibmcloud is instance $INSTANCE --output json \
