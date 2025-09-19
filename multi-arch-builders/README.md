@@ -137,17 +137,14 @@ podman cp coreos-s390x-builder.ign ibmcloud:/root/coreos-s390x-builder.ign
 ```
 
 We've occasionally seen some failures and/or capacity issues so we'll
-document here variables for `us-east-1` and `ca-tor-1`. If you use
-`ca-tor-1` you may run into issues with yum mirrors being slow in tests
-because the IP address block there is thought to be in France and not
-Toronto when doing Geo IP lookups.
+document here variables for `us-east-1` and `us-south-1`.
 
 ```bash
-IMAGE='r038-28097bd5-500b-45f1-8d48-99b3d51e3b60'
-ZONE='ca-tor-1'
-VPC='r038-992efef6-1b41-4b58-8a3f-0112c6b770ca'
-SUBNET='02q7-bef3b4b8-095b-4f90-a0e3-7e4aad0a509a'
-SG='r038-24bc65f4-f8a5-4d70-a1cf-657b623257cc'
+IMAGE='r006-e6f4f1be-e88b-4c4e-8891-cd9cb2c1e630'
+ZONE='us-south-1'
+VPC='r006-4e33b5cb-c523-42fc-9760-4b2b7c415259'
+SUBNET='0717-8b070e59-485d-431f-aaa7-6f68b1331792'
+SG='r006-485ad323-c353-48ce-815f-5bdebf0a84d3'
 ```
 
 ```bash
