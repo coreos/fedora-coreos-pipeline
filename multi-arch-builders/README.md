@@ -28,8 +28,8 @@ NAME="coreos-aarch64-builder-$(date +%Y%m%d)"
 AMI=''
 TYPE='a1.metal'
 DISK='200'
-SUBNET='subnet-050b478f586723c62'
-SECURITY_GROUPS='sg-0ff537e445349ca0e'
+SUBNET='subnet-09b21d23b5feffd3c'
+SECURITY_GROUPS='sg-01e9626e414e468f1'
 USERDATA="${PWD}/coreos-aarch64-builder.ign"
 aws ec2 run-instances                     \
     --output json                         \
@@ -47,7 +47,7 @@ Wait for the instance to come up (`a1.metal` instances can take 5-10 minutes to
 come up) and log in:
 
 ```bash
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
+INSTANCE=$(jq --raw-output '.Instances[0].InstanceId' out.json)
 IP=$(aws ec2 describe-instances --instance-ids $INSTANCE --output json \
      | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
 ssh "core@${IP}"
@@ -67,7 +67,7 @@ aarch64 jobs are running).
 
 ```bash
 # Grab the instance ID and associate the IP address
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
+INSTANCE=$(jq --raw-output '.Instances[0].InstanceId' out.json)
 EIP='18.233.54.49'
 EIPID='eipalloc-4305254a'
 aws ec2 associate-address --instance-id $INSTANCE --allow-reassociation --allocation-id $EIPID

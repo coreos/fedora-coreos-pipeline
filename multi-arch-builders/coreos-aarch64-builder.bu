@@ -19,3 +19,7 @@ storage:
       overwrite: true
       contents:
         inline: coreos-aarch64-builder
+ignition:
+  config:
+    merge:
+      - local: builder-common.ign
