@@ -420,7 +420,7 @@ def get_push_trigger() {
 }
 
 // Gets desired artifacts to build from pipeline config
-def get_artifacts_to_build(pipecfg, stream, basearch) {
+def get_artifacts_to_build(pipecfg, stream, basearch, skip_untested) {
     // Explicit stream-level override takes precedence
     def artifacts = (pipecfg.streams[stream].artifacts?."${basearch}" ?: []) as Set
     if (artifacts.isEmpty()) {
@@ -432,14 +432,25 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
         artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?.all ?: [])
         artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: [])
     }
+    if (skip_untested) {
+        // Only build the testable artifacts. Note that the QEMU artifact is
+        // usually built before this step so it's not listed here.
+        def testable_artifacts = ["metal", "metal4k", "live"]
+        for (artifact in artifacts) {
+            if (cloud_testing_enabled_for_arch(pipecfg, artifact, basearch)) {
+                testable_artifacts += artifact
+            }
+        }
+        artifacts = artifacts.intersect(testable_artifacts)
+    }
     return artifacts.toList()
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
-def build_artifacts(pipecfg, stream, basearch) {
+def build_artifacts(pipecfg, stream, basearch, skip_untested) {
 
     // First get the list of artifacts to build from the config
-    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch)
+    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch, skip_untested)
 
     // If `cosa osbuild` is supported then let's build what we can using OSBuild
     if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-osbuild") == 0) {
@@ -1002,6 +1013,23 @@ def rpm_to_go_arch(arch) {
         "ppc64le" : "ppc64le"
     ]
     return archAliasMap[arch]
+}
+
+// Defines some sort of loose policy around skipping build of untested
+// artifacts in our mechanical/development streams.
+// https://github.com/coreos/fedora-coreos-pipeline/issues/1189
+def should_we_skip_untested_artifacts(pipecfg) {
+    // Only perform skipping if the pipecfg knob is set:
+    if (pipecfg.misc?.allow_skip_of_untested_artifacts) {
+        // Ok. This pipeline allows skipping, but do we want to?
+        // Currently we skip on all but one day a week. The once a
+        // week at least gives us some testing/pulse of being able
+        // to build the artifacts we typically skip.
+        def day = shwrapCapture("date +%A")
+        return day != "Friday"
+    } else {
+        return false
+    }
 }
 
 return this
