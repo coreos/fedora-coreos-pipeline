@@ -117,3 +117,4 @@ misc:
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
   allow_missing_architectures_when_autotriggering_release_job: true
+  allow_skip_of_untested_artifacts: true

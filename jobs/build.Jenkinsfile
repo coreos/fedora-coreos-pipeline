@@ -53,6 +53,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
+                   defaultValue: false,
+                   description: 'Skip building and pushing any artifacts we do not CI test'),
       booleanParam(name: 'WAIT_FOR_RELEASE_JOB',
                    defaultValue: false,
                    description: 'Wait for the release job and propagate errors.'),
@@ -90,6 +93,10 @@ def stream_info = pipecfg.streams[params.STREAM]
 // Default to false, override with runtime param or stream_info
 // runtime parameter always wins
 def no_upload = params.NO_UPLOAD ?: stream_info.get('no_upload', false)
+
+if (params.SKIP_UNTESTED_ARTIFACTS && stream_info.type == "production" ) {
+    error("Cannot specify SKIP_UNTESTED_ARTIFACTS parameter for production streams")
+}
 
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
@@ -406,7 +413,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Build the remaining artifacts
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, params.SKIP_UNTESTED_ARTIFACTS)
 
             // Stop the build if the kernel + kernel-rt versions do not match.
             // This check runs on x86_64 RHCOS builds only.
@@ -592,6 +599,7 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
             build job: 'build-arch', wait: wait, parameters: [
                 booleanParam(name: 'FORCE', value: true),
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
+                booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
                 string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
                 string(name: 'STREAM', value: params.STREAM),

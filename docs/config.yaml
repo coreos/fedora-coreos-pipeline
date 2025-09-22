@@ -305,6 +305,9 @@ misc:
   run_extended_upgrade_test_fcos: true
   # OPTIONAL: Allow missing arches when auto-triggering the release job from build. Defaults to false
   allow_missing_architectures_when_autotriggering_release_job: true
+  # OPTIONAL: whether to allow the pipeline to skip building untested
+  #           artifacts on CI (development/mechanical) runs
+  allow_skip_of_untested_artifacts: true
 
 # OPTIONAL: Node image keys
 ocp_node_builds:
