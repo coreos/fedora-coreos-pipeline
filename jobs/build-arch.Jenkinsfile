@@ -314,7 +314,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Run Kola Tests
         stage("Kola") {
-            def n = 4 // VMs are 2G each and arch builders have approx 32G
+            def n = 2 // VMs are 2G each and arch builders have approx 32G
             kola(cosaDir: env.WORKSPACE, parallel: n, arch: basearch,
                  skipUpgrade: pipecfg.hacks?.skip_upgrade_tests,
                  allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
