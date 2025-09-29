@@ -184,7 +184,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 def releases = readJSON file: "releases.json"
                 // check if there's a previous release we should use as parent
                 for (release in releases["releases"].reverse()) {
-                    def oci_image = release["oci-images"].find{ images -> images["architecture"] == basearch }
+                    def oci_image = release["oci-images"].find{ image -> image["architecture"] == basearch }
                     if (oci_image != null) {
                         parent_version = release["version"]
                         break
