@@ -178,16 +178,14 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Determine parent version/commit information
         def parent_version = ""
-        def parent_commit = ""
         if (s3_stream_dir) {
             pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "releases.json")
             if (utils.pathExists("releases.json")) {
                 def releases = readJSON file: "releases.json"
                 // check if there's a previous release we should use as parent
                 for (release in releases["releases"].reverse()) {
-                    def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
-                    if (commit_obj != null) {
-                        parent_commit = commit_obj["checksum"]
+                    def oci_image = release["oci-images"].find{ images -> images["architecture"] == basearch }
+                    if (oci_image != null) {
                         parent_version = release["version"]
                         break
                     }
@@ -259,11 +257,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
             // Insert the parent info into meta.json so we can display it in
             // the release browser and for sanity checking
-            if (parent_commit && parent_version) {
+            if (parent_version) {
                 shwrap("""
-                cosa meta \
-                    --set fedora-coreos.parent-commit=${parent_commit} \
-                    --set fedora-coreos.parent-version=${parent_version}
+                cosa meta --set fedora-coreos.parent-version=${parent_version}
                 """)
             }
         }
