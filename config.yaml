@@ -27,7 +27,7 @@ source_config:
 s3:
   # TODO: change the bucket url once finished
   # bucket: fcos-builds
-  bucket: prod-account-match-fcos-builds
+  bucket: art-rhcos-ci
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
   oci_sigs_key: "prod/signatures/oci"
