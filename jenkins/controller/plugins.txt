@@ -21,16 +21,16 @@
 # [1] https://github.com/openshift/jenkins/blob/master/2/contrib/openshift/bundle-plugins.txt
 # [2] https://github.com/openshift/jenkins/blob/master/2/contrib/openshift/base-plugins.txt
 # [3] https://github.com/openshift/jenkins#plugin-installation-for-centos7-v410
-basic-branch-build-strategies:81.v05e333931c7d
-generic-webhook-trigger:2.0.1
-github-oauth:597.ve0c3480fcb_d0
-kubernetes-credentials-provider:1.262.v2670ef7ea_0c5
-pipeline-github:2.8-159.09e4403bc62f
-slack:684.v833089650554
-timestamper:1.27
-splunk-devops-extend:1.10.2
-splunk-devops:1.10.2
-antisamy-markup-formatter:162.v0e6ec0fcfcf6
+basic-branch-build-strategies:275.vde2351b_4a_58b_
+generic-webhook-trigger:2.4.1
+github-oauth:651.v135e939e8b_60
+kubernetes-credentials-provider:1.299.v610fa_e76761a_
+pipeline-github:2.8-162.382498405fdc
+slack:795.v4b_9705b_e6d47
+timestamper:1.30
+splunk-devops-extend:1.11.0
+splunk-devops:1.11.0
+antisamy-markup-formatter:173.v680e3a_b_69ff3
 jms-messaging:1.1.28
 
 # The below list are plugins that are also in base-plugins.txt but for
