@@ -112,7 +112,12 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
             def releases = readJSON file: "releases.json"
             def newest_version = releases["releases"][-1]["version"]
             for (release in releases["releases"]) {
-                def has_arch = release["oci-images"].find{ image -> image["architecture"] == params.ARCH }
+                // for older releases that don't have OCI images we get the ostree commit
+                def media = "oci-images"
+                if ( release[media] == null) {
+                    media = "commits"
+                }
+                has_arch = release[media].find{ image -> image["architecture"] == params.ARCH }
                 if (release["version"] in deadends || has_arch == null) {
                     continue // This release has been disqualified
                 }
