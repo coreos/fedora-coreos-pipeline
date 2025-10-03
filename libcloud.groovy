@@ -34,17 +34,22 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
 
     // For AWS we need to consider the primary AWS partition and the
     // GovCloud partition. Define a closure here that we'll call for both.
-    def awsReplicateClosure = { config, credentialId ->
+    def awsReplicateClosure = { config, credentialId, winli = false ->
         def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
         withCredentials(creds) {
             def c = config
+            def extraArgs = []
+            if (winli) {
+                extraArgs += "--winli"
+            }
             shwrap("""
             cosa aws-replicate \
                 --log-level=INFO \
                 --build=${buildID} \
                 --arch=${basearch} \
                 --source-region=${c.primary_region} \
-                --credentials-file=\${AWS_CONFIG_FILE}
+                --credentials-file=\${AWS_CONFIG_FILE} \
+                ${extraArgs.join(' ')}
             """)
         }
     }
@@ -95,6 +100,10 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
             replicators["☁️ 🔄:aws"] = {
                 awsReplicateClosure.call(pipecfg.clouds.aws,
                                          "aws-build-upload-config")
+            }
+            replicators["☁️ 🔄:aws-winli"] = {
+                awsReplicateClosure.call(pipecfg.clouds.aws,
+                                        "aws-build-upload-config", true)
             }
         }
         credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
