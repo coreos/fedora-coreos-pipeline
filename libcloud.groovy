@@ -79,12 +79,6 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                     --credentials-file=\${AWS_CONFIG_FILE} \
                     ${extraArgs.join(' ')}
             """)
-
-            // remove the false vmdk file from the builds directory so it doesn't get
-            // uploaded by some other process
-            shwrap("""
-                rm ${aws_image_path}
-            """)
         }
     }
     if (meta.amis) {
