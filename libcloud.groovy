@@ -91,19 +91,19 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         if (pipecfg.clouds?.aws &&
             utils.credentialsExist(credentials)) {
 
+            replicators["☁️ 🔄:aws"] = {
+                awsReplicateClosure.call(pipecfg.clouds.aws,
+                                         "aws-build-upload-config")
+            }
             // aws-winli is only supported on x86_64
             if ((basearch == "x86_64") && (stream_info.create_and_replicate_winli_ami)) {
                 builders["☁️ 🔨:aws-winli"] = {
                     awsWinLIBuildClosure.call(pipecfg.clouds.aws, "aws-build-upload-config")
                 }
-            }
-            replicators["☁️ 🔄:aws"] = {
-                awsReplicateClosure.call(pipecfg.clouds.aws,
-                                         "aws-build-upload-config")
-            }
-            replicators["☁️ 🔄:aws-winli"] = {
-                awsReplicateClosure.call(pipecfg.clouds.aws,
-                                        "aws-build-upload-config", true)
+                replicators["☁️ 🔄:aws-winli"] = {
+                    awsReplicateClosure.call(pipecfg.clouds.aws,
+                                            "aws-build-upload-config", true)
+                }
             }
         }
         credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
