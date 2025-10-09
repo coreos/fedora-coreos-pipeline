@@ -397,6 +397,12 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
+// Returns a list of stream names from `streams_subset` that do not have `konflux_driven: true` set
+def non_konflux_driven_streams(config, streams_subset) {
+    return streams_subset.findAll{stream ->
+        !config.streams[stream].konflux_driven}.collect{k, v -> k}
+}
+
 def get_streams_choices(config, node = null) {
     def stream_source = node ? config.ocp_node_builds.release : config.streams
 
