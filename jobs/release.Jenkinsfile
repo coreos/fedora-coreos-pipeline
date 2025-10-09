@@ -85,12 +85,14 @@ def stream_info = pipecfg.streams[params.STREAM]
 build_description += "[${basearches.join(' ')}][${params.VERSION}]"
 currentBuild.description = "${build_description} Waiting"
 
-// We just lock here out of an abundance of caution in case somehow two release
-// jobs run for the same stream, but that really shouldn't happen. Anyway, if it
-// *does*, this makes sure they're run serially.
+// Take a lock for the stream to make sure only one of these run at a
+// time and also synchronize with the kola-upgrade job. Take this lock
+// early (i.e. don't wait for all the arch specific locks) and hold it
+// so we can synchronize with the kola-upgrade job.
+lock(resource: "release-${params.STREAM}") {
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
-lock(resource: "release-${params.STREAM}", extra: locks) {
+lock(resource: locks.remove(0).resource, extra: locks) {
     // We should probably try to change this behavior in the coreos-ci-lib
     // So we won't need to handle the secret case here.
     // Request 4.5Gi: in the worst case, we need to upload 4 container images in
@@ -113,16 +115,19 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         def gcp_image = ""
         def ostree_prod_refs = [:]
 
+        def uploading_to_brew = (brew_profile && !stream_info.skip_brew_upload)
+
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
             def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+            def fetch_config_git = uploading_to_brew ? "--file coreos-assembler-config-git.json" : ""
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
             cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                --file "coreos-assembler-config-git.json"
+                ${fetch_config_git}
             """)
         }
 
@@ -178,17 +183,24 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             // For production streams, import the OSTree into the prod
             // OSTree repo.
             if (stream_info.type == 'production') {
-                pipeutils.tryWithMessagingCredentials() {
-                    stage("OSTree Import ${basearch}: Prod Repo") {
-                        shwrap("""
-                        /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                            --build=${params.VERSION} --arch=${basearch} \
-                            --s3=${s3_stream_dir} --repo=prod \
-                            --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                        """)
-                    }
+                // Import into the OSTree repo if we are F42. We stopped
+                // doing this for F43+ because we distribute updates from
+                // the container registry now.
+                if (params.VERSION.tokenize('.')[0] == '42') {
+                    pipeutils.tryWithMessagingCredentials() {
+                        stage("OSTree Import ${basearch}: Prod Repo") {
+                            shwrap("""
+                            /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
+                                --build=${params.VERSION} --arch=${basearch} \
+                                --s3=${s3_stream_dir} --repo=prod \
+                                --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
+                            """)
+                        }
 
-                    ostree_prod_refs[meta.ref] = meta["ostree-commit"]
+                        ostree_prod_refs[meta.ref] = meta["ostree-commit"]
+                    }
+                } else {
+                    echo "Skipping OSTree repo import for F43+"
                 }
             }
 
@@ -288,7 +300,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             }
         }
 
-        if (brew_profile && !stream_info.skip_brew_upload) {
+        if (uploading_to_brew) {
             stage('Brew Upload') {
                 def tag = pipecfg.streams[params.STREAM].brew_tag
                 for (arch in basearches) {
@@ -399,14 +411,27 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     """)
                 }
             }
+        }
 
-            pipeutils.tryWithMessagingCredentials() {
-                def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                    stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+        pipeutils.tryWithMessagingCredentials() {
+            stage("Sign OS Container") {
+                def s3_sigs_dir = "${pipecfg.s3.bucket}/${pipecfg.s3.oci_sigs_key}"
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa sign --build=${params.VERSION} \
+                    robosignatory --s3-sigstore ${s3_sigs_dir} \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --oci --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
                 """)
             }
+
+            // and now that the release is published and signed, announce it!
+            def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
+            shwrap("""
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+            """)
         }
 
         if (ostree_prod_refs.size() > 0) {
@@ -462,4 +487,4 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         stream += "-${pipecfg.hotfix.name}"
     }
     pipeutils.trySlackSend(message: ":bullettrain_front: release #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
-}}} // try-catch-finally, cosaPod and lock finish here
+}}}} // try-catch-finally, cosaPod and lock and lock finish here

@@ -88,8 +88,10 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
             }
         }
 
-        withCredentials([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
-                              credentialsId: 'azure-kola-tests-config')]) {
+        withCredentials([
+                file(variable: 'AZURE_KOLA_TESTS_CONFIG', credentialsId: 'azure-kola-tests-config'),
+                string(variable: 'AZURE_KOLA_MANAGED_IDENTITY', credentialsId: 'azure-kola-managed-identity')
+            ]) {
 
             def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
             def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
@@ -127,6 +129,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 # it will be a no-op on gallery creation given the
                 # gallery exists in the specified region.
                 ore azure create-gallery-image --log-level=INFO         \
+                    --arch $params.ARCH                                 \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
@@ -148,6 +151,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                      platformArgs: """-p=azure                               \
                          --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                          --azure-location $region                            \
+                         --azure-managed-identity \${AZURE_KOLA_MANAGED_IDENTITY}   \
                          --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0""")
             } finally {
                 parallel "Delete Image": {

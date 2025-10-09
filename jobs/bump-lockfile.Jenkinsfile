@@ -141,7 +141,7 @@ lock(resource: "bump-lockfile") {
                         cosa buildfetch --arch=${arch} --find-build-for-arch \
                             --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                             --url=s3://${s3_stream_dir}/builds
-                        cosa fetch --update-lockfile --dry-run
+                        cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run
                         """)
                     } else {
                         pipeutils.withExistingCosaRemoteSession(
@@ -150,7 +150,7 @@ lock(resource: "bump-lockfile") {
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
                                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                                 --url=s3://${s3_stream_dir}/builds
-                            cosa fetch --update-lockfile --dry-run
+                            cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run
                             cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
                             """)
                         }
@@ -302,7 +302,9 @@ lock(resource: "bump-lockfile") {
                 echo "Triggering build for stream: ${params.STREAM}"
                 build job: 'build', wait: false, propagate: false, parameters: [
                   string(name: 'STREAM', value: params.STREAM),
-                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false),
+                  booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
+                               value: pipeutils.should_we_skip_untested_artifacts(pipecfg))
                 ]
             }
         }

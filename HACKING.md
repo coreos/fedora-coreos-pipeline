@@ -32,7 +32,7 @@ up wanting that.
 
 The easiest way to set up your own local OCP4 cluster for developing on
 the pipeline is using
-[CodeReady Containers](https://code-ready.github.io/crc),
+[CodeReady Containers](https://crc.dev/docs/introducing),
 though the author has not yet tried setting up the pipeline on that
 footprint yet. (You'll need to allocate the VM at least ~14G of RAM.)
 
@@ -210,6 +210,19 @@ oc label secret/azure-kola-tests-config \
     jenkins.io/credentials-type=secretFile
 oc annotate secret/azure-kola-tests-config \
     jenkins.io/credentials-description="Azure kola tests credentials config"
+```
+
+If you want to establish an authorized identity to pre-emptively grant access
+to other Azure resources, enabling the startup process to leverage Azure's default
+credentials, use the azure-kola-managed-identity:
+
+```
+oc create secret generic azure-kola-managed-identity \
+    --from-file=text="${MANAGED_IDENTITY_ID}"
+oc label secret/azure-kola-managed-identity \
+    jenkins.io/credentials-type=secretText
+oc annotate secret/azure-kola-managed-identity \
+    jenkins.io/credentials-description="Azure managed identity credentials"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden
@@ -531,11 +544,9 @@ oc new-app --file=manifests/jenkins.yaml \
   --param=STORAGE_CLASS_NAME=ocs-storagecluster-ceph-rbd
 ```
 
-Notice the `NAMESPACE` parameter. This makes the Jenkins controller use the
-image from our namespace, which we'll create in the next step. (The
-reason we create the app first is that otherwise OpenShift will
+The reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
-the Jenkins pipeline).
+the Jenkins pipeline.
 
 The `STORAGE_CLASS_NAME` may be required depending on the cluster. If
 using a development cluster, it normally isn't, and you can drop it. For

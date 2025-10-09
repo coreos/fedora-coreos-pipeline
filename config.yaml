@@ -8,8 +8,8 @@ streams:
   testing-devel:
     type: development
     default: true
-  # next-devel:         # do not touch; line managed by `next-devel/manage.py`
-    # type: development # do not touch; line managed by `next-devel/manage.py`
+  next-devel:         # do not touch; line managed by `next-devel/manage.py`
+    type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
   #branched:
@@ -28,6 +28,7 @@ s3:
   bucket: fcos-builds
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
+  oci_sigs_key: "prod/signatures/oci"
   # just upload as public-read for now, but see discussions in
   # https://github.com/coreos/fedora-coreos-tracker/issues/189
   acl: public-read
@@ -53,6 +54,7 @@ default_artifacts:
     - gcp
     - hetzner
     - hyperv
+    - oraclecloud
   ppc64le:
     - powervs
   s390x:
@@ -72,6 +74,8 @@ default_artifacts:
     - ibmcloud
     - kubevirt
     - nutanix
+    - oraclecloud
+    - proxmoxve
     - virtualbox
     - vmware
     - vultr
@@ -95,7 +99,6 @@ clouds:
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
     test_gallery: fedoracoreostestinggallery
-    test_architectures: [x86_64]
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import
     description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
@@ -113,3 +116,5 @@ misc:
   versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
+  allow_missing_architectures_when_autotriggering_release_job: true
+  allow_skip_of_untested_artifacts: true

@@ -45,18 +45,36 @@ if (params.PIPECFG_HOTFIX_REPO || params.PIPECFG_HOTFIX_REF) {
 }
 
 def stream_info = pipecfg.ocp_node_builds.release[params.RELEASE]
+def skip_brew_upload = stream_info.skip_brew_upload ?: false
 def src_config_ref = stream_info.source_config.ref
 def src_config_url = stream_info.source_config.url
 
+def basearches = params.ARCHES.split() as Set
+def timeout_mins = 300
+
+def cosa_img = params.COREOS_ASSEMBLER_IMAGE
+
+// Get the tag that's unique
+def unique_tag = ""
+
 lock(resource: "build-node-image") {
+    // building actually happens on builders so we don't need much resources
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "512Mi", kvm: false,
+            memory: "2.5Gi", kvm: true,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
                       "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
     timeout(time: 45, unit: 'MINUTES') {
-    try {
+
+        def registry_staging_repo
+        def registry_staging_tags
+        def registry_prod_repo
+        def registry_prod_tags
+        def node_image_manifest_digest
+        def extensions_image_manifest_digest
+
+        try {
 
         def output = shwrapCapture("git ls-remote ${src_config_url} ${src_config_ref}")
         commit = output.substring(0,40)
@@ -69,10 +87,8 @@ lock(resource: "build-node-image") {
         def archinfo = arches.collectEntries{[it, [:]]}
         def now = java.time.LocalDateTime.now()
         def timestamp = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
-        def (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
+        (registry_staging_repo, registry_staging_tags, registry_prod_repo, registry_prod_tags) = pipeutils.get_ocp_node_registry_repo(pipecfg, params.RELEASE, timestamp)
 
-        // Get the tag that's unique
-        def unique_tag = ""
         for (tag in registry_prod_tags) {
             if (tag.contains(timestamp)) {
                 if (unique_tag != "") {
@@ -92,8 +108,6 @@ lock(resource: "build-node-image") {
         pipeutils.addOptionalRootCA()
 
         def yumrepos_file
-        def node_image_manifest_digest
-        def extensions_image_manifest_digest
         stage('Init') {
             shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
             for (repo in stream_info.yumrepo.files) {
@@ -147,10 +161,82 @@ lock(resource: "build-node-image") {
                                                                   "--add-openshift-build-labels"] + label_args)
             }
         }
-        stage("Brew Upload") {
-            // Use the staging since we already have the disgests
-            pipeutils.brew_upload(arches, params.RELEASE, registry_staging_repo, node_image_manifest_digest,
-                                  extensions_image_manifest_digest, timestamp, pipecfg)
+        stage("Run Tests") {
+            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                def openshift_stream = params.RELEASE.split("-")[0]
+                def rhel_stream = "rhel-" + params.RELEASE.split("-")[1]
+
+                parallel basearches.collectEntries { arch ->
+                    [arch, {
+                        // Define the sequence of cosa commands as a closure to avoid repetition.
+                        def executeCosaCommands = { boolean isRemote ->
+                            // The 'cosa init' command can exit with an error due to a known issue (coreos/coreos-assembler#4239).
+                            // Piping to 'true' ignores any non-zero exit code from 'cosa init', preventing the pipeline from failing.
+                            shwrap("""
+                                set +o pipefail
+                                cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
+                            """)
+                            // The 'cosa shell' prefix directs commands to the correct execution environment:
+                            // the remote session if active, or the local container otherwise.
+                            def s3_dir = pipeutils.get_s3_streams_dir(pipecfg, rhel_stream)
+                            pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                                cosa shell mkdir -p tmp
+                                cosa buildfetch \
+                                    --arch=$arch --artifact qemu --url=s3://${s3_dir}/builds \
+                                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --find-build-for-arch
+                            """)
+
+                            def build_id = shwrapCapture("""
+                                link=\$(cosa shell realpath builds/latest)
+                                cosa shell basename \$link
+                            """)
+                            shwrap("cosa decompress --build $build_id")
+                            def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
+                            shwrap("cosa shell skopeo copy --override-arch ${skopeo_arch_override} --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift-${arch}.ociarchive")
+                            kola(
+                                cosaDir: WORKSPACE,
+                                build: build_id,
+                                arch: arch,
+                                skipUpgrade: true,
+                                extraArgs: "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
+                            )
+                            kola(
+                                cosaDir: WORKSPACE,
+                                build: build_id,
+                                arch: arch,
+                                skipUpgrade: true,
+                                extraArgs: "-b rhcos --tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
+                            )
+                        }
+
+                        // Conditional execution based on architecture
+                        if (arch != 'x86_64') {
+                            // Conditionally create the remote session only if the architecture is NOT x86_64.
+                            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                                def session = pipeutils.makeCosaRemoteSession(
+                                    expiration: "${timeout_mins}m",
+                                    image: cosa_img,
+                                    workdir: WORKSPACE
+                                )
+                                withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
+                                    // Execute the commands within the remote session context.
+                                    executeCosaCommands(true)
+                                }
+                            }
+                        } else {
+                            // For x86_64, execute the commands directly without a remote session.
+                            executeCosaCommands(false)
+                        }
+                    }]
+                }
+            }
+        }
+        if (!skip_brew_upload){
+            stage("Brew Upload") {
+                // Use the staging since we already have the digests
+                pipeutils.brew_upload(arches, params.RELEASE, registry_staging_repo, node_image_manifest_digest,
+                                      extensions_image_manifest_digest, timestamp, pipecfg)
+            }
         }
         stage("Release Manifests") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
@@ -176,7 +262,7 @@ lock(resource: "build-node-image") {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        message = ":openshift:"
+        def message = ":openshift:"
         if (currentBuild.result == 'SUCCESS') {
             currentBuild.description = "${build_description} ⚡"
             message = "${message} :sparkles:"
@@ -184,8 +270,22 @@ lock(resource: "build-node-image") {
             currentBuild.description = "${build_description} ❌"
             message = "${message} :fire:"
         }
-        message = "${message} build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${build_description}"
+
+        def unique_tag_display = unique_tag ? "(${unique_tag})" : ""
+
+        if (unique_tag != "") {
+            node_ref = ":${unique_tag}"
+            extensions_ref = ":${unique_tag}-extensions"
+            registry_repo = registry_prod_repo
+        } else {
+            node_ref = "@${node_image_manifest_digest}"
+            extensions_ref = "@${extensions_image_manifest_digest}"
+            registry_repo = registry_staging_repo
+        }
+
+        def pullspec_links = " <https://${registry_repo}${node_ref}|:node:> <https://${registry_repo}${extensions_ref}|:puzzle-piece:>"
+
+        message = "${message} build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${build_description}${unique_tag_display} ${pullspec_links}"
         pipeutils.trySlackSend(message: message)
     }
 }}} // cosaPod, timeout, and lock finish here
-

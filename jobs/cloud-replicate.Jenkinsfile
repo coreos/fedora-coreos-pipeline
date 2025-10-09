@@ -98,6 +98,19 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
             """)
+            // If we're creating the Windows License Included (winli) AMI, we need to
+            // buildfetch the ostree artifact because the AWS ore wrapper relies on
+            // information stored in image.json. This ensures consistency with the
+            // original AMI values. We only buildfetch for x86_64 to avoid fetching
+            // unnecessary artifacts for other architectures.
+            if (stream_info.create_and_replicate_winli_ami) {
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa buildfetch --build=${params.VERSION} \
+                --arch=x86_64 --artifact=ostree \
+                --url=s3://${s3_stream_dir}/builds \
+                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+                """)
+            }
         }
 
         def builtarches = shwrapCapture("""

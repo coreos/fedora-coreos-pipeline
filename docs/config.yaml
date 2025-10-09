@@ -61,10 +61,9 @@ streams:
       variant: rhcos-9.0
       # OPTIONAL: override whether to use a versionary for this stream
       versionary: false
-      # OPTIONAL: Whether to skip disk image generation and upload. This
-      # is equivalent to listing all live artifacts and cloud platforms in
-      # `skip_artifacts`.
-      skip_disk_images: true
+      # OPTIONAL: Whether to skip building ostree in the build pipeline.
+      # The build would be imported using `cosa import` with the specified image uri.
+      import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
       # OPTIONAL: make the release job trigger build-node-image for the
       # following OCP releases once successful
       build_node_images: ["4.19-9.6"]
@@ -122,7 +121,11 @@ streams:
       # `build-mechanical` will only build those streams
       scheduled: true
       # OPTIONAL: Create and replicate AWS Windows License Included images for this stream.
+      # requires winli_billing_code under the 'aws' mapping
       create_and_replicate_winli_ami: true
+      # OPTIONAL: Do not not upload results to S3
+      # Default to false if not specified
+      no_upload: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
@@ -139,6 +142,8 @@ s3:
   bucket: rhcos-jlebon
   # OPTIONAL: S3 bucket subkey. Supports `${STREAM}` variable.
   builds_key: "streams/${STREAM}"
+  # OPTIONAL: S3 bucket subkey in which to put OCI GPG signatures.
+  oci_sigs_key: "prod/signatures/oci"
   # OPTIONAL: object ACL to use when uploading
   acl: private
 
@@ -212,6 +217,9 @@ clouds:
       # OPTIONAL: boolean: whether or not to set the image/snapshot as public on
       # initial upload (AMIs of released builds are always made public)
       public: true
+    # OPTIONAL: billing code to create a Windows License Included Image
+    # required if using 'create_and_replicate_winli_ami' under the stream mappings
+    winli_billing_code: "bp-12345abcde"
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.
@@ -295,6 +303,11 @@ misc:
   generate_release_index: true
   # OPTIONAL: whether to run extended upgrade test kola job
   run_extended_upgrade_test_fcos: true
+  # OPTIONAL: Allow missing arches when auto-triggering the release job from build. Defaults to false
+  allow_missing_architectures_when_autotriggering_release_job: true
+  # OPTIONAL: whether to allow the pipeline to skip building untested
+  #           artifacts on CI (development/mechanical) runs
+  allow_skip_of_untested_artifacts: true
 
 # OPTIONAL: Node image keys
 ocp_node_builds:
@@ -317,6 +330,8 @@ ocp_node_builds:
                ref: master
                # REQUIRED: repo file name to build
                file: rhel-9.6.repo
+           # OPTIONAL: skip upload to brew. Defaults to false
+           skip_brew_upload: false
     # REQUIRED: knobs related to the source config
     registries:
         # REQUIRED: staging repo to push the final image built

@@ -420,7 +420,7 @@ def get_push_trigger() {
 }
 
 // Gets desired artifacts to build from pipeline config
-def get_artifacts_to_build(pipecfg, stream, basearch) {
+def get_artifacts_to_build(pipecfg, stream, basearch, skip_untested) {
     // Explicit stream-level override takes precedence
     def artifacts = (pipecfg.streams[stream].artifacts?."${basearch}" ?: []) as Set
     if (artifacts.isEmpty()) {
@@ -432,19 +432,25 @@ def get_artifacts_to_build(pipecfg, stream, basearch) {
         artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?.all ?: [])
         artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: [])
     }
-    if (pipecfg.streams[stream].skip_disk_images) {
-        // Only keep the extensions container. Note that the ostree container
-        // and QEMU image are always built and not skippable artifacts.
-        artifacts = artifacts.intersect(["extensions-container"])
+    if (skip_untested) {
+        // Only build the testable artifacts. Note that the QEMU artifact is
+        // usually built before this step so it's not listed here.
+        def testable_artifacts = ["metal", "metal4k", "live"]
+        for (artifact in artifacts) {
+            if (cloud_testing_enabled_for_arch(pipecfg, artifact, basearch)) {
+                testable_artifacts += artifact
+            }
+        }
+        artifacts = artifacts.intersect(testable_artifacts)
     }
     return artifacts.toList()
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
-def build_artifacts(pipecfg, stream, basearch) {
+def build_artifacts(pipecfg, stream, basearch, skip_untested) {
 
     // First get the list of artifacts to build from the config
-    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch)
+    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch, skip_untested)
 
     // If `cosa osbuild` is supported then let's build what we can using OSBuild
     if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-osbuild") == 0) {
@@ -582,6 +588,11 @@ def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
 // this cloud which is intended to limit the architectures that
 // are tested for the given cloud.
 def cloud_testing_enabled_for_arch(pipecfg, cloud, basearch) {
+    if (! utils.credentialsExist([file(variable: 'UNUSED',
+                                 credentialsId: "${cloud}-kola-tests-config")])) {
+        // If the credential doesn't exist for it then we can't test
+        return false
+    }
     if (pipecfg.clouds."${cloud}"?.test_architectures) {
         // The list exists. Return true/false if the arch is in the list.
         return basearch in pipecfg.clouds."${cloud}".test_architectures
@@ -604,10 +615,8 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
                   string(name: 'SRC_CONFIG_COMMIT', value: commit)]
 
     // Kick off the Kola AWS job if we have an uploaded image, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value amis") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch) &&
-        utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'aws-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value amis") != "None") {
         testruns['Kola:AWS'] = { build job: 'kola-aws', wait: false, parameters: params }
       // XXX: This is failing right now. Disable until the New
       // Year when someone can dig into the problem.
@@ -615,26 +624,20 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     }
 
     // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.azure") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
-        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'azure-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.azure") != "None") {
         testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
     }
 
     // Kick off the Kola GCP job if we have an uploaded image, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value gcp") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch) &&
-        utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'gcp-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value gcp") != "None") {
         testruns['Kola:GCP'] = { build job: 'kola-gcp', wait: false, parameters: params }
     }
 
     // Kick off the Kola OpenStack job if we have an artifact, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.openstack") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
-        utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'openstack-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.openstack") != "None") {
         testruns['Kola:OpenStack'] = { build job: 'kola-openstack', wait: false, parameters: params }
     }
 
@@ -975,14 +978,8 @@ def get_arch_image_digest(from) {
 def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_digest, version, pipecfg) {
     def node_digest_arch_map = get_arch_image_digest("${repo}@${manifest_digest}")
     def extensions_node_digest_arch_map  = get_arch_image_digest("${repo}@${extensions_manifest_digest}")
-    def archAliasMap = [
-        "x86_64"  : "amd64",
-        "aarch64" : "arm64",
-        "s390x"   : "s390x",
-        "ppc64le" : "ppc64le"
-    ]
     for (arch in arches) {
-        def inspect_arch = archAliasMap[arch]
+        def inspect_arch = rpm_to_go_arch(arch)
         def node_image = "${repo}@${node_digest_arch_map[inspect_arch]}"
         def extensions_node_image = "${repo}@${extensions_node_digest_arch_map[inspect_arch]}"
 
@@ -1003,6 +1000,35 @@ def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_dige
                 --arch ${arch} \
                 --node-image
         """)
+    }
+}
+
+// maps RPM-style architecture names to Go-style architecture names
+// used by skopeo and container manifests.
+def rpm_to_go_arch(arch) {
+    def archAliasMap = [
+        "x86_64"  : "amd64",
+        "aarch64" : "arm64",
+        "s390x"   : "s390x",
+        "ppc64le" : "ppc64le"
+    ]
+    return archAliasMap[arch]
+}
+
+// Defines some sort of loose policy around skipping build of untested
+// artifacts in our mechanical/development streams.
+// https://github.com/coreos/fedora-coreos-pipeline/issues/1189
+def should_we_skip_untested_artifacts(pipecfg) {
+    // Only perform skipping if the pipecfg knob is set:
+    if (pipecfg.misc?.allow_skip_of_untested_artifacts) {
+        // Ok. This pipeline allows skipping, but do we want to?
+        // Currently we skip on all but one day a week. The once a
+        // week at least gives us some testing/pulse of being able
+        // to build the artifacts we typically skip.
+        def day = shwrapCapture("date +%A")
+        return day != "Friday"
+    } else {
+        return false
     }
 }
 

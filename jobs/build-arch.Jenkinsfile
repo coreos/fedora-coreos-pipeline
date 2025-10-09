@@ -44,6 +44,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
+                   defaultValue: false,
+                   description: 'Skip building and pushing any artifacts we do not CI test'),
       string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',
              defaultValue: '',
@@ -73,6 +76,10 @@ def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
+
+if (params.SKIP_UNTESTED_ARTIFACTS && stream_info.type == "production" ) {
+    error("Cannot specify SKIP_UNTESTED_ARTIFACTS parameter for production streams")
+}
 
 def cosa_controller_img = stream_info.cosa_controller_img ?: "quay.io/coreos-assembler/coreos-assembler:main"
 
@@ -171,16 +178,14 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Determine parent version/commit information
         def parent_version = ""
-        def parent_commit = ""
         if (s3_stream_dir) {
             pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "releases.json")
             if (utils.pathExists("releases.json")) {
                 def releases = readJSON file: "releases.json"
                 // check if there's a previous release we should use as parent
                 for (release in releases["releases"].reverse()) {
-                    def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
-                    if (commit_obj != null) {
-                        parent_commit = commit_obj["checksum"]
+                    def oci_image = release["oci-images"].find{ image -> image["architecture"] == basearch }
+                    if (oci_image != null) {
                         parent_version = release["version"]
                         break
                     }
@@ -252,11 +257,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
             // Insert the parent info into meta.json so we can display it in
             // the release browser and for sanity checking
-            if (parent_commit && parent_version) {
+            if (parent_version) {
                 shwrap("""
-                cosa meta \
-                    --set fedora-coreos.parent-commit=${parent_commit} \
-                    --set fedora-coreos.parent-version=${parent_version}
+                cosa meta --set fedora-coreos.parent-version=${parent_version}
                 """)
             }
         }
@@ -311,7 +314,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Build the remaining artifacts
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, params.SKIP_UNTESTED_ARTIFACTS)
         }
 
         // secex specific tests. 
@@ -373,8 +376,15 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 parallelruns['Sign Images'] = {
                     pipeutils.signImages(params.STREAM, newBuildID, basearch, s3_stream_dir)
                 }
-                parallelruns['OSTree Import: Compose Repo'] = {
-                    pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
+                // Import into the OSTree repo if we are F42. We stopped
+                // doing this for F43+ because we distribute updates from
+                // the container registry now.
+                if (newBuildID.tokenize('.')[0] == '42') {
+                    parallelruns['OSTree Import: Compose Repo'] = {
+                        pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
+                    }
+                } else {
+                    echo "Skipping OSTree repo import for F43+"
                 }
                 // process this batch
                 parallel parallelruns

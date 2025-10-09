@@ -8,6 +8,8 @@ objects:
     metadata:
       name: jenkins-agent-base
     spec:
+      lookupPolicy:
+        local: true
       tags:
         - name: upstream
           from:

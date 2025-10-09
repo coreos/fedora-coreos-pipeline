@@ -28,8 +28,8 @@ NAME="coreos-aarch64-builder-$(date +%Y%m%d)"
 AMI=''
 TYPE='a1.metal'
 DISK='200'
-SUBNET='subnet-050b478f586723c62'
-SECURITY_GROUPS='sg-0ff537e445349ca0e'
+SUBNET='subnet-09b21d23b5feffd3c'
+SECURITY_GROUPS='sg-01e9626e414e468f1'
 USERDATA="${PWD}/coreos-aarch64-builder.ign"
 aws ec2 run-instances                     \
     --output json                         \
@@ -47,7 +47,7 @@ Wait for the instance to come up (`a1.metal` instances can take 5-10 minutes to
 come up) and log in:
 
 ```bash
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
+INSTANCE=$(jq --raw-output '.Instances[0].InstanceId' out.json)
 IP=$(aws ec2 describe-instances --instance-ids $INSTANCE --output json \
      | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
 ssh "core@${IP}"
@@ -67,7 +67,7 @@ aarch64 jobs are running).
 
 ```bash
 # Grab the instance ID and associate the IP address
-INSTANCE=$(jq --raw-output .Instances[0].InstanceId out.json)
+INSTANCE=$(jq --raw-output '.Instances[0].InstanceId' out.json)
 EIP='18.233.54.49'
 EIPID='eipalloc-4305254a'
 aws ec2 associate-address --instance-id $INSTANCE --allow-reassociation --allocation-id $EIPID
@@ -137,17 +137,14 @@ podman cp coreos-s390x-builder.ign ibmcloud:/root/coreos-s390x-builder.ign
 ```
 
 We've occasionally seen some failures and/or capacity issues so we'll
-document here variables for `us-east-1` and `ca-tor-1`. If you use
-`ca-tor-1` you may run into issues with yum mirrors being slow in tests
-because the IP address block there is thought to be in France and not
-Toronto when doing Geo IP lookups.
+document here variables for `us-east-1` and `us-south-1`.
 
 ```bash
-IMAGE='r038-28097bd5-500b-45f1-8d48-99b3d51e3b60'
-ZONE='ca-tor-1'
-VPC='r038-992efef6-1b41-4b58-8a3f-0112c6b770ca'
-SUBNET='02q7-bef3b4b8-095b-4f90-a0e3-7e4aad0a509a'
-SG='r038-24bc65f4-f8a5-4d70-a1cf-657b623257cc'
+IMAGE='r006-e6f4f1be-e88b-4c4e-8891-cd9cb2c1e630'
+ZONE='us-south-1'
+VPC='r006-4e33b5cb-c523-42fc-9760-4b2b7c415259'
+SUBNET='0717-8b070e59-485d-431f-aaa7-6f68b1331792'
+SG='r006-485ad323-c353-48ce-815f-5bdebf0a84d3'
 ```
 
 ```bash
@@ -173,8 +170,8 @@ Assign the backup floating IP to the instance so we can log in to it
 and then log in:
 
 ```bash
-NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update coreos-s390x-builder-backup --nic $NIC
+VNIC=$(jq --raw-output .primary_network_attachment.virtual_network_interface.id out.json)
+ibmcloud is virtual-network-interface-floating-ip-add $VNIC coreos-s390x-builder-backup
 
 INSTANCE=$(jq --raw-output .id out.json)
 IP=$(ibmcloud is instance $INSTANCE --output json \
@@ -197,8 +194,9 @@ by checking to make sure Jenkins is idle (i.e. no build-cosa or multi-arch
 s390x jobs are running).
 
 ```bash
-NIC=$(jq --raw-output .primary_network_interface.id out.json)
-ibmcloud is floating-ip-update coreos-s390x-builder --nic $NIC
+VNIC=$(jq --raw-output .primary_network_attachment.virtual_network_interface.id out.json)
+ibmcloud is virtual-network-interface-floating-ip-remove $VNIC coreos-s390x-builder-backup
+ibmcloud is virtual-network-interface-floating-ip-add $VNIC coreos-s390x-builder
 
 INSTANCE=$(jq --raw-output .id out.json)
 IP=$(ibmcloud is instance $INSTANCE --output json \

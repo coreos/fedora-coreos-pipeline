@@ -76,11 +76,18 @@ if (params.ARCH == 'x86_64') {
     cosa_memory_request_mb = 1024 + 1024 + 1536 + 512
 }
 
+
+echo "Waiting for release job to finish (release-${params.STREAM} lock)"
+sleep 10 // to prevent race with release job starting up
+lock(resource: "release-${params.STREAM}") {
+    echo "release-${params.STREAM} lock acquired"
+}
+echo "release-${params.STREAM} lock released"
 lock(resource: "kola-upgrade-${params.ARCH}") {
     cosaPod(memory: "${cosa_memory_request_mb}Mi",
             image: params.COREOS_ASSEMBLER_IMAGE,
             serviceAccount: "jenkins") {
-    timeout(time: 90, unit: 'MINUTES') {
+    timeout(time: 150, unit: 'MINUTES') {
     try {
 
         // Determine the target version. If no params.TARGET_VERSION was
@@ -105,7 +112,11 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
             def releases = readJSON file: "releases.json"
             def newest_version = releases["releases"][-1]["version"]
             for (release in releases["releases"]) {
-                def has_arch = release["commits"].find{ commit -> commit["architecture"] == params.ARCH }
+                def has_arch = release["oci-images"].find{ image -> image["architecture"] == params.ARCH }
+                if (has_arch == null) {
+                    // releases older than 42 only had commits, no oci-images, so let's also check commits
+                    has_arch = release["commits"].find{ commit -> commit["architecture"] == params.ARCH }
+                }
                 if (release["version"] in deadends || has_arch == null) {
                     continue // This release has been disqualified
                 }
