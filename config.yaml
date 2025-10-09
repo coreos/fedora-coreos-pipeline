@@ -12,6 +12,7 @@ streams:
     type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
+    konflux_driven: true
   #branched:
   #  type: mechanical
   # bodhi-updates:
@@ -25,7 +26,9 @@ source_config:
   url: https://github.com/coreos/fedora-coreos-config
 
 s3:
-  bucket: fcos-builds
+  #bucket: fcos-builds
+  # TODO: change the bucket url once finished
+  bucket: prod-account-match-fcos-builds
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
   oci_sigs_key: "prod/signatures/oci"
@@ -118,3 +121,6 @@ misc:
   run_extended_upgrade_test_fcos: true
   allow_missing_architectures_when_autotriggering_release_job: true
   allow_skip_of_untested_artifacts: true
+
+hotfix: 
+  name: testing-konflux-driven-config-knob
