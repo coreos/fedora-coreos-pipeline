@@ -19,10 +19,13 @@ properties([
 
 node {
     def mechanical_streams = pipeutils.streams_of_type(pipecfg, 'mechanical')
+
     def scheduled_streams = pipeutils.scheduled_streams(pipecfg, mechanical_streams)
     if (scheduled_streams) {
         mechanical_streams = scheduled_streams
     }
+    // Filter out streams that are managed by konflux
+    mechanical_streams = pipeutils.non_konflux_driven_streams(pipecfg, mechanical_streams)
 
     mechanical_streams.each{
         echo "Triggering build for mechanical stream: ${it}"
