@@ -397,12 +397,19 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
+// Returns a list of stream names from `streams_subset` that do not have `konflux_driven: true` set
+def non_konflux_driven_streams(config, streams_subset) {
+    return streams_subset.findAll{stream ->
+        !config.streams[stream].konflux_driven}.collect{k, v -> k}
+}
+
 def get_streams_choices(config, node = null) {
     def stream_source = node ? config.ocp_node_builds.release : config.streams
 
     def default_stream = stream_source.find { k, v -> v['default'] == true }?.key
     def other_streams = stream_source.keySet().minus(default_stream) as List
-    return [default_stream] + other_streams
+    def non_konflux_driven_streams = non_konflux_driven_streams(config, other_streams)
+    return [default_stream] + non_konflux_driven_streams
 }
 
 // Returns the default trigger for push notifications. This will trigger builds
