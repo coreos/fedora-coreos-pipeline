@@ -17,6 +17,10 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to build'),
+      string(name: 'SOURCE_OCI_IMAGE',
+             description: 'Override source_oci_image image to use. If set, the STREAM and VERSION parameters will be ignored.',
+             defaultValue: '',
+             trim: true),
       string(name: 'VERSION',
              description: 'Build version',
              defaultValue: '',
@@ -97,6 +101,9 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 // the build-arch pod is mostly triggering the work on a remote node, so we
 // can be conservative with our request
 def ncpus = 1
+
+def source_oci_image = params.SOURCE_OCI_IMAGE ?: stream_info.get("source_oci_image", "")
+boolean import_oci = source_oci_image != ""
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "${build_description} Waiting"
@@ -237,33 +244,39 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
 
 
-        // fetch from repos for the current build
-        stage('Fetch') {
-            shwrap("""
-            cosa fetch ${strict_build_param} ${autolock_arg}
-            """)
-        }
-
-        stage('Build OSTree') {
-            def parent_arg = ""
-            if (parent_version != "") {
-                parent_arg = "--parent-build ${parent_version}"
-            }
-            def version = "--version ${params.VERSION}"
-            def force = params.FORCE ? "--force" : ""
-            shwrap("""
-            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
-            """)
-
-            // Insert the parent info into meta.json so we can display it in
-            // the release browser and for sanity checking
-            if (parent_version) {
+        if (!import_oci) {
+            // fetch from repos for the current build
+            stage('Fetch') {
                 shwrap("""
-                cosa meta --set fedora-coreos.parent-version=${parent_version}
+                cosa fetch ${strict_build_param} ${autolock_arg}
                 """)
             }
-        }
 
+            stage('Build OSTree') {
+                def parent_arg = ""
+                if (parent_version != "") {
+                    parent_arg = "--parent-build ${parent_version}"
+                }
+                def version = "--version ${params.VERSION}"
+                def force = params.FORCE ? "--force" : ""
+                shwrap("""
+                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
+                """)
+
+                // Insert the parent info into meta.json so we can display it in
+                // the release browser and for sanity checking
+                if (parent_version) {
+                    shwrap("""
+                    cosa meta --set fedora-coreos.parent-version=${parent_version}
+                    """)
+                }
+            }
+        } else {
+            stage("Import OCI image") {
+                echo "Skipping build : Importing OCI : $source_oci_image"
+                shwrap("cosa import docker://${source_oci_image} --skip-prune")
+            }
+        }
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
 
         pipeutils.tryWithMessagingCredentials() {
