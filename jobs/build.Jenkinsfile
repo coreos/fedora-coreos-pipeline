@@ -301,14 +301,6 @@ lock(resource: "build-${params.STREAM}") {
                 shwrap("""
                 cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
                 """)
-
-                // Insert the parent info into meta.json so we can display it in
-                // the release browser and for sanity checking
-                if (parent_version) {
-                    shwrap("""
-                    cosa meta --set fedora-coreos.parent-version=${parent_version}
-                    """)
-                }
             }
 
             def buildID = shwrapCapture("readlink builds/latest")
@@ -354,6 +346,14 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
+
+        // Insert the parent info into meta.json so we can display it in
+        // the release browser and for sanity checking
+        if (parent_version) {
+            shwrap("""
+            cosa meta --set fedora-coreos.parent-version=${parent_version}
+            """)
+        }
 
         pipeutils.tryWithMessagingCredentials() {
             shwrap("""
