@@ -26,6 +26,9 @@ properties([
         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                      defaultValue: false,
                      description: "Don't error out if upgrade tests fail (temporary)"),
+        booleanParam(name: 'SKIP_BOOTC_IMAGE_BUMP',
+                     defaultValue: false,
+                     description: "Don't attempt to bump the bootc image."),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -106,6 +109,27 @@ lock(resource: "bump-lockfile") {
             archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
         }
 
+        if (!params.SKIP_BOOTC_IMAGE_BUMP) {
+            stage("Bump bootc") {
+                shwrap('''
+                    builder_img_repo=$(
+                        grep BUILDER_IMG= src/config/build-args.conf |
+                        cut -d = -f 2                                |
+                        cut -d @ -f 1
+                    )
+                    latest_sha256sum_id=$(
+                        skopeo inspect -n --raw docker://${builder_img_repo}:latest |
+                        sha256sum | cut -d ' ' -f 1
+                    )
+                    new_builder_img="${builder_img_repo}@sha256:${latest_sha256sum_id}"
+                    sed -i "s|^BUILDER_IMG=.*|${new_builder_img}|" src/config/build-args.conf
+                ''')
+                if (shwrapRc("git -C src/config diff --exit-code src/config/build-args.conf") != 0) {
+                    haveChanges = true
+                }
+            }
+        }
+
         // Initialize the sessions on the remote builders
         stage("Initialize Remotes") {
             parallel archinfo.keySet().collectEntries{arch -> [arch, {
@@ -120,6 +144,8 @@ lock(resource: "bump-lockfile") {
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                             shwrap("""
                             cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}
+                            # Also sync over the upate to the bootc builder image
+                            cosa remote-session sync {,:}src/config/build-args.conf
                             """)
                         }
                     }
@@ -281,8 +307,7 @@ lock(resource: "bump-lockfile") {
                 message="lockfiles: bump timestamp"
             }
 
-            shwrap("git -C src/config add rpms.lock.yaml")
-            shwrap("git -C src/config add manifest-lock.*.json")
+            shwrap("git -C src/config add rpms.lock.yaml manifest-lock.*.json build-args.conf")
             shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
             withCredentials([usernamePassword(credentialsId: botCreds,
                                               usernameVariable: 'GHUSER',
