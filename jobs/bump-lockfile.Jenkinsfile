@@ -122,7 +122,7 @@ lock(resource: "bump-lockfile") {
                         sha256sum | cut -d ' ' -f 1
                     )
                     new_builder_img="${builder_img_repo}@sha256:${latest_sha256sum_id}"
-                    sed -i "s|^BUILDER_IMG=.*|${new_builder_img}|" src/config/build-args.conf
+                    sed -i "s|^BUILDER_IMG=.*|BUILDER_IMG=${new_builder_img}|" src/config/build-args.conf
                 ''')
                 if (shwrapRc("git -C src/config diff --exit-code src/config/build-args.conf") != 0) {
                     haveChanges = true
