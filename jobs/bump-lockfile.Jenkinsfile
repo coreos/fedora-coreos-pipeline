@@ -226,7 +226,7 @@ lock(resource: "bump-lockfile") {
           # do this separately so set -e kicks in if it fails
           files=\$(git -C src/config ls-files --modified --deleted)
           for f in \${files}; do
-            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|rpms\\.lock\\.yaml) ]]; then
+            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|rpms\\.lock\\.yaml|build-args\\.conf) ]]; then
               echo "Unexpected modified file \${f}"
               exit 1
             fi
