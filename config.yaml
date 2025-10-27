@@ -8,8 +8,8 @@ streams:
   testing-devel:
     type: development
     default: true
-  next-devel:         # do not touch; line managed by `next-devel/manage.py`
-    type: development # do not touch; line managed by `next-devel/manage.py`
+  # next-devel:         # do not touch; line managed by `next-devel/manage.py`
+    # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
   #branched:
