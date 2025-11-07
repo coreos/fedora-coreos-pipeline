@@ -302,6 +302,19 @@ lock(resource: "bump-lockfile") {
             }]}
         }
 
+        def TRIGGER_PATH = ".tekton/trigger"
+        stage("Bump date stamp") {
+            // Bump the date stamp file with today date.
+            // This will trigger a konflux build.
+            def trigger_comment_path = ".tekton/trigger-file-comment"
+            shwrap("""
+                pushd src/config
+                touch ${trigger_comment_path}
+                echo \$(date --utc +%Y%m%d) | cat ${trigger_comment_path} - > ${TRIGGER_PATH}
+                popd
+            """)
+        }
+
         // OK, we're ready to push: just push to the branch. In the future, we might be
         // fancier here; e.g. if tests fail, just open a PR, or if tests passed but a
         // package was added or removed.
@@ -311,7 +324,7 @@ lock(resource: "bump-lockfile") {
                 message="lockfiles: bump timestamp"
             }
 
-            shwrap("git -C src/config add rpms.lock.yaml manifest-lock.*.json build-args.conf")
+            shwrap("git -C src/config add rpms.lock.yaml manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
             shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
             withCredentials([usernamePassword(credentialsId: botCreds,
                                               usernameVariable: 'GHUSER',
