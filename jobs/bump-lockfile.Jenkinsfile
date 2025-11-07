@@ -8,13 +8,17 @@ node {
 repo = "coreos/fedora-coreos-config"
 botCreds = "github-coreosbot-token-username-password"
 
+def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
+def mechanical_streams = pipeutils.streams_of_type(pipecfg, 'mechanical')
+locked_streams = development_streams + mechanical_streams
+
 properties([
     // we're only triggered by bump-lockfiles
     pipelineTriggers([]),
     parameters([
         choice(name: 'STREAM',
-               choices: pipeutils.streams_of_type(pipecfg, 'development'),
-               description: 'CoreOS development stream to bump'),
+               choices: locked_streams,
+               description: 'CoreOS stream to bump'),
         string(name: 'SKIP_TESTS_ARCHES',
                description: 'Space-separated list of architectures to skip tests on',
                defaultValue: "",
