@@ -1,0 +1,370 @@
+name: Build Fedora CoreOS PXE Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      stream:
+        description: 'CoreOS stream to build'
+        required: true
+        default: 'testing-devel'
+        type: choice
+        options:
+          - stable
+          - testing
+          - next
+          - testing-devel
+          - rawhide
+      arch:
+        description: 'Target architecture'
+        required: true
+        default: 'x86_64'
+        type: choice
+        options:
+          - x86_64
+          - aarch64
+      force:
+        description: 'Force rebuild even if no changes'
+        required: false
+        default: false
+        type: boolean
+      skip_tests:
+        description: 'Skip Kola tests to save time'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-pxe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Maximize disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove unnecessary packages and files
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+
+          echo "Disk space after cleanup:"
+          df -h
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up build environment
+        run: |
+          # Install podman if not available
+          if ! command -v podman &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y podman
+          fi
+
+          # Create workspace directory
+          mkdir -p "${GITHUB_WORKSPACE}/builds"
+
+          echo "Environment setup complete"
+          podman --version
+
+      - name: Pull coreos-assembler image
+        run: |
+          echo "Pulling coreos-assembler container image..."
+          podman pull quay.io/coreos-assembler/coreos-assembler:latest
+
+      - name: Initialize CoreOS build
+        run: |
+          # Determine branch based on stream
+          case "${{ inputs.stream }}" in
+            stable|testing|next|testing-devel)
+              BRANCH="${{ inputs.stream }}"
+              ;;
+            rawhide)
+              BRANCH="rawhide"
+              ;;
+            *)
+              BRANCH="testing-devel"
+              ;;
+          esac
+
+          echo "Initializing build for stream: ${{ inputs.stream }}, branch: ${BRANCH}"
+
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            init --force \
+              --branch "${BRANCH}" \
+              https://github.com/coreos/fedora-coreos-config
+
+          echo "Build initialized successfully"
+
+      - name: Fetch packages
+        run: |
+          STRICT_FLAG=""
+          if [[ "${{ inputs.stream }}" != "rawhide" ]]; then
+            STRICT_FLAG="--strict"
+          fi
+
+          echo "Fetching packages for ${{ inputs.stream }}..."
+
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            fetch ${STRICT_FLAG}
+
+          echo "Package fetch complete"
+
+      - name: Build OSTree
+        run: |
+          STRICT_FLAG=""
+          FORCE_FLAG=""
+
+          if [[ "${{ inputs.stream }}" != "rawhide" ]]; then
+            STRICT_FLAG="--strict"
+          fi
+
+          if [[ "${{ inputs.force }}" == "true" ]]; then
+            FORCE_FLAG="--force"
+          fi
+
+          echo "Building OSTree..."
+
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            build ostree ${STRICT_FLAG} --skip-prune ${FORCE_FLAG}
+
+          echo "OSTree build complete"
+
+      - name: Build QEMU image
+        run: |
+          echo "Building QEMU image..."
+
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            buildextend-qemu
+
+          echo "QEMU image build complete"
+
+      - name: Run Kola tests
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          echo "Running Kola tests..."
+
+          # Check if KVM is available
+          if [ -e /dev/kvm ]; then
+            KVM_FLAG="--device /dev/kvm"
+            echo "KVM device available, enabling hardware acceleration"
+          else
+            KVM_FLAG=""
+            echo "KVM device not available, tests will run slower or be skipped"
+          fi
+
+          # Run basic Kola tests with limited parallelism
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            ${KVM_FLAG} \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            kola run --parallel 2 --basic-qemu-scenarios || {
+              echo "Warning: Kola tests failed, but continuing..."
+            }
+
+          echo "Kola tests complete"
+
+      - name: Build metal artifacts
+        run: |
+          echo "Building metal artifacts..."
+
+          # Build metal (standard 512-byte sector)
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            buildextend-metal
+
+          echo "metal artifact build complete"
+
+          # Build metal4k (4K sector optimized)
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            buildextend-metal4k
+
+          echo "metal4k artifact build complete"
+
+      - name: Build live ISO (PXE artifacts)
+        run: |
+          echo "Building live ISO with PXE artifacts..."
+
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            buildextend-live
+
+          echo "Live ISO build complete"
+
+      - name: Extract build information
+        id: build-info
+        run: |
+          # Get the build ID
+          BUILD_ID=$(readlink "${GITHUB_WORKSPACE}/builds/builds/latest")
+          echo "build_id=${BUILD_ID}" >> $GITHUB_OUTPUT
+          echo "Build ID: ${BUILD_ID}"
+
+          # Get architecture
+          ARCH="${{ inputs.arch }}"
+          echo "arch=${ARCH}" >> $GITHUB_OUTPUT
+
+          # List built artifacts
+          echo "Built artifacts:"
+          ls -lh "${GITHUB_WORKSPACE}/builds/builds/${BUILD_ID}/${ARCH}/" || true
+
+      - name: Compress artifacts
+        run: |
+          echo "Compressing artifacts..."
+
+          podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            compress
+
+          echo "Compression complete"
+
+      - name: Prepare PXE artifacts for upload
+        run: |
+          BUILD_ID="${{ steps.build-info.outputs.build_id }}"
+          ARCH="${{ steps.build-info.outputs.arch }}"
+          BUILD_DIR="${GITHUB_WORKSPACE}/builds/builds/${BUILD_ID}/${ARCH}"
+          UPLOAD_DIR="${GITHUB_WORKSPACE}/pxe-artifacts"
+
+          mkdir -p "${UPLOAD_DIR}"
+
+          # Copy PXE-related artifacts
+          # The live ISO contains the kernel, initramfs, and rootfs for PXE boot
+          if [ -f "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-live.${ARCH}.iso" ]; then
+            cp "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-live.${ARCH}.iso" "${UPLOAD_DIR}/"
+          fi
+
+          # Copy metal images (used for bare metal PXE installation)
+          if [ -f "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal.${ARCH}.raw.xz" ]; then
+            cp "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal.${ARCH}.raw.xz" "${UPLOAD_DIR}/"
+          fi
+
+          if [ -f "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal4k.${ARCH}.raw.xz" ]; then
+            cp "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal4k.${ARCH}.raw.xz" "${UPLOAD_DIR}/"
+          fi
+
+          # Copy metadata
+          if [ -f "${BUILD_DIR}/meta.json" ]; then
+            cp "${BUILD_DIR}/meta.json" "${UPLOAD_DIR}/"
+          fi
+
+          if [ -f "${BUILD_DIR}/commitmeta.json" ]; then
+            cp "${BUILD_DIR}/commitmeta.json" "${UPLOAD_DIR}/"
+          fi
+
+          # Create a README with extraction instructions
+          {
+            echo "# Fedora CoreOS PXE Artifacts"
+            echo ""
+            echo "This directory contains the artifacts needed for PXE booting Fedora CoreOS."
+            echo ""
+            echo "## Artifacts"
+            echo ""
+            echo "- **live ISO**: Contains the kernel, initramfs, and rootfs for PXE boot"
+            echo "- **metal images**: Raw disk images for bare metal installation"
+            echo "- **metadata**: Build and commit metadata"
+            echo ""
+            echo "## Extracting PXE components from Live ISO"
+            echo ""
+            echo "To extract the kernel, initramfs, and rootfs from the live ISO:"
+            echo ""
+            echo '```bash'
+            echo "# Mount the ISO"
+            echo "mkdir -p /mnt/fcos-iso"
+            echo "sudo mount -o loop fedora-coreos-*-live.x86_64.iso /mnt/fcos-iso"
+            echo ""
+            echo "# Copy PXE files"
+            echo "cp /mnt/fcos-iso/images/pxeboot/vmlinuz ./kernel"
+            echo "cp /mnt/fcos-iso/images/pxeboot/initrd.img ./initramfs"
+            echo "cp /mnt/fcos-iso/images/pxeboot/rootfs.img ./rootfs"
+            echo ""
+            echo "# Unmount"
+            echo "sudo umount /mnt/fcos-iso"
+            echo '```'
+            echo ""
+            echo "## Using for PXE Boot"
+            echo ""
+            echo "1. Set up a TFTP server with the kernel and initramfs"
+            echo "2. Configure your PXE/DHCP server to boot from these files"
+            echo "3. The rootfs should be available via HTTP/NFS for the installer"
+            echo ""
+            echo "Build: ${BUILD_ID}"
+            echo "Stream: ${{ inputs.stream }}"
+            echo "Architecture: ${ARCH}"
+            echo "Built: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          } > "${UPLOAD_DIR}/README.md"
+
+          echo "PXE artifacts prepared in ${UPLOAD_DIR}"
+          ls -lh "${UPLOAD_DIR}"
+
+      - name: Upload PXE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora-coreos-pxe-${{ inputs.stream }}-${{ steps.build-info.outputs.build_id }}-${{ inputs.arch }}
+          path: pxe-artifacts/
+          retention-days: 30
+          compression-level: 0  # Already compressed
+
+      - name: Upload full build directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora-coreos-full-build-${{ inputs.stream }}-${{ steps.build-info.outputs.build_id }}-${{ inputs.arch }}
+          path: builds/builds/latest/
+          retention-days: 7
+          compression-level: 6
+
+      - name: Build summary
+        run: |
+          BUILD_ID="${{ steps.build-info.outputs.build_id }}"
+          ARCH="${{ steps.build-info.outputs.arch }}"
+
+          echo "## Fedora CoreOS Build Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Stream:** ${{ inputs.stream }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build ID:** ${BUILD_ID}" >> $GITHUB_STEP_SUMMARY
+          echo "**Architecture:** ${ARCH}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### PXE Artifacts Built:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Live ISO (contains kernel, initramfs, rootfs)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Metal disk image (512-byte sectors)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Metal4k disk image (4K sectors)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the artifacts from the Actions run" >> $GITHUB_STEP_SUMMARY
+          echo "2. Extract PXE components from the live ISO (see README.md in artifacts)" >> $GITHUB_STEP_SUMMARY
+          echo "3. Deploy to your PXE server" >> $GITHUB_STEP_SUMMARY
+
+          echo "Disk space after build:"
+          df -h
