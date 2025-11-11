@@ -4,13 +4,14 @@ This repository has been migrated from Jenkins to GitHub Actions for building Fe
 
 ## Overview
 
-The new GitHub Actions workflow builds the essential PXE artifacts:
-- **Kernel** (vmlinuz)
-- **Initramfs** (initrd.img)
-- **Rootfs** (rootfs.img)
+The new GitHub Actions workflow builds and **directly extracts** the essential PXE artifacts:
+- **Kernel** (`fedora-coreos-VERSION-live-kernel-ARCH`)
+- **Initramfs** (`fedora-coreos-VERSION-live-initramfs.ARCH.img`)
+- **Rootfs** (`fedora-coreos-VERSION-live-rootfs.ARCH.img`)
 - **Metal disk images** (for bare metal installation)
+- **Live ISO** (for reference/alternative use)
 
-These artifacts are packaged in a Live ISO and metal images, which can be used for PXE network booting.
+Unlike the original Jenkins pipeline which only uploaded the Live ISO, this workflow **extracts and publishes the PXE components as separate, ready-to-use files**, matching what Fedora CoreOS officially distributes at `builds.coreos.fedoraproject.org`.
 
 ## Quick Start
 
@@ -33,24 +34,28 @@ After the build completes:
 1. Go to the workflow run page
 2. Scroll to the **Artifacts** section
 3. Download the `fedora-coreos-pxe-*` artifact
-4. Extract the archive to get the PXE artifacts
+4. Extract the archive - the PXE files are **already extracted and ready to use**!
 
-### Extracting PXE Components
+### Using the PXE Files
 
-The Live ISO contains the kernel, initramfs, and rootfs needed for PXE boot:
+The downloaded artifact contains these ready-to-deploy files:
 
-```bash
-# Mount the ISO
-mkdir -p /mnt/fcos-iso
-sudo mount -o loop fedora-coreos-*-live.x86_64.iso /mnt/fcos-iso
+```
+fedora-coreos-VERSION-live-kernel-ARCH           # Kernel
+fedora-coreos-VERSION-live-initramfs.ARCH.img    # Initramfs
+fedora-coreos-VERSION-live-rootfs.ARCH.img       # Rootfs
+```
 
-# Copy PXE files
-cp /mnt/fcos-iso/images/pxeboot/vmlinuz ./kernel
-cp /mnt/fcos-iso/images/pxeboot/initrd.img ./initramfs
-cp /mnt/fcos-iso/images/pxeboot/rootfs.img ./rootfs
+**No ISO mounting or extraction required!** Simply upload these files to your TFTP/HTTP server.
 
-# Unmount
-sudo umount /mnt/fcos-iso
+Example iPXE configuration:
+
+```ipxe
+#!ipxe
+set BASEURL http://your-server/path
+kernel ${BASEURL}/fedora-coreos-VERSION-live-kernel-x86_64 initrd=main coreos.live.rootfs_url=${BASEURL}/fedora-coreos-VERSION-live-rootfs.x86_64.img
+initrd --name main ${BASEURL}/fedora-coreos-VERSION-live-initramfs.x86_64.img
+boot
 ```
 
 ## Workflow Structure
@@ -67,9 +72,10 @@ The GitHub Actions workflow (`.github/workflows/build-pxe.yml`) performs the fol
 8. **Build QEMU image**: Creates a QEMU-compatible image
 9. **Run Kola tests** (optional): Runs CoreOS test suite
 10. **Build metal artifacts**: Creates bare metal disk images
-11. **Build live ISO**: Generates the Live ISO with PXE artifacts
+11. **Build live ISO**: Generates the Live ISO (also creates separate PXE files)
 12. **Compress artifacts**: Compresses the built images
-13. **Upload artifacts**: Uploads the PXE artifacts to GitHub
+13. **Extract PXE files**: Extracts kernel, initramfs, and rootfs as separate files
+14. **Upload artifacts**: Uploads the ready-to-use PXE files to GitHub
 
 ## Differences from Jenkins Pipeline
 

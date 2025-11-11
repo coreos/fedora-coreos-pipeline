@@ -251,7 +251,7 @@ jobs:
 
           echo "Compression complete"
 
-      - name: Prepare PXE artifacts for upload
+      - name: Extract and prepare PXE artifacts for upload
         run: |
           BUILD_ID="${{ steps.build-info.outputs.build_id }}"
           ARCH="${{ steps.build-info.outputs.arch }}"
@@ -260,70 +260,149 @@ jobs:
 
           mkdir -p "${UPLOAD_DIR}"
 
-          # Copy PXE-related artifacts
-          # The live ISO contains the kernel, initramfs, and rootfs for PXE boot
+          # Extract separate PXE files using cosa meta
+          # These are the actual files that should be published for PXE booting
+          cd "${GITHUB_WORKSPACE}/builds"
+
+          # Get paths to the separate kernel, initramfs, and rootfs files
+          KERNEL_PATH=$(podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            cosa meta --image-path live-kernel 2>/dev/null || echo "")
+
+          INITRAMFS_PATH=$(podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            cosa meta --image-path live-initramfs 2>/dev/null || echo "")
+
+          ROOTFS_PATH=$(podman run --rm \
+            -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            --workdir /srv \
+            --security-opt label=disable \
+            quay.io/coreos-assembler/coreos-assembler:latest \
+            cosa meta --image-path live-rootfs 2>/dev/null || echo "")
+
+          cd "${GITHUB_WORKSPACE}"
+
+          echo "Kernel path: ${KERNEL_PATH}"
+          echo "Initramfs path: ${INITRAMFS_PATH}"
+          echo "Rootfs path: ${ROOTFS_PATH}"
+
+          # Copy the separate PXE files with standard naming
+          if [ -n "${KERNEL_PATH}" ] && [ -f "${GITHUB_WORKSPACE}/builds/${KERNEL_PATH}" ]; then
+            cp "${GITHUB_WORKSPACE}/builds/${KERNEL_PATH}" "${UPLOAD_DIR}/fedora-coreos-${BUILD_ID}-live-kernel-${ARCH}"
+            echo "✓ Copied kernel"
+          fi
+
+          if [ -n "${INITRAMFS_PATH}" ] && [ -f "${GITHUB_WORKSPACE}/builds/${INITRAMFS_PATH}" ]; then
+            cp "${GITHUB_WORKSPACE}/builds/${INITRAMFS_PATH}" "${UPLOAD_DIR}/fedora-coreos-${BUILD_ID}-live-initramfs.${ARCH}.img"
+            echo "✓ Copied initramfs"
+          fi
+
+          if [ -n "${ROOTFS_PATH}" ] && [ -f "${GITHUB_WORKSPACE}/builds/${ROOTFS_PATH}" ]; then
+            cp "${GITHUB_WORKSPACE}/builds/${ROOTFS_PATH}" "${UPLOAD_DIR}/fedora-coreos-${BUILD_ID}-live-rootfs.${ARCH}.img"
+            echo "✓ Copied rootfs"
+          fi
+
+          # Also copy the live ISO for reference
           if [ -f "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-live.${ARCH}.iso" ]; then
             cp "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-live.${ARCH}.iso" "${UPLOAD_DIR}/"
+            echo "✓ Copied live ISO"
           fi
 
           # Copy metal images (used for bare metal PXE installation)
           if [ -f "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal.${ARCH}.raw.xz" ]; then
             cp "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal.${ARCH}.raw.xz" "${UPLOAD_DIR}/"
+            echo "✓ Copied metal image"
           fi
 
           if [ -f "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal4k.${ARCH}.raw.xz" ]; then
             cp "${BUILD_DIR}/fedora-coreos-${BUILD_ID}-metal4k.${ARCH}.raw.xz" "${UPLOAD_DIR}/"
+            echo "✓ Copied metal4k image"
           fi
 
           # Copy metadata
           if [ -f "${BUILD_DIR}/meta.json" ]; then
             cp "${BUILD_DIR}/meta.json" "${UPLOAD_DIR}/"
+            echo "✓ Copied meta.json"
           fi
 
           if [ -f "${BUILD_DIR}/commitmeta.json" ]; then
             cp "${BUILD_DIR}/commitmeta.json" "${UPLOAD_DIR}/"
+            echo "✓ Copied commitmeta.json"
           fi
 
-          # Create a README with extraction instructions
+          # Create a README with usage instructions
           {
             echo "# Fedora CoreOS PXE Artifacts"
             echo ""
-            echo "This directory contains the artifacts needed for PXE booting Fedora CoreOS."
+            echo "This directory contains the complete set of artifacts needed for PXE booting Fedora CoreOS."
             echo ""
-            echo "## Artifacts"
+            echo "## Files Included"
             echo ""
-            echo "- **live ISO**: Contains the kernel, initramfs, and rootfs for PXE boot"
-            echo "- **metal images**: Raw disk images for bare metal installation"
-            echo "- **metadata**: Build and commit metadata"
+            echo "### PXE Boot Files (Ready to Use)"
+            echo "- \`fedora-coreos-${BUILD_ID}-live-kernel-${ARCH}\` - Linux kernel"
+            echo "- \`fedora-coreos-${BUILD_ID}-live-initramfs.${ARCH}.img\` - Initial RAM filesystem"
+            echo "- \`fedora-coreos-${BUILD_ID}-live-rootfs.${ARCH}.img\` - Root filesystem image"
             echo ""
-            echo "## Extracting PXE components from Live ISO"
-            echo ""
-            echo "To extract the kernel, initramfs, and rootfs from the live ISO:"
-            echo ""
-            echo '```bash'
-            echo "# Mount the ISO"
-            echo "mkdir -p /mnt/fcos-iso"
-            echo "sudo mount -o loop fedora-coreos-*-live.x86_64.iso /mnt/fcos-iso"
-            echo ""
-            echo "# Copy PXE files"
-            echo "cp /mnt/fcos-iso/images/pxeboot/vmlinuz ./kernel"
-            echo "cp /mnt/fcos-iso/images/pxeboot/initrd.img ./initramfs"
-            echo "cp /mnt/fcos-iso/images/pxeboot/rootfs.img ./rootfs"
-            echo ""
-            echo "# Unmount"
-            echo "sudo umount /mnt/fcos-iso"
-            echo '```'
+            echo "### Additional Artifacts"
+            echo "- \`fedora-coreos-${BUILD_ID}-live.${ARCH}.iso\` - Bootable ISO (contains the above PXE files)"
+            echo "- \`fedora-coreos-${BUILD_ID}-metal.${ARCH}.raw.xz\` - Bare metal disk image (512-byte sectors)"
+            echo "- \`fedora-coreos-${BUILD_ID}-metal4k.${ARCH}.raw.xz\` - Bare metal disk image (4K sectors)"
+            echo "- \`meta.json\` - Build metadata"
+            echo "- \`commitmeta.json\` - Commit metadata"
             echo ""
             echo "## Using for PXE Boot"
             echo ""
-            echo "1. Set up a TFTP server with the kernel and initramfs"
-            echo "2. Configure your PXE/DHCP server to boot from these files"
-            echo "3. The rootfs should be available via HTTP/NFS for the installer"
+            echo "### Option 1: Direct PXE Boot (Recommended)"
             echo ""
-            echo "Build: ${BUILD_ID}"
-            echo "Stream: ${{ inputs.stream }}"
-            echo "Architecture: ${ARCH}"
-            echo "Built: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+            echo "The kernel, initramfs, and rootfs files are **already extracted and ready to use**."
+            echo "No ISO mounting required!"
+            echo ""
+            echo "1. Upload files to your TFTP/HTTP server:"
+            echo "   - \`fedora-coreos-${BUILD_ID}-live-kernel-${ARCH}\` → TFTP server"
+            echo "   - \`fedora-coreos-${BUILD_ID}-live-initramfs.${ARCH}.img\` → TFTP server"
+            echo "   - \`fedora-coreos-${BUILD_ID}-live-rootfs.${ARCH}.img\` → HTTP server"
+            echo ""
+            echo "2. Example iPXE configuration:"
+            echo ""
+            echo '```'
+            echo "#!ipxe"
+            echo "set BASEURL http://your-server/path"
+            echo "kernel \${BASEURL}/fedora-coreos-${BUILD_ID}-live-kernel-${ARCH} initrd=main coreos.live.rootfs_url=\${BASEURL}/fedora-coreos-${BUILD_ID}-live-rootfs.${ARCH}.img"
+            echo "initrd --name main \${BASEURL}/fedora-coreos-${BUILD_ID}-live-initramfs.${ARCH}.img"
+            echo "boot"
+            echo '```'
+            echo ""
+            echo "3. Example PXE/PXELINUX configuration:"
+            echo ""
+            echo '```'
+            echo "LABEL CoreOS"
+            echo "  MENU LABEL Fedora CoreOS ${BUILD_ID}"
+            echo "  KERNEL fedora-coreos-${BUILD_ID}-live-kernel-${ARCH}"
+            echo "  APPEND initrd=fedora-coreos-${BUILD_ID}-live-initramfs.${ARCH}.img coreos.live.rootfs_url=http://your-server/fedora-coreos-${BUILD_ID}-live-rootfs.${ARCH}.img"
+            echo '```'
+            echo ""
+            echo "### Option 2: Using coreos-installer"
+            echo ""
+            echo "You can also use the live ISO with coreos-installer to perform installations."
+            echo ""
+            echo "## Build Information"
+            echo ""
+            echo "- **Build ID**: ${BUILD_ID}"
+            echo "- **Stream**: ${{ inputs.stream }}"
+            echo "- **Architecture**: ${ARCH}"
+            echo "- **Built**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+            echo ""
+            echo "## More Information"
+            echo ""
+            echo "- [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/)"
+            echo "- [PXE Boot Reference](https://docs.fedoraproject.org/en-US/fedora-coreos/live-reference/)"
+            echo "- [Bare Metal Installation](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)"
           } > "${UPLOAD_DIR}/README.md"
 
           echo "PXE artifacts prepared in ${UPLOAD_DIR}"
@@ -356,15 +435,20 @@ jobs:
           echo "**Build ID:** ${BUILD_ID}" >> $GITHUB_STEP_SUMMARY
           echo "**Architecture:** ${ARCH}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### PXE Artifacts Built:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Live ISO (contains kernel, initramfs, rootfs)" >> $GITHUB_STEP_SUMMARY
+          echo "### PXE Files (Ready to Deploy):" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Kernel** (\`fedora-coreos-${BUILD_ID}-live-kernel-${ARCH}\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Initramfs** (\`fedora-coreos-${BUILD_ID}-live-initramfs.${ARCH}.img\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Rootfs** (\`fedora-coreos-${BUILD_ID}-live-rootfs.${ARCH}.img\`)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Additional Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Live ISO" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Metal disk image (512-byte sectors)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Metal4k disk image (4K sectors)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download the artifacts from the Actions run" >> $GITHUB_STEP_SUMMARY
-          echo "2. Extract PXE components from the live ISO (see README.md in artifacts)" >> $GITHUB_STEP_SUMMARY
-          echo "3. Deploy to your PXE server" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the \`fedora-coreos-pxe-*\` artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
+          echo "2. The PXE files are **already extracted** and ready to use - no ISO mounting needed!" >> $GITHUB_STEP_SUMMARY
+          echo "3. Upload to your TFTP/HTTP server (see README.md in artifacts for configuration examples)" >> $GITHUB_STEP_SUMMARY
 
           echo "Disk space after build:"
           df -h
