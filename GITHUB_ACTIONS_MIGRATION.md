@@ -23,6 +23,7 @@ Unlike the original Jenkins pipeline which only uploaded the Live ISO, this work
 4. Configure the build parameters:
    - **Stream**: Choose the CoreOS stream (stable, testing, next, testing-devel, rawhide)
    - **Architecture**: Select x86_64 or aarch64
+   - **Sector Size**: Choose which metal disk images to build (512, 4096, or both) - defaults to 512-byte only
    - **Force rebuild**: Check to force a rebuild even if no changes detected
    - **Skip tests**: Check to skip Kola tests (saves time, not recommended for production)
 5. Click **"Run workflow"** to start the build
@@ -132,6 +133,7 @@ The following features from the original Jenkins pipeline were intentionally omi
 |-------|-------------|---------|---------|
 | `stream` | CoreOS stream to build | `testing-devel` | stable, testing, next, testing-devel, rawhide |
 | `arch` | Target architecture | `x86_64` | x86_64, aarch64 |
+| `sector_size` | Metal disk image sector size | `512` | 512, 4096, both |
 | `force` | Force rebuild | `false` | true, false |
 | `skip_tests` | Skip Kola tests | `false` | true, false |
 
@@ -139,11 +141,16 @@ The following features from the original Jenkins pipeline were intentionally omi
 
 GitHub Actions runners have limited disk space (~14GB free on ubuntu-latest). The workflow includes disk cleanup steps, but large builds may still fail due to space constraints.
 
-If you encounter disk space issues:
+**Tips to save disk space and build time:**
 
-1. **Enable skip_tests**: Skip Kola tests to save disk space
-2. **Use larger runners**: Upgrade to GitHub Actions runners with more disk space
-3. **Mount additional storage**: Contact your GitHub admin to provision additional storage
+1. **Use `sector_size: 512`** (default): Builds only the standard 512-byte sector metal image, saving ~30% time and space
+2. **Enable `skip_tests: true`**: Skip Kola tests to save additional disk space
+3. **Build only one architecture per run**: Use separate workflow runs for x86_64 and aarch64
+
+If you still encounter disk space issues:
+
+1. **Use larger runners**: Upgrade to GitHub Actions runners with more disk space
+2. **Mount additional storage**: Contact your GitHub admin to provision additional storage
 
 ## Troubleshooting
 

@@ -32,6 +32,15 @@ on:
         required: false
         default: false
         type: boolean
+      sector_size:
+        description: 'Metal disk image sector size to build'
+        required: false
+        default: '512'
+        type: choice
+        options:
+          - '512'
+          - '4096'
+          - 'both'
 
 jobs:
   build-pxe:
@@ -187,27 +196,37 @@ jobs:
 
       - name: Build metal artifacts
         run: |
-          echo "Building metal artifacts..."
+          echo "Building metal artifacts (sector size: ${{ inputs.sector_size }})..."
 
           # Build metal (standard 512-byte sector)
-          podman run --rm \
-            -v "${GITHUB_WORKSPACE}/builds:/srv" \
-            --workdir /srv \
-            --security-opt label=disable \
-            quay.io/coreos-assembler/coreos-assembler:latest \
-            buildextend-metal
+          if [[ "${{ inputs.sector_size }}" == "512" || "${{ inputs.sector_size }}" == "both" ]]; then
+            echo "Building metal (512-byte sectors)..."
+            podman run --rm \
+              -v "${GITHUB_WORKSPACE}/builds:/srv" \
+              --workdir /srv \
+              --security-opt label=disable \
+              quay.io/coreos-assembler/coreos-assembler:latest \
+              buildextend-metal
 
-          echo "metal artifact build complete"
+            echo "✓ metal artifact build complete"
+          else
+            echo "Skipping metal (512-byte) build"
+          fi
 
           # Build metal4k (4K sector optimized)
-          podman run --rm \
-            -v "${GITHUB_WORKSPACE}/builds:/srv" \
-            --workdir /srv \
-            --security-opt label=disable \
-            quay.io/coreos-assembler/coreos-assembler:latest \
-            buildextend-metal4k
+          if [[ "${{ inputs.sector_size }}" == "4096" || "${{ inputs.sector_size }}" == "both" ]]; then
+            echo "Building metal4k (4K sectors)..."
+            podman run --rm \
+              -v "${GITHUB_WORKSPACE}/builds:/srv" \
+              --workdir /srv \
+              --security-opt label=disable \
+              quay.io/coreos-assembler/coreos-assembler:latest \
+              buildextend-metal4k
 
-          echo "metal4k artifact build complete"
+            echo "✓ metal4k artifact build complete"
+          else
+            echo "Skipping metal4k (4K) build"
+          fi
 
       - name: Build live ISO (PXE artifacts)
         run: |
@@ -434,6 +453,7 @@ jobs:
           echo "**Stream:** ${{ inputs.stream }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build ID:** ${BUILD_ID}" >> $GITHUB_STEP_SUMMARY
           echo "**Architecture:** ${ARCH}" >> $GITHUB_STEP_SUMMARY
+          echo "**Sector Size:** ${{ inputs.sector_size }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### PXE Files (Ready to Deploy):" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Kernel** (\`fedora-coreos-${BUILD_ID}-live-kernel-${ARCH}\`)" >> $GITHUB_STEP_SUMMARY
@@ -442,8 +462,15 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Additional Artifacts:" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Live ISO" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Metal disk image (512-byte sectors)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Metal4k disk image (4K sectors)" >> $GITHUB_STEP_SUMMARY
+
+          # Conditionally show which metal artifacts were built
+          if [[ "${{ inputs.sector_size }}" == "512" || "${{ inputs.sector_size }}" == "both" ]]; then
+            echo "- ✅ Metal disk image (512-byte sectors)" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [[ "${{ inputs.sector_size }}" == "4096" || "${{ inputs.sector_size }}" == "both" ]]; then
+            echo "- ✅ Metal4k disk image (4K sectors)" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. Download the \`fedora-coreos-pxe-*\` artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
