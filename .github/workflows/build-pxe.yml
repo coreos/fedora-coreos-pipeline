@@ -78,6 +78,11 @@ jobs:
           mkdir -p "${GITHUB_WORKSPACE}/builds"
           chmod 777 "${GITHUB_WORKSPACE}/builds"
 
+          # Create tmp directory for container's /srv/tmp mount
+          # This prevents the build from using tmpfs and running out of space
+          mkdir -p "${GITHUB_WORKSPACE}/builds/tmp"
+          chmod 777 "${GITHUB_WORKSPACE}/builds/tmp"
+
           echo "Environment setup complete"
           podman --version
 
@@ -153,6 +158,7 @@ jobs:
           timeout 2700 sudo podman run --privileged --rm \
             --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            -v "${GITHUB_WORKSPACE}/builds/tmp:/srv/tmp" \
             --workdir /srv \
             --security-opt label=disable \
             quay.io/coreos-assembler/coreos-assembler:latest \
@@ -212,6 +218,7 @@ jobs:
             timeout 1200 sudo podman run --privileged --rm \
               --user 0 \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
+              -v "${GITHUB_WORKSPACE}/builds/tmp:/srv/tmp" \
               --workdir /srv \
               --security-opt label=disable \
               quay.io/coreos-assembler/coreos-assembler:latest \
@@ -228,6 +235,7 @@ jobs:
             timeout 1200 sudo podman run --privileged --rm \
               --user 0 \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
+              -v "${GITHUB_WORKSPACE}/builds/tmp:/srv/tmp" \
               --workdir /srv \
               --security-opt label=disable \
               quay.io/coreos-assembler/coreos-assembler:latest \
@@ -247,12 +255,12 @@ jobs:
           timeout 1800 sudo podman run --privileged --rm \
             --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
+            -v "${GITHUB_WORKSPACE}/builds/tmp:/srv/tmp" \
             --workdir /srv \
             --security-opt label=disable \
-            -e TMPDIR=/srv/cache/tmp \
             --entrypoint bash \
             quay.io/coreos-assembler/coreos-assembler:latest \
-            -c 'mkdir -p /srv/cache/tmp && /usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live' || {
+            -c '/usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live' || {
               exit_code=$?
               if [ $exit_code -eq 124 ]; then
                 echo "Error: Build timed out after 30 minutes"
