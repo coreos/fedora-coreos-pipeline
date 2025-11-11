@@ -149,7 +149,8 @@ jobs:
 
           echo "Building OSTree..."
 
-          sudo podman run --privileged --rm \
+          # Use timeout to prevent indefinite hanging (45 minutes)
+          timeout 2700 sudo podman run --privileged --rm \
             --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
@@ -208,7 +209,7 @@ jobs:
           # Build metal (standard 512-byte sector)
           if [[ "${{ inputs.sector_size }}" == "512" || "${{ inputs.sector_size }}" == "both" ]]; then
             echo "Building metal (512-byte sectors)..."
-            sudo podman run --privileged --rm \
+            timeout 1200 sudo podman run --privileged --rm \
               --user 0 \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
               --workdir /srv \
@@ -224,7 +225,7 @@ jobs:
           # Build metal4k (4K sector optimized)
           if [[ "${{ inputs.sector_size }}" == "4096" || "${{ inputs.sector_size }}" == "both" ]]; then
             echo "Building metal4k (4K sectors)..."
-            sudo podman run --privileged --rm \
+            timeout 1200 sudo podman run --privileged --rm \
               --user 0 \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
               --workdir /srv \
@@ -241,13 +242,24 @@ jobs:
         run: |
           echo "Building live ISO with PXE artifacts..."
 
-          sudo podman run --privileged --rm \
+          # Use timeout to prevent indefinite hanging
+          # 30 minutes should be plenty for live ISO build
+          timeout 1800 sudo podman run --privileged --rm \
             --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
             quay.io/coreos-assembler/coreos-assembler:latest \
-            buildextend-live
+            buildextend-live || {
+              exit_code=$?
+              if [ $exit_code -eq 124 ]; then
+                echo "Error: Build timed out after 30 minutes"
+                exit 1
+              elif [ $exit_code -ne 0 ]; then
+                echo "Error: Build failed with exit code $exit_code"
+                exit $exit_code
+              fi
+            }
 
           echo "Live ISO build complete"
 
