@@ -252,7 +252,7 @@ jobs:
             -e TMPDIR=/srv/cache/tmp \
             --entrypoint bash \
             quay.io/coreos-assembler/coreos-assembler:latest \
-            -c 'mkdir -p /srv/cache/tmp && buildextend-live' || {
+            -c 'mkdir -p /srv/cache/tmp && /usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live' || {
               exit_code=$?
               if [ $exit_code -eq 124 ]; then
                 echo "Error: Build timed out after 30 minutes"
