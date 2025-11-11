@@ -53,6 +53,14 @@ def basearches = params.ARCHES.split() as Set
 def timeout_mins = 300
 
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
+// Derive the stream class once so both node and extensions builds use
+// the `io.openshift.os.streamclass` label. The streamclass is based on
+// the rhel major version and is used by the MCO to later select the right
+// image stream when multiple RHEL versions coexist.
+def rhel_segment = params.RELEASE.split('-')[1]
+def rhel_major = rhel_segment.split('\\.')[0]
+def stream_class = "rhel-${rhel_major}"
+def stream_class_label = "io.openshift.os.streamclass=${stream_class}"
 
 // Get the tag that's unique
 def unique_tag = ""
@@ -122,8 +130,11 @@ lock(resource: "build-node-image") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
                  def label_args = []
+                 if (stream_class_label) {
+                     label_args += ["--label", "${stream_class_label}"]
+                 }
                  if (unique_tag != "") {
-                     label_args = ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
+                     label_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
                  }
 
                  node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
@@ -144,8 +155,11 @@ lock(resource: "build-node-image") {
                 // Use the node image as from
                 def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
                 def label_args = []
+                if (stream_class_label) {
+                    label_args += ["--label", "${stream_class_label}"]
+                }
                 if (unique_tag != "") {
-                    label_args = ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
+                    label_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
                 }
                 extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
