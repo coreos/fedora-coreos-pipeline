@@ -73,8 +73,10 @@ jobs:
             sudo apt-get install -y podman
           fi
 
-          # Create workspace directory
+          # Create workspace directory with world-writable permissions
+          # This allows the container user to write to it regardless of UID mapping
           mkdir -p "${GITHUB_WORKSPACE}/builds"
+          chmod 777 "${GITHUB_WORKSPACE}/builds"
 
           echo "Environment setup complete"
           podman --version
@@ -102,6 +104,7 @@ jobs:
           echo "Initializing build for stream: ${{ inputs.stream }}, branch: ${BRANCH}"
 
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -122,6 +125,7 @@ jobs:
           echo "Fetching packages for ${{ inputs.stream }}..."
 
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -146,6 +150,7 @@ jobs:
           echo "Building OSTree..."
 
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -159,6 +164,7 @@ jobs:
           echo "Building QEMU image..."
 
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -183,6 +189,7 @@ jobs:
 
           # Run basic Kola tests with limited parallelism
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -202,6 +209,7 @@ jobs:
           if [[ "${{ inputs.sector_size }}" == "512" || "${{ inputs.sector_size }}" == "both" ]]; then
             echo "Building metal (512-byte sectors)..."
             sudo podman run --privileged --rm \
+              --user 0 \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
               --workdir /srv \
               --security-opt label=disable \
@@ -217,6 +225,7 @@ jobs:
           if [[ "${{ inputs.sector_size }}" == "4096" || "${{ inputs.sector_size }}" == "both" ]]; then
             echo "Building metal4k (4K sectors)..."
             sudo podman run --privileged --rm \
+              --user 0 \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
               --workdir /srv \
               --security-opt label=disable \
@@ -233,6 +242,7 @@ jobs:
           echo "Building live ISO with PXE artifacts..."
 
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -262,6 +272,7 @@ jobs:
           echo "Compressing artifacts..."
 
           sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -285,6 +296,7 @@ jobs:
 
           # Get paths to the separate kernel, initramfs, and rootfs files
           KERNEL_PATH=$(sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -292,6 +304,7 @@ jobs:
             cosa meta --image-path live-kernel 2>/dev/null || echo "")
 
           INITRAMFS_PATH=$(sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -299,6 +312,7 @@ jobs:
             cosa meta --image-path live-initramfs 2>/dev/null || echo "")
 
           ROOTFS_PATH=$(sudo podman run --privileged --rm \
+            --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
