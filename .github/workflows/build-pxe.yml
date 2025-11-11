@@ -101,7 +101,7 @@ jobs:
 
           echo "Initializing build for stream: ${{ inputs.stream }}, branch: ${BRANCH}"
 
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -121,7 +121,7 @@ jobs:
 
           echo "Fetching packages for ${{ inputs.stream }}..."
 
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -145,7 +145,7 @@ jobs:
 
           echo "Building OSTree..."
 
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -158,7 +158,7 @@ jobs:
         run: |
           echo "Building QEMU image..."
 
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -182,7 +182,7 @@ jobs:
           fi
 
           # Run basic Kola tests with limited parallelism
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -201,7 +201,7 @@ jobs:
           # Build metal (standard 512-byte sector)
           if [[ "${{ inputs.sector_size }}" == "512" || "${{ inputs.sector_size }}" == "both" ]]; then
             echo "Building metal (512-byte sectors)..."
-            sudo podman run --rm \
+            podman run --privileged --rm \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
               --workdir /srv \
               --security-opt label=disable \
@@ -216,7 +216,7 @@ jobs:
           # Build metal4k (4K sector optimized)
           if [[ "${{ inputs.sector_size }}" == "4096" || "${{ inputs.sector_size }}" == "both" ]]; then
             echo "Building metal4k (4K sectors)..."
-            sudo podman run --rm \
+            podman run --privileged --rm \
               -v "${GITHUB_WORKSPACE}/builds:/srv" \
               --workdir /srv \
               --security-opt label=disable \
@@ -232,7 +232,7 @@ jobs:
         run: |
           echo "Building live ISO with PXE artifacts..."
 
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -261,7 +261,7 @@ jobs:
         run: |
           echo "Compressing artifacts..."
 
-          sudo podman run --rm \
+          podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
@@ -284,21 +284,21 @@ jobs:
           cd "${GITHUB_WORKSPACE}/builds"
 
           # Get paths to the separate kernel, initramfs, and rootfs files
-          KERNEL_PATH=$(sudo podman run --rm \
+          KERNEL_PATH=$(podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
             quay.io/coreos-assembler/coreos-assembler:latest \
             cosa meta --image-path live-kernel 2>/dev/null || echo "")
 
-          INITRAMFS_PATH=$(sudo podman run --rm \
+          INITRAMFS_PATH=$(podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
             quay.io/coreos-assembler/coreos-assembler:latest \
             cosa meta --image-path live-initramfs 2>/dev/null || echo "")
 
-          ROOTFS_PATH=$(sudo podman run --rm \
+          ROOTFS_PATH=$(podman run --privileged --rm \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
             --workdir /srv \
             --security-opt label=disable \
