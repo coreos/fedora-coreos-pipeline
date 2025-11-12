@@ -260,8 +260,9 @@ jobs:
             --security-opt label=disable \
             --entrypoint bash \
             quay.io/coreos-assembler/coreos-assembler:latest \
-            -c '/usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live; mount; ls -lh /srv/tmp' || {
+            -c 'mount; ls -lh /srv/tmp; /usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live; mount; ls -lh /srv/tmp' || {
               exit_code=$?
+              mount; ls -lh /srv/tmp
               if [ $exit_code -eq 124 ]; then
                 echo "Error: Build timed out after 30 minutes"
                 exit 0
