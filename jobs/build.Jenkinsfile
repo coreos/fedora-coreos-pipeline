@@ -325,7 +325,7 @@ lock(resource: "build-${params.STREAM}") {
                         // Run the mArch jobs and wait. We wait here because if they fail
                         // we don't want to bother running the release job again since the
                         // goal is to get a complete build.
-                        run_multiarch_jobs(missing_arches, rev, buildID, cosa_img, true)
+                        run_multiarch_jobs(missing_arches, rev, buildID, import_oci_image, cosa_img, true)
                         if (stream_info.type != "production") {
                             run_release_job(buildID)
                         }
@@ -404,7 +404,7 @@ lock(resource: "build-${params.STREAM}") {
         // If desired let's go ahead and archive+fork the multi-arch jobs
         if (params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img, false)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
         }
 
         // Build the remaining artifacts
@@ -455,7 +455,7 @@ lock(resource: "build-${params.STREAM}") {
         // jobs let's go ahead and do those pieces now
         if (!params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img, false)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
         }
 
         stage('Archive') {
@@ -586,7 +586,7 @@ def archive_ostree(version, basearch, s3_stream_dir) {
     }
 }
 
-def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
+def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
     stage('Fork Multi-Arch Builds') {
         parallel arches.collectEntries{arch -> [arch, {
             // We pass in FORCE=true here since if we got this far we know
@@ -597,6 +597,7 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                 booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
+                string(name: 'SOURCE_OCI_IMAGE', value: src_oci),
                 string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
                 string(name: 'STREAM', value: params.STREAM),
                 string(name: 'VERSION', value: version),
