@@ -252,18 +252,18 @@ jobs:
 
           # Use timeout to prevent indefinite hanging
           # 30 minutes should be plenty for live ISO build
+          du --human-readable --threshold=1M
           timeout 1800 sudo podman run --privileged --rm \
             --user 0 \
             -v "${GITHUB_WORKSPACE}/builds:/srv" \
-            -v "${GITHUB_WORKSPACE}/builds/tmp:/srv/tmp" \
             --workdir /srv \
             --security-opt label=disable \
             --entrypoint bash \
             quay.io/coreos-assembler/coreos-assembler:latest \
-            -c 'echo mount; mount; echo srv/tmp; ls -lh /srv/tmp; /usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live; echo mount; mount; echo ls; ls -lh /srv/tmp' || {
+            -c '/usr/bin/dumb-init /usr/bin/coreos-assembler buildextend-live' || {
               exit_code=$?
               echo exited $exit_code
-              mount; ls -lh /srv/tmp
+              du --human-readable --threshold=1M
               if [ $exit_code -eq 124 ]; then
                 echo "Error: Build timed out after 30 minutes"
                 exit 0
