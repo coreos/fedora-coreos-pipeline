@@ -12,7 +12,6 @@ streams:
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: mechanical
-    konflux_driven: true
   #branched:
   #  type: mechanical
   # bodhi-updates:
