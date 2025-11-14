@@ -53,6 +53,19 @@ def basearches = params.ARCHES.split() as Set
 def timeout_mins = 300
 
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
+// Derive the RHEL CoreOS tag once so both node and extensions builds stamp
+// the appropriate `io.coreos.*.osstream` label. The tag is based on the
+// release’s RHEL segment (e.g. `4.20-9.6` → `rhel-coreos`) so the MCO can
+// later select the right image stream when multiple RHEL versions coexist.
+def rhel_coreos_tag = null
+def release_parts = params.RELEASE.split('-')
+def rhel_segment = release_parts[1]
+def rhel_major = rhel_segment.split('\\.')[0]
+if (rhel_major == '9') {
+    rhel_coreos_tag = "rhel-coreos"
+} else {
+    rhel_coreos_tag = "rhel-coreos-${rhel_major}"
+}
 
 // Get the tag that's unique
 def unique_tag = ""
@@ -122,8 +135,11 @@ lock(resource: "build-node-image") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
                  def label_args = []
+                 if (rhel_coreos_tag) {
+                     label_args += ["--label", "io.coreos.oscontainerimage.osstream=${rhel_coreos_tag}"]
+                 }
                  if (unique_tag != "") {
-                     label_args = ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
+                     label_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
                  }
 
                  node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
@@ -144,8 +160,11 @@ lock(resource: "build-node-image") {
                 // Use the node image as from
                 def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
                 def label_args = []
+                if (rhel_coreos_tag) {
+                    label_args += ["--label", "io.coreos.osextensionscontainerimage.osstream=${rhel_coreos_tag}"]
+                }
                 if (unique_tag != "") {
-                    label_args = ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
+                    label_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
                 }
                 extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
