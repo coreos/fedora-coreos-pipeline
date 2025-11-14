@@ -408,8 +408,7 @@ def get_streams_choices(config, node = null) {
 
     def default_stream = stream_source.find { k, v -> v['default'] == true }?.key
     def other_streams = stream_source.keySet().minus(default_stream) as List
-    def non_konflux_driven_streams = non_konflux_driven_streams(config, other_streams)
-    return [default_stream] + non_konflux_driven_streams
+    return [default_stream] + other_streams
 }
 
 // Returns the default trigger for push notifications. This will trigger builds
