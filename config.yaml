@@ -11,10 +11,10 @@ streams:
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
-    type: mechanical
+    type: development
     konflux_driven: true
   #branched:
-  #  type: mechanical
+  #  type: development
   # bodhi-updates:
   #   type: mechanical
   # bodhi-updates-testing:
