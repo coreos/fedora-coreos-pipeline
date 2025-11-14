@@ -15,10 +15,6 @@ streams:
     konflux_driven: true
   #branched:
   #  type: development
-  # bodhi-updates:
-  #   type: mechanical
-  # bodhi-updates-testing:
-  #   type: mechanical
 
 additional_arches: [aarch64, ppc64le, s390x]
 
