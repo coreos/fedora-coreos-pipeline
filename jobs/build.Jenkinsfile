@@ -54,7 +54,7 @@ properties([
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
       booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
-                   defaultValue: false,
+                   defaultValue: pipeutils.should_we_skip_untested_artifacts(pipecfg),
                    description: 'Skip building and pushing any artifacts we do not CI test'),
       booleanParam(name: 'WAIT_FOR_RELEASE_JOB',
                    defaultValue: false,
