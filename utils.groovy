@@ -403,13 +403,18 @@ def non_konflux_driven_streams(config, streams_subset) {
         !config.streams[stream]?.konflux_driven ?: false}.collect{k, v -> k}
 }
 
+// Return true if the STREAM is driven by Konflux, else false
+def is_stream_konflux_driven(pipecfg, stream) {
+    def stream_info = pipecfg.streams[stream]
+    return stream_info.konflux_driven ?: false
+}
+
 def get_streams_choices(config, node = null) {
     def stream_source = node ? config.ocp_node_builds.release : config.streams
 
     def default_stream = stream_source.find { k, v -> v['default'] == true }?.key
     def other_streams = stream_source.keySet().minus(default_stream) as List
-    def non_konflux_driven_streams = non_konflux_driven_streams(config, other_streams)
-    return [default_stream] + non_konflux_driven_streams
+    return [default_stream] + other_streams
 }
 
 // Returns the default trigger for push notifications. This will trigger builds
