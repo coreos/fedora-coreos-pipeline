@@ -30,9 +30,7 @@ node {
         echo "Triggering build for mechanical stream: ${it}"
         build job: 'build', wait: true, propagate: false, parameters: [
           string(name: 'STREAM', value: it),
-          booleanParam(name: 'EARLY_ARCH_JOBS', value: false),
-          booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
-                       value: pipeutils.should_we_skip_untested_artifacts(pipecfg))
+          booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
         ]
     }
 }
