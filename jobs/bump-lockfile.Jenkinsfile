@@ -352,14 +352,16 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
         } else {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
-            stage("Trigger Build") {
-                echo "Triggering build for stream: ${params.STREAM}"
-                build job: 'build', wait: false, propagate: false, parameters: [
-                  string(name: 'STREAM', value: params.STREAM),
-                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false),
-                  booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
-                               value: pipeutils.should_we_skip_untested_artifacts(pipecfg))
-                ]
+            if(!(stream_info.konflux_driven ?: false)) {
+                stage("Trigger Build") {
+                    echo "Triggering build for stream: ${params.STREAM}"
+                    build job: 'build', wait: false, propagate: false, parameters: [
+                      string(name: 'STREAM', value: params.STREAM),
+                      booleanParam(name: 'EARLY_ARCH_JOBS', value: false),
+                      booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
+                                   value: pipeutils.should_we_skip_untested_artifacts(pipecfg))
+                    ]
+                }
             }
         }
         currentBuild.result = 'SUCCESS'
