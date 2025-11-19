@@ -123,7 +123,7 @@ def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 def import_oci_image = params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
 boolean import_oci = import_oci_image != ""
-if (!import_oci && is_stream_konflux_driven(pipecfg, params.STREAM)) {
+if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
     error("STREAMS that are driven by Konflux must import an OCI image")
 }
 
