@@ -352,7 +352,7 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
         } else {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
-            if(!is_stream_konflux_driven(pipecfg, params.STREAM)) {
+            if(!pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
                 stage("Trigger Build") {
                     echo "Triggering build for stream: ${params.STREAM}"
                     build job: 'build', wait: false, propagate: false, parameters: [
