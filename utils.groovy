@@ -1037,8 +1037,14 @@ def should_we_skip_untested_artifacts(pipecfg) {
         // Currently we skip on all but one day a week. The once a
         // week at least gives us some testing/pulse of being able
         // to build the artifacts we typically skip.
-        def day = shwrapCapture("date +%A")
-        return day != "Friday"
+        def calendar = java.util.Calendar.getInstance()
+        def dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK)
+
+        // Calendar.DAY_OF_WEEK is 1 (Sunday) through 7 (Saturday).
+        // We need a map to convert the number to the full day name string.
+        def days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        def today = days[dayOfWeek - 1] // Subtract 1 for 0-based array index
+        return today != "Friday"
     } else {
         return false
     }
