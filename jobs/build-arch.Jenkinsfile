@@ -49,7 +49,7 @@ properties([
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
       booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
-                   defaultValue: false,
+                   defaultValue: pipeutils.should_we_skip_untested_artifacts(pipecfg),
                    description: 'Skip building and pushing any artifacts we do not CI test'),
       string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',
@@ -104,6 +104,9 @@ def ncpus = 1
 
 def source_oci_image = params.SOURCE_OCI_IMAGE ?: stream_info.get("source_oci_image", "")
 boolean import_oci = source_oci_image != ""
+if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
+    error("STREAMS that are driven by Konflux must import an OCI image")
+}
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "${build_description} Waiting"
