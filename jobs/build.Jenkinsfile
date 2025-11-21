@@ -53,9 +53,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
-      booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS',
-                   defaultValue: pipeutils.should_we_skip_untested_artifacts(pipecfg),
-                   description: 'Skip building and pushing any artifacts we do not CI test'),
+      choice(name: 'SKIP_UNTESTED_ARTIFACTS',
+             choices: ['dynamic', 'yes', 'no'],
+             description: 'Skip building and pushing any artifacts we do not CI test'),
       booleanParam(name: 'WAIT_FOR_RELEASE_JOB',
                    defaultValue: false,
                    description: 'Wait for the release job and propagate errors.'),
@@ -94,7 +94,16 @@ def stream_info = pipecfg.streams[params.STREAM]
 // runtime parameter always wins
 def no_upload = params.NO_UPLOAD ?: stream_info.get('no_upload', false)
 
-if (params.SKIP_UNTESTED_ARTIFACTS && stream_info.type == "production" ) {
+def skip_untested_artifacts = ""
+if (params.SKIP_UNTESTED_ARTIFACTS == "dynamic" ) {
+    skip_untested_artifacts = pipeutils.should_we_skip_untested_artifacts(pipecfg)
+} else if (params.SKIP_UNTESTED_ARTIFACTS == "yes" ) {
+    skip_untested_artifacts = true
+} else {
+    skip_untested_artifacts = false
+}
+
+if (skip_untested_artifacts && stream_info.type == "production" ) {
     error("Cannot specify SKIP_UNTESTED_ARTIFACTS parameter for production streams")
 }
 
@@ -417,7 +426,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Build the remaining artifacts
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, params.SKIP_UNTESTED_ARTIFACTS)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
 
             // Stop the build if the kernel + kernel-rt versions do not match.
             // This check runs on x86_64 RHCOS builds only.
