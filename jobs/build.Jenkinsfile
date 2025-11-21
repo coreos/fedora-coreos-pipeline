@@ -343,13 +343,12 @@ lock(resource: "build-${params.STREAM}") {
             stage("Import OCI image") {
                 echo "Skipping build : Importing OCI : $import_oci_image"
                 shwrap("cosa import docker://${import_oci_image} --skip-prune")
-                def builds = readJSON file: "builds/builds.json"
-                newBuildID = builds.builds[0].id
-                def build_metadata = readJSON(file: "builds/latest/${basearch}/meta.json")
-                def oci_stream = build_metadata['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
+                def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
+                def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
                 if (params.STREAM != oci_stream) {
                     error("STREAM parameter value does not match the one from the OCI image")
                 }
+                newBuildID = build_meta.buildid
             }
         }
 
