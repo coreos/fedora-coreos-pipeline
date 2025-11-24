@@ -20,6 +20,13 @@ properties([
 node {
     def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
 
+    def scheduled_streams = pipeutils.scheduled_streams(pipecfg, development_streams)
+    if (scheduled_streams) {
+        development_streams = scheduled_streams
+    }
+    // Filter out streams that are managed by konflux
+    development_streams = pipeutils.non_konflux_driven_streams(pipecfg, development_streams)
+
     parallel development_streams.collectEntries { stream -> [stream, {
         // If there is a bump-lockfile job running for this stream
         // let's wait until it is done before we kick off the daily
