@@ -280,6 +280,11 @@ lock(resource: "build-${params.STREAM}") {
 
         def overrides_fetch_param = ""
 
+        def parent_arg = ""
+        if (parent_version != "") {
+            parent_arg = "--parent-build ${parent_version}"
+        }
+
         if (!import_oci) {
             // fetch from repos for the current build
             stage('Fetch') {
@@ -292,10 +297,6 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             stage('Build OSTree') {
-                def parent_arg = ""
-                if (parent_version != "") {
-                    parent_arg = "--parent-build ${parent_version}"
-                }
                 def version_arg = ""
                 if (params.VERSION) {
                     version_arg = "--version ${params.VERSION}"
@@ -351,7 +352,7 @@ lock(resource: "build-${params.STREAM}") {
         } else {
             stage("Import OCI image") {
                 echo "Skipping build : Importing OCI : $import_oci_image"
-                shwrap("cosa import docker://${import_oci_image} --skip-prune")
+                shwrap("cosa import docker://${import_oci_image} --skip-prune ${parent_arg}")
                 def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
                 def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
                 if (params.STREAM != oci_stream) {
