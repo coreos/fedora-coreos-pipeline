@@ -285,6 +285,9 @@ lock(resource: "build-node-image") {
             message = "${message} :fire:"
         }
 
+        def node_ref
+        def extensions_ref
+        def registry_repo
         def unique_tag_display = unique_tag ? "(${unique_tag})" : ""
 
         if (unique_tag != "") {
