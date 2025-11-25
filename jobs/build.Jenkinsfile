@@ -610,7 +610,7 @@ def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
             build job: 'build-arch', wait: wait, parameters: [
                 booleanParam(name: 'FORCE', value: true),
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
-                booleanParam(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
+                string(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
                 string(name: 'SOURCE_OCI_IMAGE', value: src_oci),
                 string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
