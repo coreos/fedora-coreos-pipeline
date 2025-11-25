@@ -81,13 +81,11 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
-def skip_untested_artifacts = ""
+def skip_untested_artifacts = false
 if (params.SKIP_UNTESTED_ARTIFACTS == "dynamic" ) {
     skip_untested_artifacts = pipeutils.should_we_skip_untested_artifacts(pipecfg)
 } else if (params.SKIP_UNTESTED_ARTIFACTS == "yes" ) {
     skip_untested_artifacts = true
-} else {
-    skip_untested_artifacts = false
 }
 
 if (skip_untested_artifacts && stream_info.type == "production" ) {
