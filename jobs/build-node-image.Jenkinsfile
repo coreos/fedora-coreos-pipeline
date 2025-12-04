@@ -190,6 +190,22 @@ lock(resource: "build-node-image") {
                                 set +o pipefail
                                 cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
                             """)
+
+                            // Download the node image we just built
+                            def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
+                            shwrap("""
+                                cosa shell skopeo copy --override-arch ${skopeo_arch_override}      \
+                                    --authfile $REGISTRY_AUTH_FILE                                  \
+                                    docker://${registry_staging_repo}@${node_image_manifest_digest} \
+                                    oci-archive:./openshift-${arch}.ociarchive
+                            """)
+
+                            // Determine the RHCOS build ID that the node image was based on
+                            def build_id = shwrapCapture("""
+                                cosa shell skopeo inspect oci-archive:./openshift-${arch}.ociarchive |
+                                    jq -r '.Labels.["org.opencontainers.image.version"]'
+                            """)
+
                             // The 'cosa shell' prefix directs commands to the correct execution environment:
                             // the remote session if active, or the local container otherwise.
                             def s3_dir = pipeutils.get_s3_streams_dir(pipecfg, rhel_stream)
@@ -197,16 +213,10 @@ lock(resource: "build-node-image") {
                                 cosa shell mkdir -p tmp
                                 cosa buildfetch \
                                     --arch=$arch --artifact qemu --url=s3://${s3_dir}/builds \
-                                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --find-build-for-arch
+                                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --build=${build_id}
                             """)
 
-                            def build_id = shwrapCapture("""
-                                link=\$(cosa shell realpath builds/latest)
-                                cosa shell basename \$link
-                            """)
-                            shwrap("cosa decompress --build $build_id")
-                            def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
-                            shwrap("cosa shell skopeo copy --override-arch ${skopeo_arch_override} --authfile $REGISTRY_AUTH_FILE docker://${registry_staging_repo}@${node_image_manifest_digest} oci-archive:./openshift-${arch}.ociarchive")
+                            shwrap("cosa decompress --build ${build_id}")
                             kola(
                                 cosaDir: WORKSPACE,
                                 build: build_id,
