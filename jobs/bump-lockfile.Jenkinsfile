@@ -161,29 +161,30 @@ lock(resource: "bump-lockfile") {
         // importing RPMs if nothing actually changed. We also do a
         // buildfetch here so we can see in the build output (that happens
         // later) what packages changed.
-        stage("Fetch Metadata") {
+        stage("Container Build") {
             def parallelruns = [:]
+            // Use a development version when doing the build. Otherwise versionary
+            // will complain since this stream should be locked.
+            def dev_version = shwrapCapture("src/config/versionary --dev")
             for (architecture in archinfo.keySet()) {
                 def arch = architecture
                 parallelruns[arch] = {
-                    if (arch == "x86_64") {
-                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                        cosa buildfetch --arch=${arch} --find-build-for-arch \
-                            --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                            --url=s3://${s3_stream_dir}/builds
-                        cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run
-                        """)
-                    } else {
-                        pipeutils.withExistingCosaRemoteSession(
+                    pipeutils.withOptionalExistingCosaRemoteSession(
                             arch: arch, session: archinfo[arch]['session']) {
-                            pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                            # buildfetch the previous build so we can log a RPM diff
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
                                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                                 --url=s3://${s3_stream_dir}/builds
-                            cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run
-                            cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
-                            """)
-                        }
+                            # Delete the non-overrides lockfile so this build will be
+                            # unlocked so we'll get new RPM updates.
+                            cosa shell -- rm src/config/manifest-lock.${arch}.json
+                            cosa build --version ${dev_version}
+                            # Copy the generated lockfile into place.
+                            # NOTE: if on a remote builder this will copy to the x86_64 pod
+                            cosa shell -- cat builds/latest/${arch}/manifest-lock.generated.${arch}.json \
+                                > src/config/manifest-lock.${arch}.json
+                        """)
                     }
                 }
             }
@@ -243,12 +244,6 @@ lock(resource: "bump-lockfile") {
                 outerparallelruns[arch] = {
                     def buildAndTest = {
                         def parallelruns = [:]
-                        stage("${arch}:Fetch") {
-                            shwrap("cosa fetch --strict")
-                        }
-                        stage("${arch}:Build OSTree") {
-                            shwrap("cosa build ostree --force --strict")
-                        }
                         stage("${arch}:OSBuild") {
                             shwrap("cosa osbuild qemu metal metal4k live")
                         }
