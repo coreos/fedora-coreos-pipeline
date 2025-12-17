@@ -171,7 +171,7 @@ lock(resource: "bump-lockfile") {
                         cosa buildfetch --arch=${arch} --find-build-for-arch \
                             --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                             --url=s3://${s3_stream_dir}/builds
-                        cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run --konflux
+                        cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run
                         """)
                     } else {
                         pipeutils.withExistingCosaRemoteSession(
@@ -180,9 +180,8 @@ lock(resource: "bump-lockfile") {
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
                                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                                 --url=s3://${s3_stream_dir}/builds
-                            cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run --konflux
+                            cosa shell -- env COSA_BUILD_WITH_BUILDAH=0 cosa fetch --update-lockfile --dry-run
                             cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
-                            cosa remote-session sync {:,}src/config/${arch}.rpms.lock.yaml
                             """)
                         }
                     }
@@ -215,22 +214,13 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] 💤 (no change)"
             return
         }
-
-        // Merge the hermeto lockfiles and delete the intermediaries files
-        def archExpansion = "{${archinfo.keySet().join(',')}}"
-        shwrap("""
-          pushd src/config
-          /usr/lib/coreos-assembler/konflux-rpm-lockfile merge --input ${archExpansion}.rpms.lock.yaml --override konflux-lockfile-override.yaml
-          rm ${archExpansion}.rpms.lock.yaml
-          popd
-        """)
         
-        // sanity-check only base and konflux lockfiles were changed
+        // sanity-check only lockfiles or build-args.conf were changed
         shwrap("""
           # do this separately so set -e kicks in if it fails
           files=\$(git -C src/config ls-files --modified --deleted)
           for f in \${files}; do
-            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|rpms\\.lock\\.yaml|build-args\\.conf) ]]; then
+            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|build-args\\.conf) ]]; then
               echo "Unexpected modified file \${f}"
               exit 1
             fi
@@ -324,7 +314,7 @@ lock(resource: "bump-lockfile") {
                 message="lockfiles: bump timestamp"
             }
 
-            shwrap("git -C src/config add rpms.lock.yaml manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
+            shwrap("git -C src/config add manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
             shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
             withCredentials([usernamePassword(credentialsId: botCreds,
                                               usernameVariable: 'GHUSER',
