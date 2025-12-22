@@ -99,6 +99,14 @@ storage:
           ExecStart=podman volume prune --force --filter="label!=persistent"
           ExecStart=podman image prune --force
           ExecStart=podman image prune --all --external --force --filter until=48h
+          # Added specific cleanup for rhel-coreos-base and node-staging
+          # untagged images older than 12h:
+          ExecStart=/usr/bin/bash -c "podman images \
+           --filter 'reference=registry.ci.openshift.org/coreos/*' \
+           --filter 'until=12h' \
+           --format '{{.ID}} {{.Tag}}' \
+           | awk '$2 == \"<none>\" {print $1}' \
+           | xargs -r podman rmi -f"
     - path: /home/builder/.config/systemd/user/prune-container-resources.timer
       mode: 0644
       user:
