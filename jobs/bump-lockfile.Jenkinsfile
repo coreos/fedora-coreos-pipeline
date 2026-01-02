@@ -179,7 +179,7 @@ lock(resource: "bump-lockfile") {
                             # Delete the non-overrides lockfile so this build will be
                             # unlocked so we'll get new RPM updates.
                             cosa shell -- rm src/config/manifest-lock.${arch}.json
-                            cosa build --version ${dev_version}
+                            cosa build --force --version ${dev_version}
                             # Copy the generated lockfile into place.
                             # NOTE: if on a remote builder this will copy to the x86_64 pod
                             cosa shell -- cat builds/latest/${arch}/manifest-lock.generated.${arch}.json \
