@@ -1031,8 +1031,10 @@ def rpm_to_go_arch(arch) {
 // artifacts in our mechanical/development streams.
 // https://github.com/coreos/fedora-coreos-pipeline/issues/1189
 def should_we_skip_untested_artifacts(pipecfg) {
-    // Only perform skipping if the pipecfg knob is set:
-    if (pipecfg.misc?.allow_skip_of_untested_artifacts) {
+    // Only perform skipping if the pipecfg knob is set and we're
+    // not operating on a production stream.
+    if (pipecfg.misc?.allow_skip_of_untested_artifacts &&
+        pipecfg.streams[params.STREAM].type != "production") {
         // Ok. This pipeline allows skipping, but do we want to?
         // Currently we skip on all but one day a week. The once a
         // week at least gives us some testing/pulse of being able
