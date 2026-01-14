@@ -113,7 +113,6 @@ lock(resource: locks.remove(0).resource, extra: locks) {
 
         def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
         def gcp_image = ""
-        def ostree_prod_refs = [:]
 
         def uploading_to_brew = (brew_profile && !stream_info.skip_brew_upload)
 
@@ -179,30 +178,6 @@ lock(resource: locks.remove(0).resource, extra: locks) {
 
         for (basearch in basearches) {
             def meta = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=${basearch} --dump"))
-
-            // For production streams, import the OSTree into the prod
-            // OSTree repo.
-            if (stream_info.type == 'production') {
-                // Import into the OSTree repo if we are F42. We stopped
-                // doing this for F43+ because we distribute updates from
-                // the container registry now.
-                if (params.VERSION.tokenize('.')[0] == '42') {
-                    pipeutils.tryWithMessagingCredentials() {
-                        stage("OSTree Import ${basearch}: Prod Repo") {
-                            shwrap("""
-                            /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                                --build=${params.VERSION} --arch=${basearch} \
-                                --s3=${s3_stream_dir} --repo=prod \
-                                --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                            """)
-                        }
-
-                        ostree_prod_refs[meta.ref] = meta["ostree-commit"]
-                    }
-                } else {
-                    echo "Skipping OSTree repo import for F43+"
-                }
-            }
 
             // For production streams, if the GCP image is in an image family
             // then promote the GCP image so that it will be the chosen image
@@ -432,38 +407,6 @@ lock(resource: locks.remove(0).resource, extra: locks) {
             /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
                 stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
             """)
-        }
-
-        if (ostree_prod_refs.size() > 0) {
-            stage("OSTree Import: Wait and Verify") {
-                def tmpd = shwrapCapture("mktemp -d")
-
-                shwrap("""
-                cd ${tmpd}
-                ostree init --mode=archive --repo=.
-                # add official repo config, which enforces signature checking
-                cat /etc/ostree/remotes.d/fedora.conf >> config
-                """)
-
-                // We do this in a loop because it takes time for the import to
-                // complete and the updated summary file to propagate. But it
-                // shouldn't normally take more than 20 minutes.
-                timeout(time: 20, unit: 'MINUTES') {
-                    for (ref in ostree_prod_refs) {
-                        shwrap("""
-                        cd ${tmpd}
-                        while true; do
-                            ostree pull --commit-metadata-only fedora:${ref.key}
-                            chksum=\$(ostree rev-parse fedora:${ref.key})
-                            if [ "\${chksum}" == "${ref.value}" ]; then
-                                break
-                            fi
-                            sleep 30
-                        done
-                        """)
-                    }
-                }
-            }
         }
 
         if (!missing_arches && stream_info['build_node_images']) {
