@@ -379,21 +379,6 @@ lock(resource: "build-${params.STREAM}") {
             """)
         }
 
-        if (uploading) {
-            pipeutils.tryWithMessagingCredentials() {
-                stage('Sign OSTree') {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa sign --build=${newBuildID} --arch=${basearch} \
-                        robosignatory --s3 ${s3_stream_dir}/builds \
-                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                        --extra-fedmsg-keys stream=${params.STREAM} \
-                        --ostree --gpgkeypath /etc/pki/rpm-gpg \
-                        --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                    """)
-                }
-            }
-        }
-
         // Build QEMU image
         stage("Build QEMU") {
             shwrap("cosa buildextend-qemu")
@@ -490,28 +475,13 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // These steps interact with Fedora Infrastructure/Releng for
-        // signing of artifacts and importing of OSTree commits. They
-        // must be run after the archive stage because the artifacts
-        // are pulled from their S3 locations. They can be run in
-        // parallel.
+        // signing of artifacts. They must be run after the archive stage
+        // because the artifacts are pulled from their S3 locations.
         if (uploading) {
-            pipeutils.tryWithMessagingCredentials() {
-                def parallelruns = [:]
-                parallelruns['Sign Images'] = {
+            stage('Sign Images') {
+                pipeutils.tryWithMessagingCredentials() {
                     pipeutils.signImages(params.STREAM, newBuildID, basearch, s3_stream_dir)
                 }
-                // Import into the OSTree repo if we are F42. We stopped
-                // doing this for F43+ because we distribute updates from
-                // the container registry now.
-                if (newBuildID.tokenize('.')[0] == '42') {
-                    parallelruns['OSTree Import: Compose Repo'] = {
-                        pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
-                    }
-                } else {
-                    echo "Skipping OSTree repo import for F43+"
-                }
-                // process this batch
-                parallel parallelruns
             }
         }
 
