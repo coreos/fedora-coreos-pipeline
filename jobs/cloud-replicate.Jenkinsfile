@@ -28,7 +28,7 @@ properties([
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
              defaultValue: "",
-             trim: true)
+             trim: true),
       string(name: 'BOOTIMAGE_BUG_ID',
        description: 'Optional JIRA Bug ID for triggering bootimage bump job',
        defaultValue: '',
