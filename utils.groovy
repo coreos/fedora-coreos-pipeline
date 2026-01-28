@@ -675,8 +675,8 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
     // All other arches were shipped later than 32 so a min_version of 32 works.
     def min_version = 32 as Integer
     // Use a maximum version that matches the current stream Fedora major version
-    def manifest = readYaml(text:shwrapCapture("cosa shell -- cat src/config/manifest.yaml"))
-    def max_version = manifest.releasever as Integer
+    // The Fedora major is the first component of the provided version.
+    def max_version = version.tokenize('.')[0] as Integer
 
     // A list of all the start versions we want to run tests for
     def start_versions = []
