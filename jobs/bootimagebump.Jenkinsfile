@@ -43,7 +43,7 @@ node {
                    defaultValue: "https://rhcos.mirror.openshift.com/art/storage/prod/streams",
                    trim: true),
             booleanParam(name: 'RUN_CLOUD_REPLICATE',
-                         defaultValue: false,
+                         defaultValue: true,
                          description: 'Run cloud-replicate job before creating the bootimage bump PR'),
         ]),
         buildDiscarder(logRotator(
