@@ -42,6 +42,9 @@ node {
                    description: 'URL to use',
                    defaultValue: "https://rhcos.mirror.openshift.com/art/storage/prod/streams",
                    trim: true),
+            booleanParam(name: 'RUN_CLOUD_REPLICATE',
+                         defaultValue: false,
+                         description: 'Run cloud-replicate job before creating the bootimage bump PR'),
         ]),
         buildDiscarder(logRotator(
             numToKeepStr: '100',
@@ -59,6 +62,16 @@ node {
         RELEASE_BRANCH = "release-${streamSplit[0]}" // this extracts from the RHCOS format
     }
     RELEASE_BRANCH = "release-${params.STREAM.split('-')[0]}"
+
+    // Optionally run cloud-replicate job first
+    if (params.RUN_CLOUD_REPLICATE) {
+        stage('Run Cloud Replicate') {
+            build job: 'cloud-replicate', wait: true, parameters: [
+                string(name: 'STREAM', value: params.STREAM),
+                string(name: 'VERSION', value: params.BUILD_VERSION)
+            ]
+        }
+    }
 
     cosaPod(serviceAccount: "jenkins",
             image: params.COREOS_ASSEMBLER_IMAGE,
