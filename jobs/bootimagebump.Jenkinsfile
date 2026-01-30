@@ -66,10 +66,24 @@ node {
     // Optionally run cloud-replicate job first
     if (params.RUN_CLOUD_REPLICATE) {
         stage('Run Cloud Replicate') {
-            build job: 'cloud-replicate', wait: true, parameters: [
-                string(name: 'STREAM', value: params.STREAM),
-                string(name: 'VERSION', value: params.BUILD_VERSION)
-            ]
+            // Check if the build exists before triggering cloud-replicate
+            def buildsUrl = "${params.URL}/${params.STREAM}/builds/builds.json"
+            def buildExists = sh(
+                script: """
+                    curl -sf "${buildsUrl}" | \
+                    jq -e '.builds[] | select(.id == "${params.BUILD_VERSION}")' > /dev/null 2>&1 && echo "true" || echo "false"
+                """,
+                returnStdout: true
+            ).trim()
+
+            if (buildExists == "true") {
+                build job: 'cloud-replicate', wait: true, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    string(name: 'VERSION', value: params.BUILD_VERSION)
+                ]
+            } else {
+                echo "Build ${params.BUILD_VERSION} not found in ${buildsUrl}, skipping cloud-replicate"
+            }
         }
     }
 
