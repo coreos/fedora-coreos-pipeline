@@ -211,12 +211,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
-        // enable --autolock if not in strict mode and cosa supports it
+        // enable --autolock if not in strict mode
         def autolock_arg = ""
         if (strict_build_param == "") {
-            if (shwrapRc("cosa fetch --help |& grep -q autolock") == 0) {
-                autolock_arg = "--autolock ${params.VERSION}"
-            }
+            autolock_arg = "--autolock ${params.VERSION}"
         }
 
         // buildfetch previous build info
