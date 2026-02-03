@@ -221,15 +221,13 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         stage('BuildFetch') {
             if (s3_stream_dir) {
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa buildfetch --arch=${basearch} \
+                cosa buildfetch --arch=${basearch} --find-build-for-arch \
                     --url s3://${s3_stream_dir}/builds \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
                 if (autolock_arg != "") {
                     // Also fetch the x86_64 lockfile for the build we're
-                    // complementing so that we can use autolocking. Usually,
-                    // this is the same build we just fetched above, but not
-                    // necessarily.
+                    // complementing so that we can use autolocking.
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa buildfetch --arch=x86_64 \
                         --build ${newBuildID} \
