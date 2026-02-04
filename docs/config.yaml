@@ -59,8 +59,6 @@ streams:
       source_config_ref: main
       # OPTIONAL: override OS variant to use for this stream
       variant: rhcos-9.0
-      # OPTIONAL: override whether to use a versionary for this stream
-      versionary: false
       # OPTIONAL: Whether to skip building ostree in the build pipeline.
       # The build would be imported using `cosa import` with the specified image uri.
       import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
@@ -297,8 +295,6 @@ clouds:
 
 # OPTIONAL: miscellaneous options
 misc:
-  # OPTIONAL: whether to use a versionary to derive version numbers
-  versionary: true
   # OPTIONAL: whether to generate a release index
   generate_release_index: true
   # OPTIONAL: whether to run extended upgrade test kola job
