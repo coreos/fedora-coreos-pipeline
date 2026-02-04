@@ -110,7 +110,6 @@ clouds:
     test_architectures: [x86_64, aarch64]
 
 misc:
-  versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
   allow_missing_architectures_when_autotriggering_release_job: true
