@@ -12,7 +12,8 @@ streams:
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: development
-    konflux_driven: true
+    # Stop building with Konflux, see https://github.com/coreos/fedora-coreos-tracker/issues/2105
+    konflux_driven: false
   #branched:
   #  type: development
 
