@@ -53,12 +53,18 @@ streams:
       # OPTIONAL: set a stream as the default one
       # This will be the default stream for jobs that take a 'STREAMS' parameter
       default: true
+      # OPTIONAL: override source config URL to use for this stream
+      source_config_url: https://github.com/jlebon/fedora-coreos-config
       # OPTIONAL: override source config ref to use for this stream
       source_config_ref: main
       # OPTIONAL: override OS variant to use for this stream
       variant: rhcos-9.0
-      # OPTIONAL: override whether to use a versionary for this stream
-      versionary: false
+      # OPTIONAL: Whether to skip building ostree in the build pipeline.
+      # The build would be imported using `cosa import` with the specified image uri.
+      import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
+      # OPTIONAL: make the release job trigger build-node-image for the
+      # following OCP releases once successful
+      build_node_images: ["4.19-9.6"]
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream
@@ -81,6 +87,12 @@ streams:
       # OPTIONAL: override additional architectures to build for
       additional_arches:
         - s390x
+      # OPTIONAL: add OCI registries to upload images to, specific to this stream.
+      # This will be merged with the `registry_repos` key.
+      additional_registry_repos:
+        oscontainer:
+          - repo: quay.io/someorg/someimage
+            tags: ["${STREAM}"] 
     rawhide:
       type: mechanical
       # OPTIONAL: additional architectures to skip building for
@@ -106,6 +118,12 @@ streams:
       # When mechanical streams have `scheduled` on, then
       # `build-mechanical` will only build those streams
       scheduled: true
+      # OPTIONAL: Create and replicate AWS Windows License Included images for this stream.
+      # requires winli_billing_code under the 'aws' mapping
+      create_and_replicate_winli_ami: true
+      # OPTIONAL: Do not not upload results to S3
+      # Default to false if not specified
+      no_upload: true
 
 # REQUIRED: architectures to build for other than x86_64
 additional_arches: [aarch64, ppc64le, s390x]
@@ -122,6 +140,8 @@ s3:
   bucket: rhcos-jlebon
   # OPTIONAL: S3 bucket subkey. Supports `${STREAM}` variable.
   builds_key: "streams/${STREAM}"
+  # OPTIONAL: S3 bucket subkey in which to put OCI GPG signatures.
+  oci_sigs_key: "prod/signatures/oci"
   # OPTIONAL: object ACL to use when uploading
   acl: private
 
@@ -138,25 +158,29 @@ brew:
 registry_repos:
   # OPTIONAL: repo and tags to which to push oscontainer
   oscontainer:
-    # REQUIRED: repo name
-    repo: quay.io/fedora/fedora-coreos
-    # REQUIRED: list of tags to create/overwrite when pushing
-    #           STREAM and VERSION are supported for templating
-    tags: ["${STREAM}"]
-  # OPTIONAL: repo and tags to which to push legacy oscontainer
+      # REQUIRED: repo name
+    - repo: quay.io/fedora/fedora-coreos
+      # REQUIRED: list of tags to create/overwrite when pushing
+      #           STREAM and VERSION are supported for templating
+      tags: ["${STREAM}"]
+      # multiple push destinations can be specified
+    - repo: quay.io/some_other/registry
+      tags: ["{$STREAM}"]
+   # OPTIONAL: repo and tags to which to push legacy oscontainer
   legacy_oscontainer:
-    repo: quay.io/openshift-release-dev/rhel-coreos-dev
-    tags: ["${STREAM}-legacy", "${VERSION}-legacy"]
+    - repo: quay.io/openshift-release-dev/rhel-coreos-dev
+      tags: ["${STREAM}-legacy", "${VERSION}-legacy"]
   # OPTIONAL: repo and tags to which to push the extensions container
   extensions:
-    repo: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
-    tags: ["${STREAM}-extensions", "${VERSION}-extensions"]
+    - repo: quay.io/openshift-release-dev/rhel-coreos-extensions-dev
+      tags: ["${STREAM}-extensions", "${VERSION}-extensions"]
   # OPTIONAL: repo and tags to which to push kubevirt containerdisk container
   kubevirt:
-    repo: quay.io/fedora/fedora-coreos-kubevirt
-    tags: ["${STREAM}"]
-  # OPTIONAL: whether to push in v2s2 format rather than OCI
-  v2s2: true
+    - repo: quay.io/fedora/fedora-coreos-kubevirt
+      tags: ["${STREAM}"]
+      # OPTIONAL: whether to push in v2s2 format rather than OCI
+      # Default to false if not specified
+      v2s2: true
 
 # OPTIONAL: cloud-related knobs
 clouds:
@@ -191,6 +215,9 @@ clouds:
       # OPTIONAL: boolean: whether or not to set the image/snapshot as public on
       # initial upload (AMIs of released builds are always made public)
       public: true
+    # OPTIONAL: billing code to create a Windows License Included Image
+    # required if using 'create_and_replicate_winli_ami' under the stream mappings
+    winli_billing_code: "bp-12345abcde"
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.
@@ -268,9 +295,54 @@ clouds:
 
 # OPTIONAL: miscellaneous options
 misc:
-  # OPTIONAL: whether to use a versionary to derive version numbers
-  versionary: true
   # OPTIONAL: whether to generate a release index
   generate_release_index: true
   # OPTIONAL: whether to run extended upgrade test kola job
   run_extended_upgrade_test_fcos: true
+  # OPTIONAL: Allow missing arches when auto-triggering the release job from build. Defaults to false
+  allow_missing_architectures_when_autotriggering_release_job: true
+  # OPTIONAL: whether to allow the pipeline to skip building untested
+  #           artifacts on CI (development/mechanical) runs
+  allow_skip_of_untested_artifacts: true
+
+# OPTIONAL: Node image keys
+ocp_node_builds:
+    # REQUIRED: OCP release to build
+    release:
+        "4.19-9.6":
+           # REQUIRED: knobs related to the source config
+           source_config:
+               # REQUIRED: source config repo URL to build
+               url: https://github.com/openshift/os
+               # REQUIRED: source config ref to build
+               ref: master
+               # REQUIRED: image to replace the FROM to build
+           from: quay.io/openshift-release-dev/ocp-v4.0-art-dev:rhel-9.6-coreos
+           # REQUIRED: knobs related to the yumrepo to build
+           yumrepo:
+               # REQUIRED: source config repo URL to build
+               url: https://gitlab.cee.redhat.com/coreos/redhat-coreos.git
+               # REQUIRED: source config ref to build
+               ref: master
+               # REQUIRED: repo file name to build
+               file: rhel-9.6.repo
+           # OPTIONAL: skip upload to brew. Defaults to false
+           skip_brew_upload: false
+    # REQUIRED: knobs related to the source config
+    registries:
+        # REQUIRED: staging repo to push the final image built
+        staging:
+          image: registry.ci.openshift.org/coreos/node-staging
+          # REQUIRED: one or more tags to attach to the image
+          tags: ["${RELEASE}-node-image"]
+        # REQUIRED: prodution repo to push the final image built
+        prod:
+          # REQUIRED: the image to push to
+          image: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+          # REQUIRED: one or more tags to attach to the image
+          tags:
+            - "${RELEASE}-node-image"
+            - "${RELEASE}-${TIMESTAMP}-node-image"
+          # OPTIONAL: whether to push in v2s2 format rather than OCI
+          # Default to false if not specified
+          v2s2: false

@@ -6,7 +6,9 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         cosa meta --build=${buildID} --arch=${basearch} --dump
     """))
     def replicators = [:]
+    def builders = [:]
     def credentials
+    def stream_info = pipecfg.streams[stream]
 
     credentials = [file(variable: "ALIYUN_IMAGE_UPLOAD_CONFIG",
                         credentialsId: "aliyun-image-upload-config")]
@@ -32,17 +34,55 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
 
     // For AWS we need to consider the primary AWS partition and the
     // GovCloud partition. Define a closure here that we'll call for both.
-    def awsReplicateClosure = { config, credentialId ->
+    def awsReplicateClosure = { config, credentialId, winli = false ->
         def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
         withCredentials(creds) {
             def c = config
+            def extraArgs = []
+            if (winli) {
+                extraArgs += "--winli"
+            }
             shwrap("""
             cosa aws-replicate \
                 --log-level=INFO \
                 --build=${buildID} \
                 --arch=${basearch} \
                 --source-region=${c.primary_region} \
-                --credentials-file=\${AWS_CONFIG_FILE}
+                --credentials-file=\${AWS_CONFIG_FILE} \
+                ${extraArgs.join(' ')}
+            """)
+        }
+    }
+    // A closure to build the aws-winli AMI. This will be called before replicating to 
+    // all regions, if the option is set for the current stream. `cosa aws-replicate` 
+    // will handle both traditional AMIs and aws-winli AMIs if present in the metadata. 
+    // aws-winli is only supported on x86_64.
+    def awsWinLIBuildClosure = { config, credentialId ->
+        def creds = [file(variable: "AWS_CONFIG_FILE", credentialsId: credentialId)]
+        withCredentials(creds) {
+            utils.syncCredentialsIfInRemoteSession(["AWS_CONFIG_FILE"])
+            def c = config
+            def extraArgs = []
+            if (c.grant_users) {
+                extraArgs += c.grant_users.collect{"--grant-user=${it}"}
+                extraArgs += c.grant_users.collect{"--grant-user-snapshot=${it}"}
+            }
+            if (c.tags) {
+                extraArgs += c.tags.collect { "--tags=${it}" }
+            }
+            if (c.public) {
+                extraArgs += "--public"
+            }
+            shwrap("""
+                cosa imageupload-aws \
+                    --upload \
+                    --winli \
+                    --winli-billing-product ${c.winli_billing_code}\
+                    --arch=${basearch} \
+                    --build=${buildID} \
+                    --region=${c.primary_region} \
+                    --credentials-file=\${AWS_CONFIG_FILE} \
+                    ${extraArgs.join(' ')}
             """)
         }
     }
@@ -50,9 +90,20 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         credentials = [file(variable: "UNUSED", credentialsId: "aws-build-upload-config")]
         if (pipecfg.clouds?.aws &&
             utils.credentialsExist(credentials)) {
+
             replicators["☁️ 🔄:aws"] = {
                 awsReplicateClosure.call(pipecfg.clouds.aws,
                                          "aws-build-upload-config")
+            }
+            // aws-winli is only supported on x86_64
+            if ((basearch == "x86_64") && (stream_info.create_and_replicate_winli_ami)) {
+                builders["☁️ 🔨:aws-winli"] = {
+                    awsWinLIBuildClosure.call(pipecfg.clouds.aws, "aws-build-upload-config")
+                }
+                replicators["☁️ 🔄:aws-winli"] = {
+                    awsReplicateClosure.call(pipecfg.clouds.aws,
+                                            "aws-build-upload-config", true)
+                }
             }
         }
         credentials = [file(variable: "UNUSED", credentialsId: "aws-govcloud-image-upload-config")]
@@ -92,10 +143,19 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
         }
     }
 
+    parallel builders
     parallel replicators
 }
 // Upload artifacts to clouds
 def upload_to_clouds(pipecfg, basearch, buildID, stream) {
+
+    // In 4.19+ we switched the command to upload to clouds to
+    // `cosa imageupload-<cloud>`
+    // https://github.com/coreos/coreos-assembler/pull/4074
+    def image_upload_cmd = "imageupload"
+    if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-imageupload-aws") != 0) {
+        image_upload_cmd = "buildextend"
+    }
 
     // Get a list of the artifacts that are currently built.
     def images_json = readJSON(text: shwrapCapture("""
@@ -125,7 +185,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                     extraArgs += "--public"
                 }
                 shwrap("""
-                cosa buildextend-aliyun \
+                cosa ${image_upload_cmd}-aliyun \
                     --upload \
                     --arch=${basearch} \
                     --build=${buildID} \
@@ -157,7 +217,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 extraArgs += "--public"
             }
             shwrap("""
-            cosa buildextend-aws \
+            cosa ${image_upload_cmd}-aws \
                 --upload \
                 --arch=${basearch} \
                 --build=${buildID} \
@@ -197,7 +257,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["AZURE_IMAGE_UPLOAD_CONFIG"])
                 def c = pipecfg.clouds.azure
-                shwrap("""cosa buildextend-azure \
+                shwrap("""cosa ${image_upload_cmd}-azure \
                     --upload \
                     --credentials \${AZURE_IMAGE_UPLOAD_CONFIG} \
                     --build=${buildID} \
@@ -248,7 +308,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 shwrap("""
                 # pick up the project to use from the config
                 gcp_project=\$(jq -r .project_id \${GCP_IMAGE_UPLOAD_CONFIG})
-                cosa buildextend-gcp \
+                cosa ${image_upload_cmd}-gcp \
                     --log-level=INFO \
                     --build=${buildID} \
                     --arch=${basearch} \
@@ -275,7 +335,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                 // region that is uniquely named with the region as a suffix
                 // i.e. `rhcos-powervs-images-us-east`
                 def bucket = "${c.bucket}-${c.primary_region}"
-                shwrap("""cosa buildextend-powervs \
+                shwrap("""cosa ${image_upload_cmd}-powervs \
                     --upload \
                     --cloud-object-storage ${c.cloud_object_storage_service_instance} \
                     --bucket ${bucket} \

@@ -94,14 +94,27 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+            def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
+            cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
             """)
+            // If we're creating the Windows License Included (winli) AMI, we need to
+            // buildfetch the ostree artifact because the AWS ore wrapper relies on
+            // information stored in image.json. This ensures consistency with the
+            // original AMI values. We only buildfetch for x86_64 to avoid fetching
+            // unnecessary artifacts for other architectures.
+            if (stream_info.create_and_replicate_winli_ami) {
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa buildfetch --build=${params.VERSION} \
+                --arch=x86_64 --artifact=ostree \
+                --url=s3://${s3_stream_dir}/builds \
+                --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
+                """)
+            }
         }
 
         def builtarches = shwrapCapture("""

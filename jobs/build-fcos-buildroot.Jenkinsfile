@@ -4,7 +4,6 @@ node {
     checkout scm
     // these are script global vars
     pipeutils = load("utils.groovy")
-    pipecfg = pipeutils.load_pipecfg()
 }
 
 properties([
@@ -46,7 +45,7 @@ properties([
              trim: true),
       string(name: 'CONFIG_GIT_URL',
              description: 'Override the src/config git repo to use',
-             defaultValue: pipecfg.source_config.url,
+             defaultValue: "https://github.com/coreos/fedora-coreos-config",
              trim: true),
       string(name: 'CONFIG_GIT_REF',
              description: 'Override the src/config git ref to use',

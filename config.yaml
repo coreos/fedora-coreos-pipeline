@@ -8,22 +8,14 @@ streams:
   testing-devel:
     type: development
     default: true
-    env:
-      COSA_TESTISO_DEBUG: true
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
-    type: mechanical
-    env:
-      COSA_TESTISO_DEBUG: true
-    osbuild_experimental: true
-  branched:
-    type: mechanical
-    osbuild_experimental: true
-  # bodhi-updates:
-  #   type: mechanical
-  # bodhi-updates-testing:
-  #   type: mechanical
+    type: development
+    # Stop building with Konflux, see https://github.com/coreos/fedora-coreos-tracker/issues/2105
+    konflux_driven: false
+  #branched:
+  #  type: development
 
 additional_arches: [aarch64, ppc64le, s390x]
 
@@ -34,17 +26,18 @@ s3:
   bucket: fcos-builds
   # see bucket layout in https://github.com/coreos/fedora-coreos-tracker/issues/189
   builds_key: "prod/streams/${STREAM}"
+  oci_sigs_key: "prod/signatures/oci"
   # just upload as public-read for now, but see discussions in
   # https://github.com/coreos/fedora-coreos-tracker/issues/189
   acl: public-read
 
 registry_repos:
   oscontainer:
-    repo: quay.io/fedora/fedora-coreos
-    tags: ["${STREAM}", "${VERSION}"]
+    - repo: quay.io/fedora/fedora-coreos
+      tags: ["${STREAM}", "${VERSION}"]
   kubevirt:
-    repo: quay.io/fedora/fedora-coreos-kubevirt
-    tags: ["${STREAM}"]
+    - repo: quay.io/fedora/fedora-coreos-kubevirt
+      tags: ["${STREAM}"]
 
 default_artifacts:
   all:
@@ -57,11 +50,14 @@ default_artifacts:
     - aws
     - azure
     - gcp
+    - hetzner
     - hyperv
+    - oraclecloud
   ppc64le:
     - powervs
   s390x:
     - ibmcloud
+    - kubevirt
   x86_64:
     - aliyun
     - applehv
@@ -71,10 +67,13 @@ default_artifacts:
     - digitalocean
     - exoscale
     - gcp
+    - hetzner
     - hyperv
     - ibmcloud
     - kubevirt
     - nutanix
+    - oraclecloud
+    - proxmoxve
     - virtualbox
     - vmware
     - vultr
@@ -97,7 +96,7 @@ clouds:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
-    test_architectures: [x86_64]
+    test_gallery: fedoracoreostestinggallery
   gcp:
     bucket: fedora-coreos-cloud-image-uploads/image-import
     description: "Fedora, Fedora CoreOS ${STREAM}, ${BUILDID}, ${BASEARCH} published on ${DATE}"
@@ -112,6 +111,7 @@ clouds:
     test_architectures: [x86_64, aarch64]
 
 misc:
-  versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
+  allow_missing_architectures_when_autotriggering_release_job: true
+  allow_skip_of_untested_artifacts: true

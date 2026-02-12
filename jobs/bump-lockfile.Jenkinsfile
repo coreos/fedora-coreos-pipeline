@@ -8,13 +8,17 @@ node {
 repo = "coreos/fedora-coreos-config"
 botCreds = "github-coreosbot-token-username-password"
 
+def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
+def mechanical_streams = pipeutils.streams_of_type(pipecfg, 'mechanical')
+locked_streams = development_streams + mechanical_streams
+
 properties([
     // we're only triggered by bump-lockfiles
     pipelineTriggers([]),
     parameters([
         choice(name: 'STREAM',
-               choices: pipeutils.streams_of_type(pipecfg, 'development'),
-               description: 'CoreOS development stream to bump'),
+               choices: locked_streams,
+               description: 'CoreOS stream to bump'),
         string(name: 'SKIP_TESTS_ARCHES',
                description: 'Space-separated list of architectures to skip tests on',
                defaultValue: "",
@@ -26,6 +30,9 @@ properties([
         booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE',
                      defaultValue: false,
                      description: "Don't error out if upgrade tests fail (temporary)"),
+        booleanParam(name: 'SKIP_BOOTC_IMAGE_BUMP',
+                     defaultValue: false,
+                     description: "Don't attempt to bump the bootc image."),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -38,7 +45,6 @@ properties([
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
-echo "Waiting for bump-${params.STREAM} lock"
 currentBuild.description = "[${params.STREAM}] Waiting"
 
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
@@ -64,8 +70,10 @@ def getLockfileInfo(lockfile) {
 // Keep in sync with build.Jenkinsfile
 def cosa_memory_request_mb = 10.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
-def timeout_mins = 240
+def timeout_mins = 300
 
+lock(resource: "bump-${params.STREAM}") {
+echo "Waiting for bump-lockfile lock"
 lock(resource: "bump-lockfile") {
     cosaPod(image: cosa_img, env: container_env,
             cpu: "${ncpus}", memory: "${cosa_memory_request_mb}Mi",
@@ -105,6 +113,27 @@ lock(resource: "bump-lockfile") {
             archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
         }
 
+        if (!params.SKIP_BOOTC_IMAGE_BUMP) {
+            stage("Bump bootc") {
+                shwrap('''
+                    builder_img_repo=$(
+                        grep BUILDER_IMG= src/config/build-args.conf |
+                        cut -d = -f 2                                |
+                        cut -d @ -f 1
+                    )
+                    latest_sha256sum_id=$(
+                        skopeo inspect -n --raw docker://${builder_img_repo}:latest |
+                        sha256sum | cut -d ' ' -f 1
+                    )
+                    new_builder_img="${builder_img_repo}@sha256:${latest_sha256sum_id}"
+                    sed -i "s|^BUILDER_IMG=.*|BUILDER_IMG=${new_builder_img}|" src/config/build-args.conf
+                ''')
+                if (shwrapRc("git -C src/config diff --exit-code src/config/build-args.conf") != 0) {
+                    haveChanges = true
+                }
+            }
+        }
+
         // Initialize the sessions on the remote builders
         stage("Initialize Remotes") {
             parallel archinfo.keySet().collectEntries{arch -> [arch, {
@@ -119,6 +148,8 @@ lock(resource: "bump-lockfile") {
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
                             shwrap("""
                             cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}
+                            # Also sync over the upate to the bootc builder image
+                            cosa remote-session sync {,:}src/config/build-args.conf
                             """)
                         }
                     }
@@ -130,29 +161,30 @@ lock(resource: "bump-lockfile") {
         // importing RPMs if nothing actually changed. We also do a
         // buildfetch here so we can see in the build output (that happens
         // later) what packages changed.
-        stage("Fetch Metadata") {
+        stage("Container Build") {
             def parallelruns = [:]
+            // Use a development version when doing the build. Otherwise versionary
+            // will complain since this stream should be locked.
+            def dev_version = shwrapCapture("src/config/versionary --dev")
             for (architecture in archinfo.keySet()) {
                 def arch = architecture
                 parallelruns[arch] = {
-                    if (arch == "x86_64") {
-                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                        cosa buildfetch --arch=${arch} --find-build-for-arch \
-                            --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                            --url=s3://${s3_stream_dir}/builds
-                        cosa fetch --update-lockfile --dry-run
-                        """)
-                    } else {
-                        pipeutils.withExistingCosaRemoteSession(
+                    pipeutils.withOptionalExistingCosaRemoteSession(
                             arch: arch, session: archinfo[arch]['session']) {
-                            pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                            # buildfetch the previous build so we can log a RPM diff
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
                                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                                 --url=s3://${s3_stream_dir}/builds
-                            cosa fetch --update-lockfile --dry-run
-                            cosa remote-session sync {:,}src/config/manifest-lock.${arch}.json
-                            """)
-                        }
+                            # Delete the non-overrides lockfile so this build will be
+                            # unlocked so we'll get new RPM updates.
+                            cosa shell -- rm src/config/manifest-lock.${arch}.json
+                            cosa build --force --version ${dev_version}
+                            # Copy the generated lockfile into place.
+                            # NOTE: if on a remote builder this will copy to the x86_64 pod
+                            cosa shell -- cat builds/latest/${arch}/manifest-lock.generated.${arch}.json \
+                                > src/config/manifest-lock.${arch}.json
+                        """)
                     }
                 }
             }
@@ -183,13 +215,13 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] 💤 (no change)"
             return
         }
-
-        // sanity-check only base lockfiles were changed
+        
+        // sanity-check only lockfiles or build-args.conf were changed
         shwrap("""
           # do this separately so set -e kicks in if it fails
           files=\$(git -C src/config ls-files --modified --deleted)
           for f in \${files}; do
-            if ! [[ \${f} =~ ^manifest-lock\\.[0-9a-z_]+\\.json ]]; then
+            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|build-args\\.conf) ]]; then
               echo "Unexpected modified file \${f}"
               exit 1
             fi
@@ -212,22 +244,14 @@ lock(resource: "bump-lockfile") {
                 outerparallelruns[arch] = {
                     def buildAndTest = {
                         def parallelruns = [:]
-                        stage("${arch}:Fetch") {
-                            shwrap("cosa fetch --strict")
-                        }
-                        stage("${arch}:Build") {
-                            shwrap("cosa build --force --strict")
+                        stage("${arch}:OSBuild") {
+                            shwrap("cosa osbuild qemu metal metal4k live")
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
                              marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
                              skipKolaTags: stream_info.skip_kola_tags)
-                        stage("${arch}:Build Metal") {
-                            shwrap("cosa buildextend-metal")
-                            shwrap("cosa buildextend-metal4k")
-                        }
-                        stage("${arch}:Build Live") {
-                            shwrap("cosa buildextend-live --fast")
+                        stage("${arch}:Compress Metal") {
                             // Test metal4k with an uncompressed image and
                             // metal with a compressed one. Limit to 4G to be
                             // good neighbours and reduce chances of getting
@@ -263,6 +287,19 @@ lock(resource: "bump-lockfile") {
             }]}
         }
 
+        def TRIGGER_PATH = ".tekton/trigger"
+        stage("Bump date stamp") {
+            // Bump the date stamp file with today date.
+            // This will trigger a konflux build.
+            def trigger_comment_path = ".tekton/trigger-file-comment"
+            shwrap("""
+                pushd src/config
+                touch ${trigger_comment_path}
+                echo \$(date --utc +%Y%m%d) | cat ${trigger_comment_path} - > ${TRIGGER_PATH}
+                popd
+            """)
+        }
+
         // OK, we're ready to push: just push to the branch. In the future, we might be
         // fancier here; e.g. if tests fail, just open a PR, or if tests passed but a
         // package was added or removed.
@@ -271,7 +308,8 @@ lock(resource: "bump-lockfile") {
             if (!haveChanges && forceTimestamp) {
                 message="lockfiles: bump timestamp"
             }
-            shwrap("git -C src/config add manifest-lock.*.json")
+
+            shwrap("git -C src/config add manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
             shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
             withCredentials([usernamePassword(credentialsId: botCreds,
                                               usernameVariable: 'GHUSER',
@@ -299,6 +337,15 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
         } else {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
+            if(!pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
+                stage("Trigger Build") {
+                    echo "Triggering build for stream: ${params.STREAM}"
+                    build job: 'build', wait: false, propagate: false, parameters: [
+                      string(name: 'STREAM', value: params.STREAM),
+                      booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+                    ]
+                }
+            }
         }
         currentBuild.result = 'SUCCESS'
 
@@ -310,4 +357,4 @@ lock(resource: "bump-lockfile") {
             pipeutils.trySlackSend(message: "bump-lockfile #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}]")
         }
     }
-}}} // cosaPod, timeout, and lock finish here
+}}}} // cosaPod, timeout, and locks finish here

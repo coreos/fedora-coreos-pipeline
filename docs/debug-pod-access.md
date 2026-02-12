@@ -32,5 +32,5 @@ Team members would need access to multi arch builders for debugging failed tests
     - [Openshift Console (pods)](https://console-openshift-console.apps.ocp.fedoraproject.org/k8s/ns/fedora-coreos-pipeline/core~v1~Pod)
 
 - RHCOS Pipeline:
-    - [Jenkins](https://jenkins-rhcos.apps.ocp-virt.prod.psi.redhat.com/job/debug-pod/)
-    - [Openshift Console (pods)](https://console-openshift-console.apps.ocp-virt.prod.psi.redhat.com/k8s/ns/rhcos/core~v1~Pod)
+    - [Jenkins](https://jenkins-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-dc-iad2.itup.redhat.com/job/debug-pod/)
+    - [Openshift Console (pods)](https://console-openshift-console.apps.prod-stable-spoke1-dc-iad2.itup.redhat.com/k8s/ns/rhcos--prod-pipeline/core~v1~Pod)

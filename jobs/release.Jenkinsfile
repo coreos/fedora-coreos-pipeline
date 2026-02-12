@@ -85,12 +85,14 @@ def stream_info = pipecfg.streams[params.STREAM]
 build_description += "[${basearches.join(' ')}][${params.VERSION}]"
 currentBuild.description = "${build_description} Waiting"
 
-// We just lock here out of an abundance of caution in case somehow two release
-// jobs run for the same stream, but that really shouldn't happen. Anyway, if it
-// *does*, this makes sure they're run serially.
+// Take a lock for the stream to make sure only one of these run at a
+// time and also synchronize with the kola-upgrade job. Take this lock
+// early (i.e. don't wait for all the arch specific locks) and hold it
+// so we can synchronize with the kola-upgrade job.
+lock(resource: "release-${params.STREAM}") {
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
-lock(resource: "release-${params.STREAM}", extra: locks) {
+lock(resource: locks.remove(0).resource, extra: locks) {
     // We should probably try to change this behavior in the coreos-ci-lib
     // So we won't need to handle the secret case here.
     // Request 4.5Gi: in the worst case, we need to upload 4 container images in
@@ -111,21 +113,24 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
         def gcp_image = ""
-        def ostree_prod_refs = [:]
+
+        def uploading_to_brew = (brew_profile && !stream_info.skip_brew_upload)
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+            def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+            def fetch_config_git = uploading_to_brew ? "--file coreos-assembler-config-git.json" : ""
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
+            cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                --file "coreos-assembler-config-git.json"
+                ${fetch_config_git}
             """)
         }
 
+        def missing_arches = false
         def builtarches = shwrapCapture("""
                           cosa shell -- cat builds/builds.json | \
                               jq -r '.builds | map(select(.id == \"${params.VERSION}\"))[].arches[]'
@@ -135,6 +140,7 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
             if (params.ALLOW_MISSING_ARCHES) {
                 warn("Some requested architectures did not successfully build!")
                 basearches = builtarches.intersect(basearches)
+                missing_arches = true
             } else {
                 echo "ERROR: Some requested architectures did not successfully build"
                 echo "ERROR: Detected built architectures: $builtarches"
@@ -172,23 +178,6 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
 
         for (basearch in basearches) {
             def meta = readJSON(text: shwrapCapture("cosa meta --build=${params.VERSION} --arch=${basearch} --dump"))
-
-            // For production streams, import the OSTree into the prod
-            // OSTree repo.
-            if (stream_info.type == 'production') {
-                pipeutils.tryWithMessagingCredentials() {
-                    stage("OSTree Import ${basearch}: Prod Repo") {
-                        shwrap("""
-                        /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-                            --build=${params.VERSION} --arch=${basearch} \
-                            --s3=${s3_stream_dir} --repo=prod \
-                            --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                        """)
-                    }
-
-                    ostree_prod_refs[meta.ref] = meta["ostree-commit"]
-                }
-            }
 
             // For production streams, if the GCP image is in an image family
             // then promote the GCP image so that it will be the chosen image
@@ -259,32 +248,34 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         if (push_containers) {
             stage("Push Containers") {
                 parallel push_containers.collectEntries{configname, val -> [configname, {
-                    if (!registry_repos?."${configname}"?.'repo') {
+                    if (!registry_repos?."${configname}") {
                         echo "No registry repo config for ${configname}. Skipping"
                         return
                     }
                     withCredentials([file(variable: 'REGISTRY_SECRET',
                                           credentialsId: 'oscontainer-push-registry-secret')]) {
-                        def repo = registry_repos[configname]['repo']
+                        def repos = registry_repos[configname]
                         def (artifact, metajsonname) = val
-                        def tag_args = registry_repos[configname].tags.collect{"--tag=$it"}
-                        def v2s2_arg = registry_repos.v2s2 ? "--v2s2" : ""
-                        shwrap("""
-                        export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
-                        cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
-                        cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
-                            --auth=tmp/push-secret-${metajsonname} \
-                            --repo=${repo} ${tag_args.join(' ')} \
-                            --artifact=${artifact} --metajsonname=${metajsonname} \
-                            --build=${params.VERSION} ${v2s2_arg}
-                        rm tmp/push-secret-${metajsonname}
-                        """)
+                        for (repo in repos) {
+                            def tag_args = repo.tags.collect{"--tag=$it"}
+                            def v2s2_arg = repo.v2s2 ? "--v2s2" : ""
+                            shwrap("""
+                            export COSA_SUPERMIN_MEMORY=1024 # this really shouldn't require much RAM
+                            cp \${REGISTRY_SECRET} tmp/push-secret-${metajsonname}
+                            cosa supermin-run /usr/lib/coreos-assembler/cmd-push-container-manifest \
+                                --auth=tmp/push-secret-${metajsonname} \
+                                --repo=${repo.repo} ${tag_args.join(' ')} \
+                                --artifact=${artifact} --metajsonname=${metajsonname} \
+                                --build=${params.VERSION} ${v2s2_arg}
+                            rm tmp/push-secret-${metajsonname}
+                            """)
+                        }
                     }
                 }]}
             }
         }
 
-        if (brew_profile && !stream_info.skip_brew_upload) {
+        if (uploading_to_brew) {
             stage('Brew Upload') {
                 def tag = pipecfg.streams[params.STREAM].brew_tag
                 for (arch in basearches) {
@@ -395,47 +386,37 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
                     """)
                 }
             }
+        }
 
-            pipeutils.tryWithMessagingCredentials() {
-                def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
-                shwrap("""
-                /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
-                    stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+        pipeutils.tryWithMessagingCredentials() {
+            stage("Sign OS Container") {
+                def s3_sigs_dir = "${pipecfg.s3.bucket}/${pipecfg.s3.oci_sigs_key}"
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa sign --build=${params.VERSION} \
+                    robosignatory --s3-sigstore ${s3_sigs_dir} \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                    --extra-fedmsg-keys stream=${params.STREAM} \
+                    --oci --gpgkeypath /etc/pki/rpm-gpg \
+                    --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
                 """)
+            }
+
+            // and now that the release is published and signed, announce it!
+            def basearch_args = basearches.collect{"--basearch ${it}"}.join(" ")
+            shwrap("""
+            /usr/lib/coreos-assembler/fedmsg-broadcast --fedmsg-conf=\${FEDORA_MESSAGING_CONF} \
+                stream.release --build ${params.VERSION} ${basearch_args} --stream ${params.STREAM}
+            """)
+        }
+
+        if (!missing_arches && stream_info['build_node_images']) {
+            for (release in stream_info['build_node_images']) {
+                build job: 'build-node-image', wait: false, parameters: ([
+                    string(name: 'RELEASE', value: release)
+                ])
             }
         }
 
-        if (ostree_prod_refs.size() > 0) {
-            stage("OSTree Import: Wait and Verify") {
-                def tmpd = shwrapCapture("mktemp -d")
-
-                shwrap("""
-                cd ${tmpd}
-                ostree init --mode=archive --repo=.
-                # add official repo config, which enforces signature checking
-                cat /etc/ostree/remotes.d/fedora.conf >> config
-                """)
-
-                // We do this in a loop because it takes time for the import to
-                // complete and the updated summary file to propagate. But it
-                // shouldn't normally take more than 20 minutes.
-                timeout(time: 20, unit: 'MINUTES') {
-                    for (ref in ostree_prod_refs) {
-                        shwrap("""
-                        cd ${tmpd}
-                        while true; do
-                            ostree pull --commit-metadata-only fedora:${ref.key}
-                            chksum=\$(ostree rev-parse fedora:${ref.key})
-                            if [ "\${chksum}" == "${ref.value}" ]; then
-                                break
-                            fi
-                            sleep 30
-                        done
-                        """)
-                    }
-                }
-            }
-        }
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✓"
 
@@ -449,4 +430,4 @@ lock(resource: "release-${params.STREAM}", extra: locks) {
         stream += "-${pipecfg.hotfix.name}"
     }
     pipeutils.trySlackSend(message: ":bullettrain_front: release #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
-}}} // try-catch-finally, cosaPod and lock finish here
+}}}} // try-catch-finally, cosaPod and lock and lock finish here

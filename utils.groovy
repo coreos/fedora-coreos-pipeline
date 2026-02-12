@@ -131,14 +131,20 @@ def add_hotfix_parameters_if_supported() {
     return []
 }
 
-def get_source_config_ref_for_stream(pipecfg, stream) {
-    if (pipecfg.streams[stream].source_config_ref) {
-        return pipecfg.streams[stream].source_config_ref
-    } else if (pipecfg.source_config.ref) {
-        return utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
-    } else {
-        return stream
+def get_source_config_for_stream(pipecfg, stream) {
+    def url = pipecfg.source_config.url
+    if (pipecfg.streams[stream].source_config_url) {
+        url = pipecfg.streams[stream].source_config_url
     }
+
+    def ref = stream
+    if (pipecfg.streams[stream].source_config_ref) {
+        ref = pipecfg.streams[stream].source_config_ref
+    } else if (pipecfg.source_config.ref) {
+        ref = utils.substituteStr(pipecfg.source_config.ref, [STREAM: stream])
+    }
+
+    return [url, ref]
 }
 
 def get_env_vars_for_stream(pipecfg, stream) {
@@ -391,9 +397,23 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
-def get_streams_choices(config) {
-    def default_stream = config.streams.find{k, v -> v['default'] == true}?.key
-    def other_streams = config.streams.keySet().minus(default_stream) as List
+// Returns a list of stream names from `streams_subset` that do not have `konflux_driven: true` set
+def non_konflux_driven_streams(config, streams_subset) {
+    return streams_subset.findAll{stream ->
+        !config.streams[stream]?.konflux_driven ?: false}.collect{k, v -> k}
+}
+
+// Return true if the STREAM is driven by Konflux, else false
+def is_stream_konflux_driven(pipecfg, stream) {
+    def stream_info = pipecfg.streams[stream]
+    return stream_info.konflux_driven ?: false
+}
+
+def get_streams_choices(config, node = null) {
+    def stream_source = node ? config.ocp_node_builds.release : config.streams
+
+    def default_stream = stream_source.find { k, v -> v['default'] == true }?.key
+    def other_streams = stream_source.keySet().minus(default_stream) as List
     return [default_stream] + other_streams
 }
 
@@ -412,27 +432,37 @@ def get_push_trigger() {
 }
 
 // Gets desired artifacts to build from pipeline config
-def get_artifacts_to_build(pipecfg, stream, basearch) {
+def get_artifacts_to_build(pipecfg, stream, basearch, skip_untested) {
     // Explicit stream-level override takes precedence
-    def artifacts = pipecfg.streams[stream].artifacts?."${basearch}"
-    if (artifacts == null) {
-        // calculate artifacts from defaults + additional - skip
-        artifacts = []
-        artifacts += pipecfg.default_artifacts.all ?: []
-        artifacts += pipecfg.default_artifacts."${basearch}" ?: []
-        artifacts += pipecfg.streams[stream].additional_artifacts?.all ?: []
-        artifacts += pipecfg.streams[stream].additional_artifacts?."${basearch}" ?: []
-        artifacts -= pipecfg.streams[stream].skip_artifacts?.all ?: []
-        artifacts -= pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: []
+    def artifacts = (pipecfg.streams[stream].artifacts?."${basearch}" ?: []) as Set
+    if (artifacts.isEmpty()) {
+        // calculate artifacts from defaults, add additional, remove skip
+        artifacts.addAll(pipecfg.default_artifacts.all ?: [])
+        artifacts.addAll(pipecfg.default_artifacts."${basearch}" ?: [])
+        artifacts.addAll(pipecfg.streams[stream].additional_artifacts?.all ?: [])
+        artifacts.addAll(pipecfg.streams[stream].additional_artifacts?."${basearch}" ?: [])
+        artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?.all ?: [])
+        artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: [])
     }
-    return artifacts.unique()
+    if (skip_untested) {
+        // Only build the testable artifacts. Note that the QEMU artifact is
+        // usually built before this step so it's not listed here.
+        def testable_artifacts = ["metal", "metal4k", "live"]
+        for (artifact in artifacts) {
+            if (cloud_testing_enabled_for_arch(pipecfg, artifact, basearch)) {
+                testable_artifacts += artifact
+            }
+        }
+        artifacts = artifacts.intersect(testable_artifacts)
+    }
+    return artifacts.toList()
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
-def build_artifacts(pipecfg, stream, basearch) {
+def build_artifacts(pipecfg, stream, basearch, skip_untested) {
 
     // First get the list of artifacts to build from the config
-    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch)
+    def artifacts = get_artifacts_to_build(pipecfg, stream, basearch, skip_untested)
 
     // If `cosa osbuild` is supported then let's build what we can using OSBuild
     if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-osbuild") == 0) {
@@ -516,35 +546,65 @@ def build_artifacts(pipecfg, stream, basearch) {
 
 def get_registry_repos(pipecfg, stream, version) {
     def registry_repos = pipecfg.registry_repos ?: [:]
-    // merge top-level registry_repos with stream-specific bits
-    registry_repos += pipecfg.streams[stream].additional_registry_repos ?: [:]
-    for (repo in (registry_repos.keySet() as List)) {
-        if (repo == 'v2s2') {
-            // this is a boolean option, not a registry repo
-            continue
-        }
-        if (registry_repos[repo].tags) {
-            def processed_tags = []
-            for (tag in registry_repos."${repo}".tags) {
-                tag = utils.substituteStr(tag, [STREAM: stream, VERSION: version])
-                if (pipecfg.hotfix) {
-                    // this is a hotfix build; include the hotfix name
-                    // in the tag suffix so we don't clobber official
-                    // tags
-                    tag += "-hotfix-${pipecfg.hotfix.name}"
+    // get stream-specific bits additional repos
+    def additional_repos = pipecfg.streams[stream].additional_registry_repos ?: [:]
+    for (repo_id in (additional_repos.keySet() as List)) {
+        // merge top-level registry_repos with additional repos
+        def merged_registry_repos = registry_repos[repo_id] ?: []
+        registry_repos[repo_id] = merged_registry_repos + (additional_repos[repo_id] ?: [])
+     }
+    for (repo_id in (registry_repos.keySet() as List)) {
+        for (repo in registry_repos[repo_id]) {
+            if (repo.tags) {
+                def processed_tags = []
+                for (tag in repo.tags) {
+                    tag = utils.substituteStr(tag, [STREAM: stream, VERSION: version])
+                    if (pipecfg.hotfix) {
+                        // this is a hotfix build; include the hotfix name
+                        // in the tag suffix so we don't clobber official
+                        // tags
+                        tag += "-hotfix-${pipecfg.hotfix.name}"
+                    }
+                    processed_tags += tag
                 }
-                processed_tags += tag
+                repo.tags = processed_tags
             }
-            registry_repos[repo]['tags'] = processed_tags
         }
     }
     return registry_repos
+}
+
+def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
+    def staging_repo = pipecfg.ocp_node_builds.registries.staging.image
+    def staging_manifest_tags = pipecfg.ocp_node_builds.registries.staging.tags
+    def prod_repo = pipecfg.ocp_node_builds.registries.prod.image
+    def prod_tags = pipecfg.ocp_node_builds.registries.prod.tags
+    def processTags = { tagList ->
+        tagList.collect { tag ->
+            def substituted = utils.substituteStr(tag, [RELEASE: release, TIMESTAMP: timestamp])
+            if (pipecfg.hotfix) {
+                // this is a hotfix build; include the hotfix name
+                // in the tag suffix so we don't clobber official
+                // tags
+                substituted += "-hotfix-${pipecfg.hotfix.name}"
+            }
+            return substituted
+        }
+    }
+    def final_staging_manifest_tags = processTags(staging_manifest_tags)
+    def final_prod_tags = processTags(prod_tags)
+    return [staging_repo, final_staging_manifest_tags, prod_repo, final_prod_tags]
 }
 
 // Determine if the config.yaml has a test_architectures entry for
 // this cloud which is intended to limit the architectures that
 // are tested for the given cloud.
 def cloud_testing_enabled_for_arch(pipecfg, cloud, basearch) {
+    if (! utils.credentialsExist([file(variable: 'UNUSED',
+                                 credentialsId: "${cloud}-kola-tests-config")])) {
+        // If the credential doesn't exist for it then we can't test
+        return false
+    }
     if (pipecfg.clouds."${cloud}"?.test_architectures) {
         // The list exists. Return true/false if the arch is in the list.
         return basearch in pipecfg.clouds."${cloud}".test_architectures
@@ -567,10 +627,8 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
                   string(name: 'SRC_CONFIG_COMMIT', value: commit)]
 
     // Kick off the Kola AWS job if we have an uploaded image, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value amis") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch) &&
-        utils.credentialsExist([file(variable: 'AWS_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'aws-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'aws', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value amis") != "None") {
         testruns['Kola:AWS'] = { build job: 'kola-aws', wait: false, parameters: params }
       // XXX: This is failing right now. Disable until the New
       // Year when someone can dig into the problem.
@@ -578,26 +636,20 @@ def run_cloud_tests(pipecfg, stream, version, cosa, basearch, commit) {
     }
 
     // Kick off the Kola Azure job if we have an artifact, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.azure") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
-        utils.credentialsExist([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'azure-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'azure', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.azure") != "None") {
         testruns['Kola:Azure'] = { build job: 'kola-azure', wait: false, parameters: params }
     }
 
     // Kick off the Kola GCP job if we have an uploaded image, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value gcp") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch) &&
-        utils.credentialsExist([file(variable: 'GCP_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'gcp-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'gcp', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value gcp") != "None") {
         testruns['Kola:GCP'] = { build job: 'kola-gcp', wait: false, parameters: params }
     }
 
     // Kick off the Kola OpenStack job if we have an artifact, credentials, and testing is enabled.
-    if (shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.openstack") != "None" &&
-        cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
-        utils.credentialsExist([file(variable: 'OPENSTACK_KOLA_TESTS_CONFIG',
-                                     credentialsId: 'openstack-kola-tests-config')])) {
+    if (cloud_testing_enabled_for_arch(pipecfg, 'openstack', basearch) &&
+        shwrapCapture("cosa meta --build=${version} --arch=${basearch} --get-value images.openstack") != "None") {
         testruns['Kola:OpenStack'] = { build job: 'kola-openstack', wait: false, parameters: params }
     }
 
@@ -623,8 +675,8 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
     // All other arches were shipped later than 32 so a min_version of 32 works.
     def min_version = 32 as Integer
     // Use a maximum version that matches the current stream Fedora major version
-    def manifest = readYaml(text:shwrapCapture("cosa shell -- cat src/config/manifest.yaml"))
-    def max_version = manifest.releasever as Integer
+    // The Fedora major is the first component of the provided version.
+    def max_version = version.tokenize('.')[0] as Integer
 
     // A list of all the start versions we want to run tests for
     def start_versions = []
@@ -731,18 +783,6 @@ def signImages(stream, version, basearch, s3_stream_dir, verify_only=false) {
     """)
 }
 
-// Requests OSTree commit to be imported into the compose repo. Assumes to have
-// access to the messaging credentials.
-def composeRepoImport(version, basearch, s3_stream_dir) {
-    shwrap("""
-    cosa shell -- \
-    /usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
-        --build=${version} --arch=${basearch} \
-        --s3=${s3_stream_dir} --repo=compose \
-        --fedmsg-conf \${FEDORA_MESSAGING_CONF}
-    """)
-}
-
 // Grabs the jenkins.io/emoji-prefix annotation from the slack-api-token
 def getSlackEmojiPrefix() {
     def emoji = shwrapCapture("""
@@ -808,6 +848,209 @@ def matrixSend(message) {
              "body": "$message"
             }'
     """)
+    }
+}
+
+def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
+                        extra_build_args = []) {
+    def build_args = ["--git-ref", commit, "--git-url", url, "--repo", repo,
+                      "--push-to-registry"]
+    if (secret) {
+         build_args += ["--secret", secret]
+    }
+    if (from) {
+        build_args += ["--from", from]
+    }
+    build_args += extra_build_args
+    def digest_list = []
+    parallel arches.collectEntries { arch ->
+        [arch, {
+            pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                def final_args = build_args + ["--arch", arch, "--tag", "${tag}-${arch}"]
+                final_args += ["--write-digest-to-file", "${tag}-${arch}"]
+                shwrap("cosa remote-build-container ${final_args.join(' ')}")
+                digest_list += readFile("${tag}-${arch}")
+                shwrap("""rm -f ${tag}-${arch} """)
+            }
+        }]
+    }
+    return digest_list
+}
+
+def push_manifest(digests, repo, manifest_tag, v2s2) {
+    def images = ""
+    for (digest in digests) {
+        images += " --image=docker://${repo}@${digest}"
+    }
+    def digest = ""
+    def digest_file = "${manifest_tag}.digestfile"
+    // save the digest to a file named after the tag we are pushing
+    def push_args = ["--write-digest-to-file", digest_file]
+    if (v2s2) {
+        push_args += ["--v2s2"]
+    }
+    // arbitrarily selecting the s390x builder; we don't run this
+    // locally because podman wants user namespacing (yes, even just
+    // to push a manifest...)
+    pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
+        shwrap("""
+        cosa push-container-manifest \
+            --tag ${manifest_tag} --repo ${repo} ${images} ${push_args.join(' ')}
+        """)
+    }
+    digest = readFile(digest_file)
+    shwrap("rm ${digest_file}")
+    return digest
+}
+
+def copy_image(src_image, dest_image, authfile = "") {
+    if (authfile != "") {
+        authfile = "--authfile=${authfile}"
+    }
+    shwrap("""
+        skopeo copy --preserve-digests --retry-times 5 --all ${authfile} \
+            docker://${src_image} \
+            docker://${dest_image}
+    """)
+}
+
+def delete_tags(digests, repo, manifest_tag, authfile = "") {
+    if (authfile != "") {
+        authfile = "--authfile=${authfile}"
+    }
+    shwrap("""
+        export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+        skopeo delete ${authfile} docker://${repo}:${manifest_tag}
+    """)
+    parallel digests.keySet().collectEntries{arch -> [digest, {
+        shwrap("""
+            export STORAGE_DRIVER=vfs # https://github.com/coreos/fedora-coreos-pipeline/issues/723#issuecomment-1297668507
+            skopeo delete ${authfile} docker://${repo}:${digest}
+        """)
+    }]}
+}
+
+def get_manifest_digest(image) {
+    if (image != '' && !image.contains('@')) {
+        shwrap("skopeo inspect --raw -n docker://${image} > manifest.json")
+        def digest = shwrapCapture("skopeo manifest-digest manifest.json")
+        shwrap("rm -f manifest.json")
+        image = "${image.split(':')[0]}@${digest}"
+    }
+    return image
+}
+
+def build_and_push_image(params = [:]) {
+// Available parameters:
+    // arches:               list    -- List of architectures to run against
+    // extra_build_args:     list    -- List of extra commands to pass to `cosa remote` cmd
+    // from:                 string  -- Value to replace in the Containerfile
+    // image_tag_staging:    string  -- Image tag for the staging repo.
+    // manifest_tag_staging: string  -- Manifest tag for the staging repo.
+    // secret:               string  -- File path for the `podman --secret`
+    // src_commit:           string  -- Source Git commit.
+    // src_url:              string  -- Source Git URL.
+    // staging_repository:   string  -- Repository URL for the staging repo.
+    // v2s2:                 bool    -- Use docker v2s2 format rather than OCI. Default to false.
+
+    def secret = params.get('secret', "");
+    def from = params.get('from', "");
+    def manifest_digest = ""
+    def extra_build_args = params.get('extra_build_args', "");
+    def v2s2 = params.get('v2s2', false);
+
+    from = get_manifest_digest(from)
+    def digests = build_remote_image(params['arches'], params['src_commit'], params['src_url'], params['staging_repository'],
+                                     params['image_tag_staging'], secret, from, extra_build_args)
+    stage("Push Manifest") {
+        manifest_digest = push_manifest(digests, params['staging_repository'], params['manifest_tag_staging'], v2s2)
+    }
+    return manifest_digest
+}
+
+def get_arch_image_digest(from) {
+    return readJSON(text: shwrapCapture("""
+        skopeo inspect --raw docker://${from} | \
+            jq -r '.manifests | map({(.platform.architecture): .digest}) | add'
+    """))
+}
+
+def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_digest, version, pipecfg) {
+    def node_digest_arch_map = get_arch_image_digest("${repo}@${manifest_digest}")
+    def extensions_node_digest_arch_map  = get_arch_image_digest("${repo}@${extensions_manifest_digest}")
+    for (arch in arches) {
+        def inspect_arch = rpm_to_go_arch(arch)
+        def node_image = "${repo}@${node_digest_arch_map[inspect_arch]}"
+        def extensions_node_image = "${repo}@${extensions_node_digest_arch_map[inspect_arch]}"
+
+        // Get metadata files with package information
+        shwrap("""oc image extract $node_image[-1] --file /usr/share/openshift/base/meta.json
+                  oc image extract $extensions_node_image[-1] --file usr/share/rpm-ostree/extensions.json
+        """)
+        shwrap("""
+            coreos-assembler koji-upload \
+                upload --reserve-id \
+                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                --build $release-${version} \
+                --retry-attempts 6 \
+                --buildroot . \
+                --owner ${pipecfg.brew.principal} \
+                --profile ${pipecfg.brew.profile} \
+                --tag ${pipecfg.ocp_node_builds.release[release].brew_tag} \
+                --arch ${arch} \
+                --node-image
+        """)
+    }
+}
+
+// maps RPM-style architecture names to Go-style architecture names
+// used by skopeo and container manifests.
+def rpm_to_go_arch(arch) {
+    def archAliasMap = [
+        "x86_64"  : "amd64",
+        "aarch64" : "arm64",
+        "s390x"   : "s390x",
+        "ppc64le" : "ppc64le"
+    ]
+    return archAliasMap[arch]
+}
+
+// Defines some sort of loose policy around skipping build of untested
+// artifacts in our mechanical/development streams.
+// https://github.com/coreos/fedora-coreos-pipeline/issues/1189
+def should_we_skip_untested_artifacts(pipecfg) {
+    // Only perform skipping if the pipecfg knob is set and we're
+    // not operating on a production stream.
+    if (pipecfg.misc?.allow_skip_of_untested_artifacts &&
+        pipecfg.streams[params.STREAM].type != "production") {
+        // Ok. This pipeline allows skipping, but do we want to?
+        // Currently we skip on all but one day a week. The once a
+        // week at least gives us some testing/pulse of being able
+        // to build the artifacts we typically skip.
+        def calendar = java.util.Calendar.getInstance()
+        def dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK)
+
+        // Calendar.DAY_OF_WEEK is 1 (Sunday) through 7 (Saturday).
+        // We need a map to convert the number to the full day name string.
+        def days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        def today = days[dayOfWeek - 1] // Subtract 1 for 0-based array index
+        return today != "Friday"
+    } else {
+        return false
+    }
+}
+
+// A function to tell us if we should use versionary for the
+// build versioning or not. Right now we tightly couple this to
+// if we should build with buildah. So we basically say if build-with-buildah
+// is set then we'll definitely use versionary, which is safe for
+// now because all of FCOS is using build-with-buildah (i.e. using
+// versionary), but we are phasing in build-with-buildah in rhel-coreos-config.
+def should_use_versionary() {
+    if (shwrapRc("source /usr/lib/coreos-assembler/cmdlib.sh; should_build_with_buildah") == 0) {
+        return true
+    } else {
+        return false
     }
 }
 

@@ -25,7 +25,7 @@ properties([
          printPostContent: true,
          silentResponse: false,
          regexpFilterText: '$COREOS_ASSEMBLER_GIT_REF',
-         regexpFilterExpression: 'main|rhcos-.*'
+         regexpFilterExpression: '^main|^rhcos-.*|^rhel-.*'
         ], 
         cron('H H * * 1,3')
     ]),
@@ -93,7 +93,7 @@ def basearches = params.ARCHES.split() as Set
 
 lock(resource: "build-${containername}") {
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "512Mi", kvm: false,
+            memory: "1024Mi", kvm: false,
             serviceAccount: "jenkins") {
     timeout(time: 60, unit: 'MINUTES') {
     try {
@@ -165,6 +165,23 @@ lock(resource: "build-${containername}") {
                     skopeo delete --authfile=\$REGISTRY_SECRET \
                         docker://${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}
                     """)
+                    pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                        shwrap("""
+                        shortcommit_tag="${params.CONTAINER_REGISTRY_STAGING_REPO}:${arch}-${shortcommit}"
+                        image_id=\$(podman inspect \$shortcommit_tag | jq --raw-output .[0].Id)
+                        # Locally tag to an arbitrary tag. This means the
+                        # image (and layers) won't be dangling and won't
+                        # get pruned until the timeout in prune-container-resources.service
+                        podman tag \$image_id localhost/cosa-build-cache:\$(date +%s)
+                        # Untag the intermediate tag for the image, which could
+                        # be used if this same commit got submitted for build
+                        # again because of the cron timer trigger on this job.
+                        # In that case we want an actual build to be attempted
+                        # (which is free to used cached layers if fresh enough
+                        # to survive the cache-ttl) and not get short circuited.
+                        podman untag \$image_id \$shortcommit_tag
+                        """)
+                    }
                 }]}
             }
         }

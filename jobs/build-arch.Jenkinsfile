@@ -17,6 +17,10 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to build'),
+      string(name: 'SOURCE_OCI_IMAGE',
+             description: 'Override source_oci_image image to use. If set, the STREAM and VERSION parameters will be ignored.',
+             defaultValue: '',
+             trim: true),
       string(name: 'VERSION',
              description: 'Build version',
              defaultValue: '',
@@ -44,6 +48,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      choice(name: 'SKIP_UNTESTED_ARTIFACTS',
+             choices: ['dynamic', 'yes', 'no'],
+             description: 'Skip building and pushing any artifacts we do not CI test'),
       string(name: 'SRC_CONFIG_COMMIT',
              description: 'The exact config repo git commit to build against',
              defaultValue: '',
@@ -74,6 +81,17 @@ cosa_img = cosa_img ?: pipeutils.get_cosa_img(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+def skip_untested_artifacts = false
+if (params.SKIP_UNTESTED_ARTIFACTS == "dynamic" ) {
+    skip_untested_artifacts = pipeutils.should_we_skip_untested_artifacts(pipecfg)
+} else if (params.SKIP_UNTESTED_ARTIFACTS == "yes" ) {
+    skip_untested_artifacts = true
+}
+
+if (skip_untested_artifacts && stream_info.type == "production" ) {
+    error("Cannot specify SKIP_UNTESTED_ARTIFACTS parameter for production streams")
+}
+
 def cosa_controller_img = stream_info.cosa_controller_img ?: "quay.io/coreos-assembler/coreos-assembler:main"
 
 // Grab any environment variables we should set
@@ -90,6 +108,12 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 // the build-arch pod is mostly triggering the work on a remote node, so we
 // can be conservative with our request
 def ncpus = 1
+
+def source_oci_image = params.SOURCE_OCI_IMAGE ?: stream_info.get("source_oci_image", "")
+boolean import_oci = source_oci_image != ""
+if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
+    error("STREAMS that are driven by Konflux must import an OCI image")
+}
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "${build_description} Waiting"
@@ -153,34 +177,33 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
-        def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+        def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
         def src_config_commit
         if (params.SRC_CONFIG_COMMIT) {
             src_config_commit = params.SRC_CONFIG_COMMIT
         } else {
-            src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} refs/heads/${ref} | cut -d \$'\t' -f 1")
+            src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
         }
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+            def yumrepos_ref = pipecfg.source_config.yumrepos_ref ? "--yumrepos-branch ${pipecfg.source_config.yumrepos_ref}" : ""
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             shwrap("""
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${variant} ${pipecfg.source_config.url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
             """)
         }
 
         // Determine parent version/commit information
         def parent_version = ""
-        def parent_commit = ""
         if (s3_stream_dir) {
             pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "releases.json")
             if (utils.pathExists("releases.json")) {
                 def releases = readJSON file: "releases.json"
                 // check if there's a previous release we should use as parent
                 for (release in releases["releases"].reverse()) {
-                    def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
-                    if (commit_obj != null) {
-                        parent_commit = commit_obj["checksum"]
+                    def oci_image = release["oci-images"].find{ image -> image["architecture"] == basearch }
+                    if (oci_image != null) {
                         parent_version = release["version"]
                         break
                     }
@@ -188,27 +211,23 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
-        // enable --autolock if not in strict mode and cosa supports it
+        // enable --autolock if not in strict mode
         def autolock_arg = ""
         if (strict_build_param == "") {
-            if (shwrapRc("cosa fetch --help |& grep -q autolock") == 0) {
-                autolock_arg = "--autolock ${params.VERSION}"
-            }
+            autolock_arg = "--autolock ${params.VERSION}"
         }
 
         // buildfetch previous build info
         stage('BuildFetch') {
             if (s3_stream_dir) {
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                cosa buildfetch --arch=${basearch} \
+                cosa buildfetch --arch=${basearch} --find-build-for-arch \
                     --url s3://${s3_stream_dir}/builds \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
                 """)
                 if (autolock_arg != "") {
                     // Also fetch the x86_64 lockfile for the build we're
-                    // complementing so that we can use autolocking. Usually,
-                    // this is the same build we just fetched above, but not
-                    // necessarily.
+                    // complementing so that we can use autolocking.
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa buildfetch --arch=x86_64 \
                         --build ${newBuildID} \
@@ -231,37 +250,46 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
 
 
-
-        // fetch from repos for the current build
-        stage('Fetch') {
-            shwrap("""
-            cosa fetch ${strict_build_param} ${autolock_arg}
-            """)
+        def parent_arg = ""
+        if (parent_version != "") {
+            parent_arg = "--parent-build ${parent_version}"
         }
 
-        stage('Build OSTree') {
-            def parent_arg = ""
-            if (parent_version != "") {
-                parent_arg = "--parent-build ${parent_version}"
-            }
-            def version = "--version ${params.VERSION}"
-            def force = params.FORCE ? "--force" : ""
-            shwrap("""
-            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
-            """)
-
-            // Insert the parent info into meta.json so we can display it in
-            // the release browser and for sanity checking
-            if (parent_commit && parent_version) {
+        if (!import_oci) {
+            // fetch from repos for the current build
+            stage('Fetch') {
                 shwrap("""
-                cosa meta \
-                    --set fedora-coreos.parent-commit=${parent_commit} \
-                    --set fedora-coreos.parent-version=${parent_version}
+                cosa fetch ${strict_build_param} ${autolock_arg}
                 """)
             }
-        }
 
+            stage('Build OSTree') {
+                def version = "--version ${params.VERSION}"
+                def force = params.FORCE ? "--force" : ""
+                shwrap("""
+                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
+                """)
+            }
+        } else {
+            stage("Import OCI image") {
+                echo "Skipping build : Importing OCI : $source_oci_image"
+                shwrap("cosa import docker://${source_oci_image} --skip-prune ${parent_arg}")
+                def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
+                def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
+                if (params.STREAM != oci_stream) {
+                    error("STREAM parameter value does not match the one from the OCI image")
+                }
+            }
+        }
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
+
+        // Insert the parent info into meta.json so we can display it in
+        // the release browser and for sanity checking
+        if (parent_version) {
+            shwrap("""
+            cosa meta --set fedora-coreos.parent-version=${parent_version}
+            """)
+        }
 
         pipeutils.tryWithMessagingCredentials() {
             shwrap("""
@@ -270,21 +298,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
                 --state STARTED
             """)
-        }
-
-        if (uploading) {
-            pipeutils.tryWithMessagingCredentials() {
-                stage('Sign OSTree') {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa sign --build=${newBuildID} --arch=${basearch} \
-                        robosignatory --s3 ${s3_stream_dir}/builds \
-                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                        --extra-fedmsg-keys stream=${params.STREAM} \
-                        --ostree --gpgkeypath /etc/pki/rpm-gpg \
-                        --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                    """)
-                }
-            }
         }
 
         // Build QEMU image
@@ -311,7 +324,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
         // Build the remaining artifacts
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
         }
 
         // secex specific tests. 
@@ -363,21 +376,13 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         // These steps interact with Fedora Infrastructure/Releng for
-        // signing of artifacts and importing of OSTree commits. They
-        // must be run after the archive stage because the artifacts
-        // are pulled from their S3 locations. They can be run in
-        // parallel.
+        // signing of artifacts. They must be run after the archive stage
+        // because the artifacts are pulled from their S3 locations.
         if (uploading) {
-            pipeutils.tryWithMessagingCredentials() {
-                def parallelruns = [:]
-                parallelruns['Sign Images'] = {
+            stage('Sign Images') {
+                pipeutils.tryWithMessagingCredentials() {
                     pipeutils.signImages(params.STREAM, newBuildID, basearch, s3_stream_dir)
                 }
-                parallelruns['OSTree Import: Compose Repo'] = {
-                    pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
-                }
-                // process this batch
-                parallel parallelruns
             }
         }
 

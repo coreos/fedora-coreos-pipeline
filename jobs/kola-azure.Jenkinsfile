@@ -59,49 +59,55 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
     try {
 
         def azure_image_name, azure_image_filepath
-        stage('Fetch Metadata/Image') {
-            def commitopt = ''
-            if (params.SRC_CONFIG_COMMIT != '') {
-                commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
-            }
-            // Grab the metadata. Also grab the image so we can upload it.
-            withCredentials([file(variable: 'AWS_CONFIG_FILE',
-                                  credentialsId: 'aws-build-upload-config')]) {
-                def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-                shwrap("""
-                cosa init --branch ${ref} ${commitopt} ${variant} ${pipecfg.source_config.url}
-                time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
-                    --url=s3://${s3_stream_dir}/builds --artifact=azure
-                """)
-                pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
-                    shwrap("cosa decompress --build=${params.VERSION} --artifact=azure")
+        lock(resource: "kola-cloud-buildfetch") {
+            stage('Fetch Metadata/Image') {
+                def commitopt = ''
+                if (params.SRC_CONFIG_COMMIT != '') {
+                    commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
                 }
-                azure_image_filepath = shwrapCapture("""
-                cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path azure
-                """)
-            }
+                // Grab the metadata. Also grab the image so we can upload it.
+                withCredentials([file(variable: 'AWS_CONFIG_FILE',
+                                    credentialsId: 'aws-build-upload-config')]) {
+                    def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
+                    def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+                    shwrap("""
+                    cosa init --branch ${ref} ${commitopt} ${variant} ${url}
+                    time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
+                        --url=s3://${s3_stream_dir}/builds --artifact=azure
+                    """)
+                    pipeutils.withXzMemLimit(cosa_memory_request_mb - 512) {
+                        shwrap("cosa decompress --build=${params.VERSION} --artifact=azure")
+                    }
+                    azure_image_filepath = shwrapCapture("""
+                    cosa meta --build=${params.VERSION} --arch=${params.ARCH} --image-path azure
+                    """)
+                }
 
-            // Use a consistent image name for this stream in case it gets left behind
-            azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"
+                // Use a consistent image name for this stream in case it gets left behind
+                azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"
+            }
         }
 
-        withCredentials([file(variable: 'AZURE_KOLA_TESTS_CONFIG',
-                              credentialsId: 'azure-kola-tests-config')]) {
+        withCredentials([
+                file(variable: 'AZURE_KOLA_TESTS_CONFIG', credentialsId: 'azure-kola-tests-config'),
+                string(variable: 'AZURE_KOLA_MANAGED_IDENTITY', credentialsId: 'azure-kola-managed-identity')
+            ]) {
 
             def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
             def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
             def azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
+            def azure_testing_gallery = pipecfg.clouds?.azure?.test_gallery
 
             stage('Upload/Create Image') {
                 // Create the image in Azure
                 shwrap("""
                 # First delete the blob/image since we re-use it.
-                ore azure delete-image --log-level=INFO                 \
+                ore azure delete-gallery-image --log-level=INFO         \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
-                    --resource-group ${azure_testing_resource_group}    \
-                    --image-name ${azure_image_name}
+                    --resource-group $azure_testing_resource_group      \
+                    --gallery-name $azure_testing_gallery               \
+                    --gallery-image-name $azure_image_name
                 ore azure delete-blob --log-level=INFO                  \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
@@ -118,11 +124,17 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     --container $azure_testing_storage_container        \
                     --blob-name $azure_image_name                       \
                     --file ${azure_image_filepath}
-                ore azure create-image --log-level=INFO                 \
+                # Create a fresh gallery image. Note that this will
+                # create the testing gallery if it does not exist, but
+                # it will be a no-op on gallery creation given the
+                # gallery exists in the specified region.
+                ore azure create-gallery-image --log-level=INFO         \
+                    --arch $params.ARCH                                 \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
-                    --resource-group $azure_testing_resource_group      \
                     --azure-location $region                            \
-                    --image-name $azure_image_name                      \
+                    --resource-group $azure_testing_resource_group      \
+                    --gallery-name $azure_testing_gallery               \
+                    --gallery-image-name $azure_image_name              \
                     --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_image_name}"
                 """)
             }
@@ -139,16 +151,18 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                      platformArgs: """-p=azure                               \
                          --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                          --azure-location $region                            \
-                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/images/${azure_image_name}""")
+                         --azure-managed-identity \${AZURE_KOLA_MANAGED_IDENTITY}   \
+                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0""")
             } finally {
                 parallel "Delete Image": {
                     // Delete the image in Azure
                     shwrap("""
-                    ore azure delete-image --log-level=INFO                 \
+                    ore azure delete-gallery-image --log-level=INFO         \
                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                         --azure-location $region                            \
                         --resource-group $azure_testing_resource_group      \
-                        --image-name $azure_image_name
+                        --gallery-name $azure_testing_gallery               \
+                        --gallery-image-name $azure_image_name
                     ore azure delete-blob --log-level=INFO                  \
                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                         --azure-location $region                            \
@@ -175,7 +189,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
         throw e
     } finally {
         if (currentBuild.result != 'SUCCESS') {
-            pipeutils.trySlackSend(message: ":azure: kola-azure #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")     
+            pipeutils.trySlackSend(message: ":azure: kola-azure #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${params.ARCH}] (${params.VERSION})")
         }
     }
 }} // cosaPod and timeout finish here

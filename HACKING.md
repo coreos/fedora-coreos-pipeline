@@ -32,7 +32,7 @@ up wanting that.
 
 The easiest way to set up your own local OCP4 cluster for developing on
 the pipeline is using
-[CodeReady Containers](https://code-ready.github.io/crc),
+[CodeReady Containers](https://crc.dev/docs/introducing),
 though the author has not yet tried setting up the pipeline on that
 footprint yet. (You'll need to allocate the VM at least ~14G of RAM.)
 
@@ -210,6 +210,19 @@ oc label secret/azure-kola-tests-config \
     jenkins.io/credentials-type=secretFile
 oc annotate secret/azure-kola-tests-config \
     jenkins.io/credentials-description="Azure kola tests credentials config"
+```
+
+If you want to establish an authorized identity to pre-emptively grant access
+to other Azure resources, enabling the startup process to leverage Azure's default
+credentials, use the azure-kola-managed-identity:
+
+```
+oc create secret generic azure-kola-managed-identity \
+    --from-file=text="${MANAGED_IDENTITY_ID}"
+oc label secret/azure-kola-managed-identity \
+    jenkins.io/credentials-type=secretText
+oc annotate secret/azure-kola-managed-identity \
+    jenkins.io/credentials-description="Azure managed identity credentials"
 ```
 
 NOTE: For the prod pipeline these secrets can be found in BitWarden
@@ -454,10 +467,21 @@ oc annotate secret/github-coreosbot-token-username-password  \
     jenkins.io/credentials-description="GitHub coreosbot token as username/password"
 ```
 
-### [PROD, OPTIONAL] Create additional root CA certificate secret
+### Create root CA certificate secret
 
-If an additional root CA certificate is needed, create it as
-a secret. This assumes `ca.crt` is a file in the working directory:
+The root CA certificate (ca.crt) is required and should be created as a secret.
+This example assumes that the ca.crt file is present in your current working
+directory.
+
+If you are working in an environment that doesn't need a custom root CA, you
+still need to create a dummy configuration file as shown below:
+
+```
+cat <<'EOF' > ca.crt
+dummy
+EOF
+```
+Then create the secret:
 
 ```
 oc create secret generic additional-root-ca-cert \
@@ -517,27 +541,18 @@ oc create secret generic krb5-conf \
 
 ```
 oc new-app --file=manifests/jenkins.yaml \
-  --param=NAMESPACE=fedora-coreos-pipeline \
   --param=STORAGE_CLASS_NAME=ocs-storagecluster-ceph-rbd
 ```
 
-Notice the `NAMESPACE` parameter. This makes the Jenkins controller use the
-image from our namespace, which we'll create in the next step. (The
-reason we create the app first is that otherwise OpenShift will
+The reason we create the app first is that otherwise OpenShift will
 automatically instantiate Jenkins with default parameters when creating
-the Jenkins pipeline).
+the Jenkins pipeline.
 
 The `STORAGE_CLASS_NAME` may be required depending on the cluster. If
 using a development cluster, it normally isn't, and you can drop it. For
 the Fedora prod cluster, use `ocs-storagecluster-ceph-rbd` as shown
 above.
 
-If using an additional root CA certificate, then you will also need to
-specify the `AGENT_NAMESPACE` parameter to yours, e.g.:
-
-```
-  --param=AGENT_NAMESPACE=fedora-coreos-pipeline \
-```
 
 Now, create the Jenkins configmap:
 
@@ -583,11 +598,12 @@ This will create:
 
 1. the Jenkins controller imagestream,
 2. the Jenkins agent imagestream,
-3. the Jenkins agent BuildConfig (if a root CA cert was provided),
+3. the Jenkins agent BuildConfig,
 4. the jenkins-config configmap.
 
-If a root CA cert was provided, we need to build the base images that
-will bake in the cert in the controller and agent:
+Note: If you are working with the Fedora staging pipeline, specify the
+`staging` branch for the pipecfg: `--pipecfg
+https://github.com/coreos/fedora-coreos-pipeline@staging`.
 
 ```
 oc start-build --follow jenkins-with-cert

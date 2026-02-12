@@ -7,8 +7,8 @@ node {
 
 properties([
     pipelineTriggers([
-        // run every 24h at 2am UTC
-        cron("0 2 * * *")
+        // run every 24h at 10:00 UTC
+        cron("0 10 * * *")
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -23,6 +23,8 @@ node {
     if (scheduled_streams) {
         mechanical_streams = scheduled_streams
     }
+    // Filter out streams that are managed by konflux
+    mechanical_streams = pipeutils.non_konflux_driven_streams(pipecfg, mechanical_streams)
 
     mechanical_streams.each{
         echo "Triggering build for mechanical stream: ${it}"

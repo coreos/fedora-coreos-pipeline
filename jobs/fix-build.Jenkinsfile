@@ -94,11 +94,11 @@ lock(resource: "sign-${params.VERSION}") {
 
         // Fetch metadata files for the build we are interested in
         stage('Fetch Metadata') {
-            def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+            def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             def arch_args = basearches.collect{"--arch=$it"}
             pipeutils.shwrapWithAWSBuildUploadCredentials("""
-            cosa init --branch ${ref} ${variant} ${pipecfg.source_config.url}
+            cosa init --branch ${ref} ${variant} ${url}
             cosa buildfetch --build=${params.VERSION} \
                 ${arch_args.join(' ')} --artifact=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
@@ -122,9 +122,8 @@ lock(resource: "sign-${params.VERSION}") {
         build_description = "[${params.STREAM}][${basearches.join(' ')}][${params.VERSION}]"
         currentBuild.description = "${build_description} Running"
 
-        def src_config_commit = shwrapCapture("""
-            jq '.[\"coreos-assembler.config-gitrev\"]' builds/${params.VERSION}/${basearches[0]}/meta.json
-        """)
+        def meta = readJSON(file: "builds/${params.VERSION}/${basearches[0]}/meta.json")
+        def src_config_commit = meta["coreos-assembler.container-config-git"]["commit"]
 
         for (basearch in basearches) {
             pipeutils.tryWithMessagingCredentials() {
@@ -141,8 +140,15 @@ lock(resource: "sign-${params.VERSION}") {
                     }
                 }
                 if (!params.SKIP_COMPOSE_IMPORT) {
-                    parallelruns['OSTree Import: Compose Repo'] = {
-                        pipeutils.composeRepoImport(params.VERSION, basearch, s3_stream_dir)
+                    // Import into the OSTree repo if we are F42. We stopped
+                    // doing this for F43+ because we distribute updates from
+                    // the container registry now.
+                    if (params.VERSION.tokenize('.')[0] == '42') {
+                        parallelruns['OSTree Import: Compose Repo'] = {
+                            pipeutils.composeRepoImport(params.VERSION, basearch, s3_stream_dir)
+                        }
+                    } else {
+                        echo "Skipping OSTree repo import for F43+"
                     }
                 }
                 // process this batch

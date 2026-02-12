@@ -17,6 +17,10 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to build'),
+      string(name: 'IMPORT_OCI_IMAGE',
+             description: 'Override import_oci_image image to use. If set, the STREAM parameter must match the image labels.',
+             defaultValue: "",
+             trim: true),
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
              defaultValue: '',
@@ -49,6 +53,9 @@ properties([
       booleanParam(name: 'NO_UPLOAD',
                    defaultValue: false,
                    description: 'Do not upload results to S3; for debugging purposes.'),
+      choice(name: 'SKIP_UNTESTED_ARTIFACTS',
+             choices: ['dynamic', 'yes', 'no'],
+             description: 'Skip building and pushing any artifacts we do not CI test'),
       booleanParam(name: 'WAIT_FOR_RELEASE_JOB',
                    defaultValue: false,
                    description: 'Wait for the release job and propagate errors.'),
@@ -83,6 +90,21 @@ if (params.ADDITIONAL_ARCHES != "none") {
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+// Default to false, override with runtime param or stream_info
+// runtime parameter always wins
+def no_upload = params.NO_UPLOAD ?: stream_info.get('no_upload', false)
+
+def skip_untested_artifacts = false
+if (params.SKIP_UNTESTED_ARTIFACTS == "dynamic" ) {
+    skip_untested_artifacts = pipeutils.should_we_skip_untested_artifacts(pipecfg)
+} else if (params.SKIP_UNTESTED_ARTIFACTS == "yes" ) {
+    skip_untested_artifacts = true
+}
+
+if (skip_untested_artifacts && stream_info.type == "production" ) {
+    error("Cannot specify SKIP_UNTESTED_ARTIFACTS parameter for production streams")
+}
+
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
@@ -106,6 +128,12 @@ def cosa_memory_request_mb = 10.5 * 1024 as Integer
 // cleaner
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
+def import_oci_image = params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
+boolean import_oci = import_oci_image != ""
+if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
+    error("STREAMS that are driven by Konflux must import an OCI image")
+}
+
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "${build_description} Waiting"
 
@@ -113,12 +141,7 @@ currentBuild.description = "${build_description} Waiting"
 def newBuildID, basearch
 
 // matches between build/build-arch job
-def timeout_mins = 240
-if (pipecfg.hacks?.ppc64le_kola_minimal) {
-    // XXX: extend the timeout for ppc64le; temporary measure for ppc64le move
-    // in RHCOS pipeline
-    timeout_mins = 300
-}
+def timeout_mins = 300
 
 if (params.WAIT_FOR_RELEASE_JOB) {
     // Waiting for the release job effectively means waiting for all the build-
@@ -171,22 +194,27 @@ lock(resource: "build-${params.STREAM}") {
         // Now, determine if we should do any uploads to remote s3 buckets or clouds
         // Don't upload if the user told us not to or we're debugging with KOLA_RUN_SLEEP
         def uploading = false
-        if (s3_stream_dir && (!params.NO_UPLOAD || params.KOLA_RUN_SLEEP)) {
+        if (s3_stream_dir && (!no_upload || params.KOLA_RUN_SLEEP)) {
             uploading = true
         }
 
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
-        def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-        def src_config_commit = shwrapCapture("git ls-remote ${pipecfg.source_config.url} refs/heads/${ref} | cut -d \$'\t' -f 1")
+        def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
+        def src_config_commit = ""
+        if (import_oci) {
+            src_config_commit = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"org.opencontainers.image.revision\"'")
+        } else {
+            src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
+        }
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
             def yumrepos_ref = pipecfg.source_config.yumrepos_ref ? "--yumrepos-branch ${pipecfg.source_config.yumrepos_ref}" : ""
             def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             shwrap("""
-            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${pipecfg.source_config.url}
+            cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
             """)
 
             // for now, just use the PVC to keep cache.qcow2 in a stream-specific dir
@@ -207,16 +235,14 @@ lock(resource: "build-${params.STREAM}") {
 
         // Determine parent version/commit information
         def parent_version = ""
-        def parent_commit = ""
         if (s3_stream_dir) {
             pipeutils.aws_s3_cp_allow_noent("s3://${s3_stream_dir}/releases.json", "releases.json")
             if (utils.pathExists("releases.json")) {
                 def releases = readJSON file: "releases.json"
                 // check if there's a previous release we should use as parent
                 for (release in releases["releases"].reverse()) {
-                    def commit_obj = release["commits"].find{ commit -> commit["architecture"] == basearch }
-                    if (commit_obj != null) {
-                        parent_commit = commit_obj["checksum"]
+                    def oci_image = release["oci-images"].find{ image -> image["architecture"] == basearch }
+                    if (oci_image != null) {
                         parent_version = release["version"]
                         break
                     }
@@ -252,85 +278,92 @@ lock(resource: "build-${params.STREAM}") {
 
         def overrides_fetch_param = ""
 
-        // fetch from repos for the current build
-        stage('Fetch') {
-            // Dont run this for production builds
-            if (recent_commits_to_lockfiles() == 0 && stream_info.type != "production" ) {
-                shwrap("python3 /usr/lib/coreos-assembler/download-overrides.py")
-                overrides_fetch_param = "--with-cosa-overrides"
-            }
-            shwrap("cosa fetch ${overrides_fetch_param} ${strict_build_param}")            
+        def parent_arg = ""
+        if (parent_version != "") {
+            parent_arg = "--parent-build ${parent_version}"
         }
 
-        stage('Build OSTree') {
-            def parent_arg = ""
-            if (parent_version != "") {
-                parent_arg = "--parent-build ${parent_version}"
-            }
-            def version_arg = ""
-            if (params.VERSION) {
-                version_arg = "--version ${params.VERSION}"
-            } else {
-                def use_versionary = pipecfg.misc?.versionary
-                if (stream_info.containsKey('versionary')) {
-                    // stream override always wins
-                    use_versionary = stream_info.versionary
+        if (!import_oci) {
+            // fetch from repos for the current build
+            stage('Fetch') {
+                // Dont run this for production builds
+                if (recent_commits_to_lockfiles() == 0 && stream_info.type != "production" ) {
+                    shwrap("python3 /usr/lib/coreos-assembler/download-overrides.py")
+                    overrides_fetch_param = "--with-cosa-overrides"
                 }
-                if (use_versionary) {
-                    version_arg = "--versionary"
-                }
+                shwrap("cosa fetch ${overrides_fetch_param} ${strict_build_param}")
             }
-            def force = params.FORCE ? "--force" : ""
-            shwrap("""
-            cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
-            """)
 
-            // Insert the parent info into meta.json so we can display it in
-            // the release browser and for sanity checking
-            if (parent_commit && parent_version) {
-                shwrap("""
-                cosa meta \
-                    --set fedora-coreos.parent-commit=${parent_commit} \
-                    --set fedora-coreos.parent-version=${parent_version}
-                """)
-            }
-        }
-
-        def buildID = shwrapCapture("readlink builds/latest")
-        if (prevBuildID == buildID) {
-            currentBuild.result = 'SUCCESS'
-            currentBuild.description = "${build_description} 💤 (no new build)"
-
-            // Nothing changed since the latest build. Check if it's missing
-            // some arches and retrigger `build-arch` only for the missing
-            // arches, and the follow-up `release` job. Match the exact src
-            // config commit that was used. But only do this if there isn't
-            // already outstanding work in progress for that build ID. Skip if
-            // not uploading since it's required for multi-arch.
-            if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
-                def builds = readJSON file: "builds/builds.json"
-                assert buildID == builds.builds[0].id
-                def missing_arches = additional_arches - builds.builds[0].arches
-                if (missing_arches) {
-                    def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
-                    def rev = meta["coreos-assembler.config-gitrev"]
-                    currentBuild.description = "${build_description} 🔨 ${buildID}"
-                    // Run the mArch jobs and wait. We wait here because if they fail
-                    // we don't want to bother running the release job again since the
-                    // goal is to get a complete build.
-                    run_multiarch_jobs(missing_arches, rev, buildID, cosa_img, true)
-                    if (stream_info.type != "production") {
-                        run_release_job(buildID)
+            stage('Build OSTree') {
+                def version_arg = ""
+                if (params.VERSION) {
+                    version_arg = "--version ${params.VERSION}"
+                } else {
+                    if (should_use_versionary()) {
+                        version_arg = "--versionary"
                     }
                 }
+                def force = params.FORCE ? "--force" : ""
+                shwrap("""
+                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
+                """)
             }
 
-            // And we're done!
-            return
+            def buildID = shwrapCapture("readlink builds/latest")
+            if (prevBuildID == buildID) {
+                currentBuild.result = 'SUCCESS'
+                currentBuild.description = "${build_description} 💤 (no new build)"
+
+                // Nothing changed since the latest build. Check if it's missing
+                // some arches and retrigger `build-arch` only for the missing
+                // arches, and the follow-up `release` job. Match the exact src
+                // config commit that was used. But only do this if there isn't
+                // already outstanding work in progress for that build ID. Skip if
+                // not uploading since it's required for multi-arch.
+                if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
+                    def builds = readJSON file: "builds/builds.json"
+                    assert buildID == builds.builds[0].id
+                    def missing_arches = additional_arches - builds.builds[0].arches
+                    if (missing_arches) {
+                        def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
+                        def rev = meta["coreos-assembler.container-config-git"]["commit"]
+                        currentBuild.description = "${build_description} 🔨 ${buildID}"
+                        // Run the mArch jobs and wait. We wait here because if they fail
+                        // we don't want to bother running the release job again since the
+                        // goal is to get a complete build.
+                        run_multiarch_jobs(missing_arches, rev, buildID, import_oci_image, cosa_img, true)
+                        if (stream_info.type != "production") {
+                            run_release_job(buildID)
+                        }
+                    }
+                }
+
+                // And we're done!
+                return
+            }
+            newBuildID = buildID
+        } else {
+            stage("Import OCI image") {
+                echo "Skipping build : Importing OCI : $import_oci_image"
+                shwrap("cosa import docker://${import_oci_image} --skip-prune ${parent_arg}")
+                def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
+                def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
+                if (params.STREAM != oci_stream) {
+                    error("STREAM parameter value does not match the one from the OCI image")
+                }
+                newBuildID = build_meta.buildid
+            }
         }
 
-        newBuildID = buildID
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
+
+        // Insert the parent info into meta.json so we can display it in
+        // the release browser and for sanity checking
+        if (parent_version) {
+            shwrap("""
+            cosa meta --set fedora-coreos.parent-version=${parent_version}
+            """)
+        }
 
         pipeutils.tryWithMessagingCredentials() {
             shwrap("""
@@ -339,21 +372,6 @@ lock(resource: "build-${params.STREAM}") {
                 --build-dir ${BUILDS_BASE_HTTP_URL}/${params.STREAM}/builds/${newBuildID}/${basearch} \
                 --state STARTED
             """)
-        }
-
-        if (uploading) {
-            pipeutils.tryWithMessagingCredentials() {
-                stage('Sign OSTree') {
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa sign --build=${newBuildID} --arch=${basearch} \
-                        robosignatory --s3 ${s3_stream_dir}/builds \
-                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
-                        --extra-fedmsg-keys stream=${params.STREAM} \
-                        --ostree --gpgkeypath /etc/pki/rpm-gpg \
-                        --fedmsg-conf=\${FEDORA_MESSAGING_CONF}
-                    """)
-                }
-            }
         }
 
         // Build QEMU image
@@ -381,12 +399,12 @@ lock(resource: "build-${params.STREAM}") {
         // If desired let's go ahead and archive+fork the multi-arch jobs
         if (params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img, false)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
         }
 
         // Build the remaining artifacts
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
 
             // Stop the build if the kernel + kernel-rt versions do not match.
             // This check runs on x86_64 RHCOS builds only.
@@ -432,7 +450,7 @@ lock(resource: "build-${params.STREAM}") {
         // jobs let's go ahead and do those pieces now
         if (!params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, cosa_img, false)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
         }
 
         stage('Archive') {
@@ -452,22 +470,24 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // These steps interact with Fedora Infrastructure/Releng for
-        // signing of artifacts and importing of OSTree commits. They
-        // must be run after the archive stage because the artifacts
-        // are pulled from their S3 locations. They can be run in
-        // parallel.
+        // signing of artifacts. They must be run after the archive stage
+        // because the artifacts are pulled from their S3 locations.
         if (uploading) {
-            pipeutils.tryWithMessagingCredentials() {
-                def parallelruns = [:]
-                parallelruns['Sign Images'] = {
+            stage('Sign Images') {
+                pipeutils.tryWithMessagingCredentials() {
                     pipeutils.signImages(params.STREAM, newBuildID, basearch, s3_stream_dir)
                 }
-                parallelruns['OSTree Import: Compose Repo'] = {
-                    pipeutils.composeRepoImport(newBuildID, basearch, s3_stream_dir)
-                }
-                // process this batch
-                parallel parallelruns
             }
+        }
+
+        // For now, we auto-release all non-production streams builds. That
+        // way, we can e.g. test testing-devel AMIs easily. NOTE: this
+        // was moved to go before triggering upgrade tests because
+        // the upgrade tests wait for a the release job lock to be
+        // released before continuing so that they can test upgrading
+        // from the actual containers pushed to the registry and signed.
+        if (uploading && stream_info.type != "production") {
+            run_release_job(newBuildID)
         }
 
         // Now that the metadata is uploaded go ahead and kick off some followup tests.
@@ -482,12 +502,6 @@ lock(resource: "build-${params.STREAM}") {
                                                      cosa_img, basearch, src_config_commit)
                 }
             }
-        }
-
-        // For now, we auto-release all non-production streams builds. That
-        // way, we can e.g. test testing-devel AMIs easily.
-        if (uploading && stream_info.type != "production") {
-            run_release_job(newBuildID)
         }
 
         currentBuild.result = 'SUCCESS'
@@ -552,7 +566,7 @@ def archive_ostree(version, basearch, s3_stream_dir) {
     }
 }
 
-def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
+def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
     stage('Fork Multi-Arch Builds') {
         parallel arches.collectEntries{arch -> [arch, {
             // We pass in FORCE=true here since if we got this far we know
@@ -561,7 +575,9 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
             build job: 'build-arch', wait: wait, parameters: [
                 booleanParam(name: 'FORCE', value: true),
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
+                string(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
+                string(name: 'SOURCE_OCI_IMAGE', value: src_oci),
                 string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
                 string(name: 'STREAM', value: params.STREAM),
                 string(name: 'VERSION', value: version),
@@ -575,14 +591,15 @@ def run_multiarch_jobs(arches, src_commit, version, cosa_img, wait) {
 
 def run_release_job(buildID) {
     stage('Publish') {
-        // Since we are only running this stage for non-production (i.e.
-        // mechanical and development) builds we'll default to allowing failures
-        // for additional architectures.
+        // For FCOS development/mechanical builds, we will allow missing architectures for flexibility.
+        // However, for RHCOS, we can keep the default behavior of not allowing missing architectures.
+        def allow_missing = (pipecfg.misc?.allow_missing_architectures_when_autotriggering_release_job) ?: false
+        
         build job: 'release', wait: params.WAIT_FOR_RELEASE_JOB, parameters: [
             string(name: 'STREAM', value: params.STREAM),
             string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
             string(name: 'VERSION', value: buildID),
-            booleanParam(name: 'ALLOW_MISSING_ARCHES', value: true),
+            booleanParam(name: 'ALLOW_MISSING_ARCHES', value: allow_missing),
             booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
             string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
             string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
@@ -599,4 +616,18 @@ def buildid_has_work_pending(buildID, arches) {
         locked = false
     }
     return locked
+}
+
+// A function to tell us if we should use versionary for the
+// build versioning or not. Right now we tightly couple this to
+// if we should build with buildah. So we basically say if build-with-buildah
+// is set then we'll definitely use versionary, which is safe for
+// now because all of FCOS is using build-with-buildah (i.e. using
+// versionary), but we are phasing in build-with-buildah in rhel-coreos-config.
+def should_use_versionary() {
+    if (shwrapRc("source /usr/lib/coreos-assembler/cmdlib.sh; should_build_with_buildah") == 0) {
+        return true
+    } else {
+        return false
+    }
 }

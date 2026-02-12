@@ -1,0 +1,36 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: jenkins-images-template
+objects:
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-agent-base
+    spec:
+      lookupPolicy:
+        local: true
+      tags:
+        - name: upstream
+          from:
+            kind: DockerImage
+            name: registry.redhat.io/ocp-tools-4/jenkins-agent-base-rhel9:v4.17.0
+          importPolicy:
+            scheduled: true
+          referencePolicy:
+            type: Local
+
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: jenkins
+    spec:
+      tags:
+        - name: upstream
+          from:
+            kind: DockerImage
+            name: registry.redhat.io/ocp-tools-4/jenkins-rhel9:v4.17.0
+          importPolicy:
+            scheduled: true
+          referencePolicy:
+            type: Local
