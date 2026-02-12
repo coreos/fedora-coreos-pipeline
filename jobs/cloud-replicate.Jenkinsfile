@@ -28,11 +28,11 @@ properties([
       string(name: 'COREOS_ASSEMBLER_IMAGE',
              description: 'Override coreos-assembler image to use',
              defaultValue: "",
-             trim: true),
-      string(name: 'BOOTIMAGE_BUG_ID',
-       description: 'Optional JIRA Bug ID for triggering bootimage bump job',
-       defaultValue: '',
-       trim: true)
+             trim: true)
+      // string(name: 'BOOTIMAGE_BUG_ID',
+      //  description: 'Optional JIRA Bug ID for triggering bootimage bump job',
+      //  defaultValue: '',
+      //  trim: true)
     ] + pipeutils.add_hotfix_parameters_if_supported()),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -159,14 +159,16 @@ lock(resource: "cloud-replicate-${params.VERSION}") {
             }
         }
 
-        if (params.BOOTIMAGE_BUG_ID?.trim()) {
-            echo "Triggering bootimagebump job with version: ${params.VERSION}"
-            build job: 'bootimagebump', wait: false, parameters: [
-                string(name: 'STREAM', value: params.STREAM),
-                string(name: 'BUILD_VERSION', value: params.VERSION),
-                string(name: 'BOOTIMAGE_BUG_ID', value: params.BOOTIMAGE_BUG_ID)
-            ]
-        }
+        // Commenting out cloud-replicate trigger for bootimagebump
+        // to test the bootimagebump PR creation independently.
+        // if (params.BOOTIMAGE_BUG_ID?.trim()) {
+        //     echo "Triggering bootimagebump job with version: ${params.VERSION}"
+        //     build job: 'bootimagebump', wait: false, parameters: [
+        //         string(name: 'STREAM', value: params.STREAM),
+        //         string(name: 'BUILD_VERSION', value: params.VERSION),
+        //         string(name: 'BOOTIMAGE_BUG_ID', value: params.BOOTIMAGE_BUG_ID)
+        //     ]
+        // }
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✓"
 
