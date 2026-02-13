@@ -161,6 +161,11 @@ lock(resource: "build-node-image") {
                 if (unique_tag != "") {
                     label_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
                 }
+                // Check if extensions/Containerfile exists, otherwise fall back to extensions/Dockerfile
+                // for backwards compatibility with older branches.
+                def raw_url = src_config_url.replace("github.com", "raw.githubusercontent.com")
+                def containerfile_exists = shwrapCapture("curl -sfL ${raw_url}/${commit}/extensions/Containerfile >/dev/null 2>&1 && echo true || echo false").trim() == "true"
+                def extensions_containerfile = containerfile_exists ? "extensions/Containerfile" : "extensions/Dockerfile"
                 extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                src_commit: commit,
                                                src_url: src_config_url,
@@ -171,7 +176,7 @@ lock(resource: "build-node-image") {
                                                from: build_from,
                                                v2s2: v2s2,
                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
-                                                                  "--git-containerfile", "extensions/Dockerfile", "--force",
+                                                                  "--git-containerfile", "${extensions_containerfile}", "--force",
                                                                   "--add-openshift-build-labels"] + label_args)
             }
         }
