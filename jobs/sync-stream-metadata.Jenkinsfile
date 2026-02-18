@@ -65,6 +65,23 @@ cosaPod(serviceAccount: "jenkins") {
                 }
             }
 
+            // Sync browser and graph
+            dir('fedora-coreos-browser') {
+                git(url: 'https://github.com/coreos/fedora-coreos-browser',
+                    branch: 'main', credentialsId: 'github-coreosbot-token-username-password')
+                for (item in ["browser", "graph"]) {
+                    shwrap("aws s3 cp s3://${pipecfg.s3.bucket}/${item} ${item}/index.html")
+                }
+                if (shwrapRc("git diff --exit-code") != 0) {
+                    shwrap("git reset --hard HEAD")
+                    for (item in ["browser", "graph"]) {
+                        shwrap("""
+                            aws s3 cp --acl public-read --cache-control 'max-age=60' \
+                                --content-type text/html ${item}/index.html s3://${pipecfg.s3.bucket}/${item}
+                        """)
+                    }
+                }
+            }
         }
 
         currentBuild.result = 'SUCCESS'
