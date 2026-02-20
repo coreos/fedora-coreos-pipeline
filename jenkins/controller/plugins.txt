@@ -21,18 +21,18 @@
 # [1] https://github.com/openshift/jenkins/blob/master/2/contrib/openshift/bundle-plugins.txt
 # [2] https://github.com/openshift/jenkins/blob/master/2/contrib/openshift/base-plugins.txt
 # [3] https://github.com/openshift/jenkins#plugin-installation-for-centos7-v410
-basic-branch-build-strategies:228.v68c089762a_db_
-generic-webhook-trigger:2.3.1
-github-oauth:621.v33b_4394dda_4d
-kubernetes-credentials-provider:1.281.v331e3f5a_05a_9
+basic-branch-build-strategies:317.v85b_331d6cc42
+generic-webhook-trigger:2.4.1
+github-oauth:685.v53b_070455063
+kubernetes-credentials-provider:1.301.v2eed6d439a_79
 pipeline-github:2.8-162.382498405fdc
-slack:761.v2a_8770f0d169
+slack:795.v4b_9705b_e6d47
 timestamper:1.30
-splunk-devops-extend:1.11.0
-splunk-devops:1.11.0
+splunk-devops-extend:1.11.1
+splunk-devops:1.11.1
 antisamy-markup-formatter:173.v680e3a_b_69ff3
 jms-messaging:1.1.28
-pipeline-graph-view:584.v32e797f976a_2
+pipeline-graph-view:772.vb_b_19985c0b_8b_
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
