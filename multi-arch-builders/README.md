@@ -127,13 +127,10 @@ ibmcloud plugin install infrastructure-service
 ibmcloud login --sso
 ```
 
-Create the Ignition config in a separate terminal and copy it into the
-container where ibmcloud is running:
+Grab the Butane config:
 
 ```bash
-cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat coreos-s390x-builder.bu | butane --pretty --strict --files-dir=. > coreos-s390x-builder.ign
-podman cp coreos-s390x-builder.ign ibmcloud:/root/coreos-s390x-builder.ign
+curl -O https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-s390x-builder.bu
 ```
 
 We've occasionally seen some failures and/or capacity issues so we'll
@@ -162,7 +159,7 @@ NAME="coreos-s390x-builder-$(date +%Y%m%d)"
 PROFILE='bz2-8x32'
 ibmcloud is instance-create $NAME $VPC $ZONE $PROFILE $SUBNET --output json --image-id $IMAGE \
      --boot-volume '{"name": "my-boot-vol-1", "volume": {"capacity": 200, "profile": {"name": "general-purpose"}}}' \
-     --sgs $SG --user-data @coreos-s390x-builder.ign > out.json
+     --sgs $SG --user-data @coreos-s390x-builder.bu > out.json
 ```
 
 
