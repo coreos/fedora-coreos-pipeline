@@ -14,8 +14,8 @@ streams:
     type: development
     # Stop building with Konflux, see https://github.com/coreos/fedora-coreos-tracker/issues/2105
     konflux_driven: false
-  #branched:
-  #  type: development
+  branched:
+    type: development
 
 additional_arches: [aarch64, ppc64le, s390x]
 
