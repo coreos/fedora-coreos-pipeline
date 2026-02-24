@@ -204,6 +204,8 @@ lock(resource: "build-tec") {
         }
 
         // Phase 2: Clean cache and build QEMU/KubeVirt with standard attester
+        // COMMENTED OUT FOR TESTING - Uncomment after Azure testing is complete
+        /*
         stage('Clean Cache for QEMU/KubeVirt Build') {
             shwrap("""
             # Clean builds and cache to avoid Build ID conflict
@@ -269,6 +271,7 @@ lock(resource: "build-tec") {
                 echo "Uploaded QEMU/KubeVirt artifacts to s3://${s3_stream_dir}/builds"
             }
         }
+        */
 
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✅"
