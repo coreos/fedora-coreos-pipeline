@@ -95,7 +95,7 @@ storage:
           Description=Prune Dangling and Expired Container Resources
           [Service]
           Type=oneshot
-          ExecStart=podman container prune --force
+          ExecStart=podman container prune --force --filter until=1h
           ExecStart=podman volume prune --force --filter="label!=persistent"
           ExecStart=podman image prune --force
           ExecStart=podman image prune --all --external --force --filter until=48h
