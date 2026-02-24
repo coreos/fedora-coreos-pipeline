@@ -36,21 +36,24 @@ properties([
 def base_image = ""
 def coreos_osname = ""
 def coreos_config_repo = ""
-def kbc_img = ""
+def kbc_img_standard = ""
+def kbc_img_without_tpm = ""
 def clevis_pin_img = ""
 def ignition_img = ""
 if (params.COREOS_TYPE == "fedora-coreos") {
     base_image = "quay.io/trusted-execution-clusters/fedora-coreos@sha256:6997f51fd27d1be1b5fc2e6cc3ebf16c17eb94d819b5d44ea8d6cf5f826ee773"
     coreos_osname = "fedora-coreos"
     coreos_config_repo = "https://github.com/coreos/fedora-coreos-config.git"
-    kbc_img = "quay.io/trusted-execution-clusters/trustee-attester:fedora-22434de"
+    kbc_img_standard = "quay.io/trusted-execution-clusters/trustee-attester:fedora-standard-ea582b3"
+    kbc_img_without_tpm = "quay.io/trusted-execution-clusters/trustee-attester:fedora-without-tpm-ea582b3"
     clevis_pin_img = "quay.io/trusted-execution-clusters/clevis-pin-trustee:fedora-75015a5"
     ignition_img = "quay.io/trusted-execution-clusters/ignition:fedora-5a45ee84"
 } else if (params.COREOS_TYPE == "redhat-coreos") {
     base_image = "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:905508f17491d092ce5c81283cac740bb7616d2dcf1947c883849a3a76cf9c4f"
     coreos_osname = "rhcos"
     coreos_config_repo = "https://github.com/coreos/fedora-coreos-config.git"
-    kbc_img = "quay.io/trusted-execution-clusters/trustee-attester:centos-stream-22434de"
+    kbc_img_standard = "quay.io/trusted-execution-clusters/trustee-attester:centos-stream-standard-ea582b3"
+    kbc_img_without_tpm = "quay.io/trusted-execution-clusters/trustee-attester:centos-stream-without-tpm-ea582b3"
     clevis_pin_img = "quay.io/trusted-execution-clusters/clevis-pin-trustee:centos-stream-75015a5"
     ignition_img = "quay.io/trusted-execution-clusters/ignition:centos-stream-5a45ee84"
 }
@@ -88,48 +91,59 @@ lock(resource: "build-tec") {
         currentBuild.description = "${build_description} Running"
         echo "Source commit: ${src_commit}"
 
-        def image_name = "build-image"
-        def image_tag = "latest"
-        def tarball = "build-image.tar"
+        // Define a closure to build and import a container with specific KBC image
+        def buildAndImportContainer = { kbc_img, variant_name ->
+            def image_name = "build-image"
+            def image_tag = "${variant_name}"
+            def tarball = "build-image-${variant_name}.tar"
 
-        stage('Clone Repository') {
-            shwrap("""
-            git clone ${params.CONTAINERFILE_REPO} src-repo
-            cd src-repo
-            git checkout ${params.CONTAINERFILE_REF}
-            """)
-        }
-
-        stage('Build Container') {
-            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
-                    // Build using podman on remote x86_64 builder
-                    // Sync credentials to remote session for pulling base images
-                    utils.syncCredentialsIfInRemoteSession(["REGISTRY_AUTH_FILE"])
-                    shwrap("""
-                    cd src-repo/coreos
-                    podman build \
-                        --build-arg BASE=${base_image} \
-                        --build-arg COM_COREOS_OSNAME=${coreos_osname} \
-                        --build-arg KBC_IMG=${kbc_img} \
-                        --build-arg CLEVIS_PIN_IMG=${clevis_pin_img} \
-                        --build-arg IGNITION_IMG=${ignition_img} \
-                        -f Containerfile \
-                        -t ${image_name}:${image_tag} \
-                        .
-                    """)
+            stage("Build Container (${variant_name})") {
+                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                    pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
+                        // Build using podman on remote x86_64 builder
+                        // Sync credentials to remote session for pulling base images
+                        utils.syncCredentialsIfInRemoteSession(["REGISTRY_AUTH_FILE"])
+                        shwrap("""
+                        # Clone repository if not already present
+                        if [ ! -d src-repo ]; then
+                            git clone ${params.CONTAINERFILE_REPO} src-repo
+                            cd src-repo
+                            git checkout ${params.CONTAINERFILE_REF}
+                        else
+                            cd src-repo
+                            git fetch origin
+                            git checkout ${params.CONTAINERFILE_REF}
+                        fi
+                        cd coreos
+                        podman build \
+                            --build-arg BASE=${base_image} \
+                            --build-arg COM_COREOS_OSNAME=${coreos_osname} \
+                            --build-arg KBC_IMG=${kbc_img} \
+                            --build-arg CLEVIS_PIN_IMG=${clevis_pin_img} \
+                            --build-arg IGNITION_IMG=${ignition_img} \
+                            -f Containerfile \
+                            -t ${image_name}:${image_tag} \
+                            .
+                        """)
+                    }
                 }
+                echo "Built container: ${image_name}:${image_tag} with KBC image ${kbc_img}"
             }
 
-            echo "Built container: ${image_name}:${image_tag} with base ${base_image}"
-        }
-
-        stage('Save Container Image') {
-            pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
-                // Save the remote image to a local OCI archive tarball
-                shwrap("podman save --format oci-archive ${image_name}:${image_tag} -o ${tarball}")
+            stage("Save Container Image (${variant_name})") {
+                pipeutils.withPodmanRemoteArchBuilder(arch: "x86_64") {
+                    // Save the remote image to a local OCI archive tarball
+                    shwrap("podman save --format oci-archive ${image_name}:${image_tag} -o ${tarball}")
+                }
+                echo "Saved container image to ${tarball}"
             }
-            echo "Saved container image to ${tarball}"
+
+            stage("Import Container Image (${variant_name})") {
+                shwrap("""
+                cosa import oci-archive:${tarball}
+                """)
+                echo "Imported container image from ${tarball}"
+            }
         }
 
         stage('Initialize CoreOS Config') {
@@ -139,12 +153,9 @@ lock(resource: "build-tec") {
             echo "Initialized CoreOS configuration from ${coreos_config_repo}"
         }
 
-        stage('Import Container Image') {
-            shwrap("""
-            cosa import oci-archive:${tarball}
-            """)
-            echo "Imported container image from ${tarball}"
-        }
+        // Phase 1: Build Azure with without-tpm attester
+        // Build and import container with without-tpm attester for Azure
+        buildAndImportContainer(kbc_img_without_tpm, "without-tpm")
 
         stage('Build Azure Image') {
             shwrap("""
@@ -179,6 +190,32 @@ lock(resource: "build-tec") {
             """)
             echo "Compressed Azure artifact with xz"
         }
+
+        if (uploading) {
+            stage('Upload Azure to S3') {
+                def acl = pipecfg.s3.acl ?: 'public-read'
+                pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                cosa buildupload --skip-builds-json s3 \
+                    --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
+                    --acl=${acl} ${s3_stream_dir}/builds
+                """)
+                echo "Uploaded Azure artifacts to s3://${s3_stream_dir}/builds"
+            }
+        }
+
+        // Phase 2: Clean cache and build QEMU/KubeVirt with standard attester
+        stage('Clean Cache for QEMU/KubeVirt Build') {
+            shwrap("""
+            # Clean builds and cache to avoid Build ID conflict
+            rm -rf builds/* tmp/* cache/*
+            # Re-initialize CoreOS config
+            cosa init --force ${coreos_config_repo}
+            """)
+            echo "Cleaned cache and re-initialized for QEMU/KubeVirt build"
+        }
+
+        // Build and import container with standard attester for QEMU and KubeVirt
+        buildAndImportContainer(kbc_img_standard, "standard")
 
         stage('Build QEMU Image') {
             shwrap("""
@@ -221,16 +258,15 @@ lock(resource: "build-tec") {
             echo "Built KubeVirt image"
         }
 
-
         if (uploading) {
-            stage('Upload to S3') {
+            stage('Upload QEMU/KubeVirt to S3') {
                 def acl = pipecfg.s3.acl ?: 'public-read'
                 pipeutils.shwrapWithAWSBuildUploadCredentials("""
                 cosa buildupload --skip-builds-json s3 \
                     --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} \
                     --acl=${acl} ${s3_stream_dir}/builds
                 """)
-                echo "Uploaded artifacts to s3://${s3_stream_dir}/builds"
+                echo "Uploaded QEMU/KubeVirt artifacts to s3://${s3_stream_dir}/builds"
             }
         }
 
