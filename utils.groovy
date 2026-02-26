@@ -324,17 +324,6 @@ def triggered_by_push() {
     return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
 }
 
-// Runs closure if credentials exist or not.
-def tryWithOrWithoutCredentials(creds, Closure body) {
-    try {
-        withCredentials(creds) {
-            body()
-        }
-    } catch (CredentialNotFoundException e) {
-        body()
-    }
-}
-
 // Runs closure if the fedmsg credentials exist, otherwise gracefully return.
 def tryWithMessagingCredentials(Closure body) {
     // Here we need to use `dockerCert`, which was renamed to
