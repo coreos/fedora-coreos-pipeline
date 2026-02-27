@@ -376,6 +376,22 @@ follows:
 - Content Type: `application/json`
 - Secret: Use the secret text from the GitHub webhook shared secret above
 
+### [OPTIONAL] Create pull secrets (if pulling from authenticated registry for builds)
+
+See Bitwarden. To create it use:
+
+```
+oc create secret generic bootc-builder-img-pull-registry-secret \
+    --from-literal=filename=dockercfg \
+    --from-file=data=bootc-builder-img-pull-registry-secret
+oc label secret/bootc-builder-img-pull-registry-secret \
+    jenkins.io/credentials-type=secretFile
+oc annotate secret/bootc-builder-img-pull-registry-secret \
+    jenkins.io/credentials-description="Pull secret for bootc builder image container"
+oc annotate secret/bootc-builder-img-pull-registry-secret \
+    pipeline="CoreOS Pipeline"
+```
+
 ### [PROD] Create OSContainer image push secret
 
 This secret is used to push the oscontainer and others to Quay.io.

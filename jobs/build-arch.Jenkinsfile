@@ -266,9 +266,16 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             stage('Build OSTree') {
                 def version_arg = "--version ${params.VERSION}"
                 def force = params.FORCE ? "--force" : ""
-                shwrap("""
-                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
-                """)
+                // Downstream we need a pull secret to pull the boot
+                // builder image from either registry.stage.redhat.io
+                // or registry.redhat.io.
+                pipeutils.withOptionalRegistryPullCredential([file(variable: 'REGISTRY_AUTH_FILE',
+                                                             credentialsId: 'bootc-builder-img-pull-registry-secret')]) {
+                    shwrap("""
+                    cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE} \
+                        cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
+                    """)
+                }
             }
         } else {
             stage("Import OCI image") {

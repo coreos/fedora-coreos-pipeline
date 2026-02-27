@@ -319,6 +319,18 @@ def withOptionalExistingCosaRemoteSession(params = [:], Closure body) {
     }
 }
 
+// Runs closure if credentials exist or not.
+def withOptionalRegistryPullCredential(creds, Closure body) {
+    try {
+        withCredentials(creds) {
+            utils.syncCredentialsIfInRemoteSession(['REGISTRY_AUTH_FILE'])
+            body()
+        }
+    } catch (CredentialNotFoundException e) {
+        body()
+    }
+}
+
 // Returns true if the build was triggered by a push notification.
 def triggered_by_push() {
     return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
