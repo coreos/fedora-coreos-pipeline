@@ -264,10 +264,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
 
             stage('Build OSTree') {
-                def version = "--version ${params.VERSION}"
+                def version_arg = "--version ${params.VERSION}"
                 def force = params.FORCE ? "--force" : ""
                 shwrap("""
-                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version} ${parent_arg}
+                cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
                 """)
             }
         } else {
