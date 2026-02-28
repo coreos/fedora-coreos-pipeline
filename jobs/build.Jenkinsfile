@@ -310,7 +310,7 @@ lock(resource: "build-${params.STREAM}") {
                 pipeutils.withOptionalRegistryPullCredential([file(variable: 'REGISTRY_AUTH_FILE',
                                                              credentialsId: 'bootc-builder-img-pull-registry-secret')]) {
                     shwrap("""
-                    cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE} \
+                    cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE:-} \
                         cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
                     """)
                 }
