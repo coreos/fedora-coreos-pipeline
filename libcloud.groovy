@@ -80,7 +80,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                     "us-west-2"
                 ]
                 def aws_regions_arg = aws_regions.join(" ")
-                extraArgs += "--regions=${aws_regions_arg}"
+                extraArgs += "--regions ${aws_regions_arg}"
             }
             shwrap("""
             cosa aws-replicate \
