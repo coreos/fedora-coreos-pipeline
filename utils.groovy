@@ -575,10 +575,16 @@ def get_registry_repos(pipecfg, stream, version) {
 }
 
 def get_ocp_node_registry_repo(pipecfg, release, timestamp) {
-    def staging_repo = pipecfg.ocp_node_builds.registries.staging.image
-    def staging_manifest_tags = pipecfg.ocp_node_builds.registries.staging.tags
-    def prod_repo = pipecfg.ocp_node_builds.registries.prod.image
-    def prod_tags = pipecfg.ocp_node_builds.registries.prod.tags
+    def cfg = pipecfg.ocp_node_builds
+
+    if (pipecfg.streams?."${release}"?.registries) {
+        cfg = pipecfg.streams["${release}"]
+    }
+    def staging_repo = cfg.registries.staging.image
+    def staging_manifest_tags = cfg.registries.staging.tags
+    def prod_repo = cfg.registries.prod.image
+    def prod_tags = cfg.registries.prod.tags
+
     def processTags = { tagList ->
         tagList.collect { tag ->
             def substituted = utils.substituteStr(tag, [RELEASE: release, TIMESTAMP: timestamp])
