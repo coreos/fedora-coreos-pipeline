@@ -65,6 +65,10 @@ streams:
       # OPTIONAL: make the release job trigger build-node-image for the
       # following OCP releases once successful
       build_node_images: ["4.19-9.6"]
+      # OPTIONAL: The pull secret to use while doing the initial container build
+      # for a given stream. This corresponds to a kubernetes secret in the cluster
+      # which is mapped into Jenkins.
+      builder_pull_secret: 'bootc-builder-img-pull-registry-secret'
     stable:
       type: production
       # OPTIONAL: override cosa image to use for this stream
@@ -304,6 +308,10 @@ misc:
   # OPTIONAL: whether to allow the pipeline to skip building untested
   #           artifacts on CI (development/mechanical) runs
   allow_skip_of_untested_artifacts: true
+  # OPTIONAL: The default pull secret to use while doing the initial container
+  # build. This corresponds to a kubernetes secret in the cluster which is mapped
+  # into Jenkins.
+  builder_pull_secret: 'bootc-builder-img-pull-registry-secret'
 
 # OPTIONAL: Node image keys
 ocp_node_builds:
