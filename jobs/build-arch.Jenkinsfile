@@ -269,8 +269,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 // Downstream we need a pull secret to pull the boot
                 // builder image from either registry.stage.redhat.io
                 // or registry.redhat.io.
+                def pull_secret_name = stream_info.get('builder_pull_secret') ?: pipecfg.misc?.builder_pull_secret ?: ""
                 pipeutils.withOptionalRegistryPullCredential([file(variable: 'REGISTRY_AUTH_FILE',
-                                                             credentialsId: 'bootc-builder-img-pull-registry-secret')]) {
+                                                                   credentialsId: pull_secret_name)]) {
                     shwrap("""
                     cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE:-} \
                         cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
