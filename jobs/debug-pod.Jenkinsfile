@@ -23,7 +23,7 @@ properties([
       string(name: 'TIMEOUT',
              description: 'Timeout value (in hours)',
              defaultValue: "8",
-             trim: true),  
+             trim: true),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '15',
@@ -32,7 +32,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-// Retrieve the username logged in from Jenkins 
+// Retrieve the username logged in from Jenkins
 def userName = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]?.userName
 def build_description = "[${userName}][${params.STREAM}][${params.ARCH}]"
 
@@ -133,9 +133,9 @@ cosaPod(cpu: "${ncpus}",
         }
 
         currentBuild.description = "${build_description} Ready"
-        
-        stage('Sleep') {        
-            shwrap("sleep infinity")    
+
+        stage('Sleep') {
+            shwrap("sleep infinity")
         }
 
         } // end withEnv
@@ -145,5 +145,5 @@ cosaPod(cpu: "${ncpus}",
 } catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
-} 
+}
 }}
