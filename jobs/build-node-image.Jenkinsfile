@@ -229,13 +229,6 @@ lock(resource: "build-node-image") {
                                 skipUpgrade: true,
                                 extraArgs: "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
                             )
-                            kola(
-                                cosaDir: WORKSPACE,
-                                build: build_id,
-                                arch: arch,
-                                skipUpgrade: true,
-                                extraArgs: "-b rhcos --tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
-                            )
                         }
 
                         // Conditional execution based on architecture
