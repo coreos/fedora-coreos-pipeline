@@ -33,6 +33,7 @@ passwd:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakoRGbYQ3LWiZbI7QsyUse3Yn1N/+jdmPvPIUoSlMA afrosi@redhat.com
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPPNI6DP+fuWig4nxs80r/YXA1oqS7cFNulWLjKQe8C6 hhei@redhat
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE5h253p77Ez3dboIen2BBM2r5z4QN3/bLUVRySWiJn0 jcapitao@redhat
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6kvsQxj3uUpKpxB/T4gAjPNF+GKKjF8u3Hcf3JT8QA rolv@fedora
 kernel_arguments:
   should_exist:
     - mitigations=off
