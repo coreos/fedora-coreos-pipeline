@@ -96,17 +96,15 @@ To create the Ignition config for this machine:
 ```bash
 cat builder-common.bu | butane --pretty --strict > builder-common.ign
 cat coreos-ppc64le-builder.bu | butane --pretty --strict --files-dir=. > coreos-ppc64le-builder.ign
+cat coreos-ppc64le-fcos-builder.bu | butane --pretty --strict --files-dir=. > coreos-ppc64le-fcos-builder.ign
 ```
 
 To connect to this machine first add 
 [custom ssh configuration](https://docs.fedoraproject.org/en-US/infra/sysadmin_guide/sshaccess/#_ssh_configuration)
 for connecting to machines via Fedora bastion hosts.
 
-When done, tweak the list of `10.3.*` addresses in the list to include
-`10.3.171.*`. Then you should be able to connect:
-
 ```
-ssh core@10.3.171.40
+ssh core@10.16.171.40
 ```
 
 

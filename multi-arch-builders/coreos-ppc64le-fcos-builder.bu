@@ -1,0 +1,34 @@
+# This butane config will do the following:
+#
+# - Merge in the coreos-ppc64le-builder.ign Ignition file
+# - Add static networking info specific to the fcos ppc64le builder
+#
+variant: fcos
+version: 1.6.0
+ignition:
+  config:
+    merge:
+      - local: coreos-ppc64le-builder.ign
+kernel_arguments:
+  should_exist:
+    - net.ifnames=0
+storage:
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: buildvm-ppc64le-fcos01.rdu3.fedoraproject.org
+    - path: /etc/NetworkManager/system-connections/eth0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=eth0
+          type=ethernet
+          interface-name=eth0
+          [ipv4]
+          address1=10.16.171.40/24,10.16.171.254
+          dns=10.16.163.33;10.16.163.34;
+          dns-search=
+          may-fail=false
+          method=manual
