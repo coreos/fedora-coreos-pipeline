@@ -1,7 +1,8 @@
 # This butane config will do the following:
 #
 # - Merge in the coreos-ppc64le-builder.ign Ignition file
-# - Add static networking info specific to the fcos ppc64le builder
+# - Add bond + DHCP configuration specific to the fcos ppc64le builder
+#     - We have two NICs and must be on 711 vlan (builder network)
 #
 variant: fcos
 version: 1.6.0
@@ -14,21 +15,56 @@ kernel_arguments:
     - net.ifnames=0
 storage:
   files:
-    - path: /etc/hostname
-      mode: 0644
-      contents:
-        inline: buildvm-ppc64le-fcos01.rdu3.fedoraproject.org
-    - path: /etc/NetworkManager/system-connections/eth0.nmconnection
+    - path: /etc/NetworkManager/system-connections/bond0.711.nmconnection
       mode: 0600
       contents:
         inline: |
           [connection]
-          id=eth0
-          type=ethernet
-          interface-name=eth0
+          id=bond0.711
+          type=vlan
+          interface-name=bond0.711
+          [vlan]
+          egress-priority-map=
+          flags=1
+          id=711
+          ingress-priority-map=
+          parent=bond0
           [ipv4]
-          address1=10.16.171.40/24,10.16.171.254
-          dns=10.16.163.33;10.16.163.34;
           dns-search=
           may-fail=false
-          method=manual
+          method=auto
+    - path: /etc/NetworkManager/system-connections/bond0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0
+          type=bond
+          interface-name=bond0
+          [bond]
+          miimon=100
+          mode=active-backup
+          [ipv4]
+          method=disabled
+          [ipv6]
+          method=disabled
+    - path: /etc/NetworkManager/system-connections/bond0-slave-eth0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0-slave-eth0
+          type=ethernet
+          interface-name=eth0
+          master=bond0
+          slave-type=bond
+    - path: /etc/NetworkManager/system-connections/bond0-slave-eth1.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0-slave-eth1
+          type=ethernet
+          interface-name=eth1
+          master=bond0
+          slave-type=bond
