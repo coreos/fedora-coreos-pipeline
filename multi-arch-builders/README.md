@@ -104,7 +104,7 @@ To connect to this machine first add
 for connecting to machines via Fedora bastion hosts.
 
 ```
-ssh core@10.16.171.40
+ssh core@10.16.171.35
 ```
 
 
