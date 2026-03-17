@@ -161,7 +161,7 @@ lock(resource: "build-node-image") {
             }
         }
 
-        if (stream_info.extensions) {
+        if (stream_info.extensions != false) {
             stage('Build Extensions Image') {
                 withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                     // Use the node image as from
@@ -196,7 +196,7 @@ lock(resource: "build-node-image") {
                 }
             }
         }
-        if (stream_info.run_test) {
+        if (stream_info.run_test != false) {
             stage("Run Tests") {
                 withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                     def openshift_stream = params.RELEASE.split("-")[0]
