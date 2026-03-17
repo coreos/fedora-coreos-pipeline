@@ -93,7 +93,11 @@ lock(resource: "build-node-image") {
         // Get the list of requested architectures to build for
         def allowed_arches = (pipecfg.ocp_node_builds.release[params.RELEASE]?.arches ?: []) as Set
         def requested_arches = params.ARCHES.split() as Set
-        def arches = requested_arches.intersect(allowed_arches)
+        // Use requested_arches if allowed_arches is []
+        def arches = allowed_arches
+            ? requested_arches.intersect(allowed_arches)
+            : requested_arches
+        assert arches : "No valid architectures selected! Allowed: ${allowed_arches}, Requested: ${requested_arches}"
 
         def archinfo = arches.collectEntries{[it, [:]]}
         def now = java.time.LocalDateTime.now()
