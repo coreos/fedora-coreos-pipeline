@@ -287,7 +287,7 @@ lock(resource: "build-node-image") {
                 // Skopeo does not support pushing multiple tags at the same time
                 // So we just recopy the same image multiple times.
                 // https://github.com/containers/skopeo/issues/513
-                if (stream_info.extensions) {
+                if (stream_info.extensions != false) {
                     for (tag in registry_prod_tags) {
                         pipeutils.copy_image("${registry_staging_repo}@${extensions_image_manifest_digest}",
                                          "${registry_prod_repo}:${tag}-extensions")
