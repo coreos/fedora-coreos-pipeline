@@ -240,10 +240,12 @@ clouds:
     storage_account: fedoracoreos
     storage_container: fedora-coreos-image-blobs
     # REQUIRED (if Azure kola test credentials provided): resource group, storage
-    # account, and storage container to use for kola tests
+    # account, storage container, gallery, and coreos gallery profile to use for kola tests
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
     test_storage_container: fedora-coreos-testing-image-blobs
+    test_gallery: fedoracoreostestinggallery
+    test_coreos_gallery_profile: fedora-community
     # OPTIONAL: list of architectures to limit cloud testing to.
     test_architectures: [x86_64]
   gcp:

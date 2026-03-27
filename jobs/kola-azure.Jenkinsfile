@@ -83,8 +83,9 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     """)
                 }
 
-                // Use a consistent image name for this stream in case it gets left behind
-                azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}.vhd"
+                // Use consistent blob and image names for this stream in case it gets left behind
+                azure_image_name = "kola-fedora-coreos-${params.STREAM}-${params.ARCH}"
+                azure_blob_name = azure_image_name + ".vhd"
             }
         }
 
@@ -93,10 +94,12 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 string(variable: 'AZURE_KOLA_MANAGED_IDENTITY', credentialsId: 'azure-kola-managed-identity')
             ]) {
 
+            def galleryImageVersionId
             def azure_testing_resource_group = pipecfg.clouds?.azure?.test_resource_group
             def azure_testing_storage_account = pipecfg.clouds?.azure?.test_storage_account
             def azure_testing_storage_container = pipecfg.clouds?.azure?.test_storage_container
             def azure_testing_gallery = pipecfg.clouds?.azure?.test_gallery
+            def azure_coreos_gallery_profile = pipecfg.clouds?.azure?.test_coreos_gallery_profile
 
             stage('Upload/Create Image') {
                 // Create the image in Azure
@@ -107,14 +110,16 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
                     --gallery-name $azure_testing_gallery               \
-                    --gallery-image-name $azure_image_name
+                    --gallery-image-name $azure_image_name              \
+                    --version $params.VERSION                           \
+                    --coreos-gallery-profile $azure_coreos_gallery_profile
                 ore azure delete-blob --log-level=INFO                  \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
                     --storage-account $azure_testing_storage_account    \
                     --container $azure_testing_storage_container        \
-                    --blob-name $azure_image_name
+                    --blob-name $azure_blob_name
                 # Then create them fresh
                 ore azure upload-blob --log-level=INFO                  \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
@@ -122,21 +127,30 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     --resource-group $azure_testing_resource_group      \
                     --storage-account $azure_testing_storage_account    \
                     --container $azure_testing_storage_container        \
-                    --blob-name $azure_image_name                       \
+                    --blob-name $azure_blob_name                        \
                     --file ${azure_image_filepath}
-                # Create a fresh gallery image. Note that this will
-                # create the testing gallery if it does not exist, but
-                # it will be a no-op on gallery creation given the
-                # gallery exists in the specified region.
-                ore azure create-gallery-image --log-level=INFO         \
-                    --arch $params.ARCH                                 \
-                    --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
-                    --azure-location $region                            \
-                    --resource-group $azure_testing_resource_group      \
-                    --gallery-name $azure_testing_gallery               \
-                    --gallery-image-name $azure_image_name              \
-                    --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_image_name}"
                 """)
+
+                  def output = shwrapCapture("""
+                  ore azure create-gallery-image --log-level=INFO            \
+                      --arch $params.ARCH                                    \
+                      --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}        \
+                      --azure-location $region                               \
+                      --resource-group $azure_testing_resource_group         \
+                      --gallery-name $azure_testing_gallery                  \
+                      --gallery-image-name $azure_image_name                 \
+                      --coreos-gallery-profile $azure_coreos_gallery_profile \
+                      --version $params.VERSION                              \
+                      --image-blob "https://${azure_testing_storage_account}.blob.core.windows.net/${azure_testing_storage_container}/${azure_blob_name}"
+                  """).trim()
+                  
+                  // Grab the newly created Gallery Image ID from the output of `ore azure create-gallery-image`
+                  def jsonLine = output.readLines().reverse().find { it.trim().startsWith('{') }
+                  if (!jsonLine) {
+                      error("Failed to find JSON output from ore azure create-gallery-image")
+                  }
+                  def galleryImage = readJSON(text: jsonLine)
+                  galleryImageVersionId = galleryImage.ID
             }
 
             // Since we don't have permanent images uploaded to Azure we'll
@@ -152,7 +166,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                          --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                          --azure-location $region                            \
                          --azure-managed-identity \${AZURE_KOLA_MANAGED_IDENTITY}   \
-                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0""")
+                         --azure-disk-uri $galleryImageVersionId """)
             } finally {
                 parallel "Delete Image": {
                     // Delete the image in Azure
@@ -162,7 +176,9 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                         --azure-location $region                            \
                         --resource-group $azure_testing_resource_group      \
                         --gallery-name $azure_testing_gallery               \
-                        --gallery-image-name $azure_image_name
+                        --gallery-image-name $azure_image_name              \
+                        --version $params.VERSION                           \
+                        --coreos-gallery-profile $azure_coreos_gallery_profile
                     ore azure delete-blob --log-level=INFO                  \
                         --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                         --azure-location $region                            \
