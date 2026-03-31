@@ -31,6 +31,10 @@ properties([
              description: 'The exact config repo git commit to run tests against',
              defaultValue: '',
              trim: true),
+      string(name: 'GCP_ZONE',
+             description: 'The GCP zone to be used',
+             defaultValue: 'us-central1-b',
+             trim: true),
     ]),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -83,6 +87,7 @@ cosaPod(memory: "512Mi", kvm: false,
                     skipKolaTags: stream_info.skip_kola_tags,
                     platformArgs: """-p=gcp \
                         --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                        --gcp-zone=${params.GCP_ZONE} \
                         --gcp-project=${gcp_project}""")
             }
             if (params.ARCH == "x86_64") {
@@ -105,6 +110,7 @@ cosaPod(memory: "512Mi", kvm: false,
                         marker: "confidential-snp",
                         platformArgs: """-p=gcp \
                             --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                            --gcp-zone=${params.GCP_ZONE} \
                             --gcp-project=${gcp_project} \
                             --gcp-confidential-type sev_snp""")
                 }
@@ -123,6 +129,7 @@ cosaPod(memory: "512Mi", kvm: false,
                         marker: "confidential-tdx",
                         platformArgs: """-p=gcp \
                             --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
+                            --gcp-zone=${params.GCP_ZONE} \
                             --gcp-project=${gcp_project} \
                             --gcp-confidential-type tdx""")
                 }
