@@ -128,7 +128,8 @@ lock(resource: "bump-lockfile") {
                     new_builder_img="${builder_img_repo}@sha256:${latest_sha256sum_id}"
                     sed -i "s|^BUILDER_IMG=.*|BUILDER_IMG=${new_builder_img}|" src/config/build-args.conf
                 ''')
-                if (shwrapRc("git -C src/config diff --exit-code src/config/build-args.conf") != 0) {
+                if (shwrapCapture("git -C src/config diff build-args.conf") != "") {
+                    println("There is an update for the bootc base image!")
                     haveChanges = true
                 }
             }
@@ -198,7 +199,14 @@ lock(resource: "bump-lockfile") {
             archinfo[arch]['newPkgChecksum'] = pkgChecksum
             archinfo[arch]['newPkgTimestamp'] = pkgTimestamp
 
+            println("${lockfile}: previous package checksum: ${archinfo[arch]['prevPkgChecksum']}")
+            println("${lockfile}: new package checksum:      ${archinfo[arch]['newPkgChecksum']}")
+
+            println("${lockfile}: previous timestamp: ${archinfo[arch]['prevPkgTimestamp']}")
+            println("${lockfile}: new timestamp:      ${archinfo[arch]['newPkgTimestamp']}")
+
             if (archinfo[arch]['newPkgChecksum'] != archinfo[arch]['prevPkgChecksum']) {
+                println("${lockfile} has package updates")
                 haveChanges = true
             }
             if ((archinfo[arch]['newPkgTimestamp'] - archinfo[arch]['prevPkgTimestamp']) > (2*24*60*60)) {
