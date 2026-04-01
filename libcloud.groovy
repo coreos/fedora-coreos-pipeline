@@ -43,7 +43,7 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                 extraArgs += "--winli"
             }
             if (c.primary_region == "us-east-1") {
-                // Exclude "me-central-1" due to AWS outage
+                // Exclude "me-central-1" and "me-south-1" due to AWS outages
                 def aws_regions = [
                     "af-south-1",
                     "ap-east-1",
@@ -71,7 +71,6 @@ def replicate_to_clouds(pipecfg, basearch, buildID, stream) {
                     "eu-west-2",
                     "eu-west-3",
                     "il-central-1",
-                    "me-south-1",
                     "mx-central-1",
                     "sa-east-1",
                     "us-east-1",
