@@ -220,7 +220,7 @@ The Pipelines-as-Code (PAC) definitions are stored alongside the FCOS configurat
 
 **Location**: [`.tekton/`](https://github.com/coreos/fedora-coreos-config/tree/testing-devel/.tekton)
 
-**Base PipelineRun**: [`base/base/fedora-coreos.yaml`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/.tekton/base/base/fedora-coreos.yaml)
+**Jinja2 Template**: [`templates/pipelinerun.yaml.j2`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/.tekton/templates/pipelinerun.yaml.j2)
 
 > [!TIP]
 > `PipelineRun` resources are Pipelines-as-Code (PAC) components that define
@@ -248,21 +248,16 @@ These Tekton artifacts (bundles) are built and pushed to
 ├── README.md
 ├── trigger                         # Trigger file (see "Trigger File Mechanism" below)
 ├── trigger-file-comment
-├── base/                           # Base templates (shared across streams)
-│   ├── kustomization.yaml
-│   ├── base/
-│   │   └── fedora-coreos.yaml     # Main PipelineRun template
+├── templates/                      # Jinja2 templates and configuration
+│   ├── pipelinerun.yaml.j2        # Jinja2 template for PipelineRun
+│   └── streams.yaml               # Stream definitions and settings
+├── testing-devel/                  # Generated PipelineRun files
 │   ├── on-push/
-│   │   └── kustomization.yaml     # Push event overlay
+│   │   └── fedora-coreos-testing-devel-on-push.yaml
 │   ├── on-pull-request/
-│   │   └── kustomization.yaml     # PR event overlay
+│   │   └── fedora-coreos-testing-devel-on-pull-request.yaml
 │   └── on-pull-request-overrides/
-│       └── kustomization.yaml     # PR overrides overlay
-├── testing-devel/                  # Stream-specific configurations
-│   ├── on-push/
-│   │   └── kustomization.yaml
-│   └── on-pull-request/
-│       └── kustomization.yaml
+│       └── fedora-coreos-testing-devel-on-pull-request-overrides.yaml
 ├── testing/
 ├── stable/
 ├── next/
@@ -273,32 +268,35 @@ These Tekton artifacts (bundles) are built and pushed to
 
 #### Templating Approach
 
-We use **Kustomize** to template PipelineRun definitions from base configurations.
+We use **Jinja2** templates with a Python script to generate PipelineRun definitions.
 This approach provides:
 
-- **Base configuration**: Common pipeline definition in
-  [`base/base/fedora-coreos.yaml`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/.tekton/base/base/fedora-coreos.yaml)
-- **Event overlays**: Customizations for `on-push` and `on-pull-request` events
-- **Stream overlays**: Branch-specific configurations with CEL expressions for
-  targeting the correct branch
-
-> [!NOTE]
-> We may migrate to a more capable templating tool e.g: Jinja in the
-> future for better flexibility and maintainability.
+- **Jinja2 template**: Common pipeline definition in
+  [`templates/pipelinerun.yaml.j2`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/.tekton/templates/pipelinerun.yaml.j2)
+- **Stream configuration**: All streams and their settings defined in
+  [`templates/streams.yaml`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/.tekton/templates/streams.yaml)
+- **Event types**: Each stream generates `on-push` and `on-pull-request` pipelines,
+  with an additional `on-pull-request-overrides` for streams with override lockfiles
 
 #### Generating Pipeline Files
 
-After modifying base templates or kustomization files, regenerate the final
-`PipelineRun` configurations using:
+After modifying Jinja2 templates or stream configuration, regenerate the
+`PipelineRun` files using:
 
 ```bash
-./ci/generate-tekton-pipelinerun
+./ci/generate-tekton-pipelinerun.py
 ```
 
-**Prerequisites**: [kustomize](https://github.com/kubernetes-sigs/kustomize/releases/)
-must be installed.
+To verify that generated files are up to date (useful for CI):
 
-- **Script**: [`ci/generate-tekton-pipelinerun`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/ci/generate-tekton-pipelinerun)
+```bash
+./ci/generate-tekton-pipelinerun.py --check
+```
+
+**Prerequisites**: Python 3.6+, `jinja2`, and `pyyaml` must be installed
+(`pip install jinja2 pyyaml`).
+
+- **Script**: [`ci/generate-tekton-pipelinerun.py`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/ci/generate-tekton-pipelinerun.py)
 
 #### Trigger File Mechanism
 
