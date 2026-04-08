@@ -13,13 +13,15 @@ streams:
   # next-devel:         # do not touch; line managed by `next-devel/manage.py`
     # type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
-    type: mechanical
-    source_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
-    env:
-      COSA_TESTISO_DEBUG: true
-      RUNVM_CACHE_SIZE: "30G"
-      COSA_BUILD_WITH_BUILDAH: true
-    osbuild_experimental: true
+    type: development
+    # Stop building with Konflux, see https://github.com/coreos/fedora-coreos-tracker/issues/2105
+    konflux_driven: false
+    # source_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
+    # env:
+    #   COSA_TESTISO_DEBUG: true
+    #   RUNVM_CACHE_SIZE: "30G"
+    #   COSA_BUILD_WITH_BUILDAH: true
+    # osbuild_experimental: true
   # branched:
   #   type: mechanical
   # bodhi-updates:
@@ -117,6 +119,7 @@ clouds:
     test_architectures: [x86_64, aarch64]
 
 misc:
-  versionary: true
   generate_release_index: true
   run_extended_upgrade_test_fcos: true
+  allow_missing_architectures_when_autotriggering_release_job: true
+  allow_skip_of_untested_artifacts: true
