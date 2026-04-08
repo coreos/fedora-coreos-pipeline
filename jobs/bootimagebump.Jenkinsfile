@@ -16,6 +16,14 @@ node {
                    description: 'RHCOS build version to use for the bump',
                    defaultValue: '',
                    trim: true),
+            string(name: 'SECONDARY_STREAM',
+                   description: 'Secondary stream for dual-stream releases (4.22+, e.g. 4.22-9.8 if primary is rhel-10.2)',
+                   defaultValue: '',
+                   trim: true),
+            string(name: 'SECONDARY_BUILD_VERSION',
+                   description: 'Build version for the secondary stream',
+                   defaultValue: '',
+                   trim: true),
             string(name: 'BOOTIMAGE_BUG_ID',
                    description: 'JIRA bug ID for the bootimage bump',
                    defaultValue: '',
@@ -51,9 +59,11 @@ node {
         durabilityHint('PERFORMANCE_OPTIMIZED')
     ])
 
-    if (params.STREAM == '') {
-        echo "STREAM parameter is empty, exiting. This is expected on the first run to register parameters."
-        return
+    if (params.STREAM == "") {
+        throw new Exception("Missing STREAM parameter!")
+    }
+    if (params.BUILD_VERSION == "") {
+        throw new Exception("Missing BUILD_VERSION parameter!")
     }
 
     PR_BRANCH = "bootimage-bump-${params.BUILD_VERSION}"
@@ -67,12 +77,19 @@ node {
 
     // For OCP 4.22+, the metadata file is split by RHEL major version
     // (coreos-rhel-9.json / coreos-rhel-10.json) instead of rhcos.json
+    isDualStream = params.SECONDARY_STREAM != '' && params.SECONDARY_BUILD_VERSION != ''
     def ocpMinor = RELEASE_BRANCH.tokenize('-.')[2]
     def rhelMajor = streamSplit.length > 1 ? streamSplit[1].tokenize('.')[0] : null
     if (ocpMinor && (ocpMinor as Integer) >= 22 && rhelMajor) {
         RHCOS_METADATA_FILE = "data/data/coreos/coreos-rhel-${rhelMajor}.json"
     } else {
         RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
+    }
+
+    if (isDualStream) {
+        def secondarySplit = params.SECONDARY_STREAM.split('-')
+        def secondaryRhelMajor = secondarySplit.length > 1 ? secondarySplit[1].tokenize('.')[0] : null
+        SECONDARY_METADATA_FILE = "data/data/coreos/coreos-rhel-${secondaryRhelMajor}.json"
     }
 
     // Optionally run cloud-replicate job first
@@ -95,6 +112,27 @@ node {
                 ]
             } else {
                 echo "Build ${params.BUILD_VERSION} not found in ${buildsUrl}, skipping cloud-replicate"
+            }
+
+            // For dual-stream releases (4.22+), also run cloud-replicate for the secondary stream
+            if (isDualStream) {
+                def secondaryBuildsUrl = "${params.URL}/${params.SECONDARY_STREAM}/builds/builds.json"
+                def secondaryBuildExists = sh(
+                    script: """
+                        curl -sf "${secondaryBuildsUrl}" | \
+                        jq -e '.builds[] | select(.id == "${params.SECONDARY_BUILD_VERSION}")' > /dev/null 2>&1 && echo "true" || echo "false"
+                    """,
+                    returnStdout: true
+                ).trim()
+
+                if (secondaryBuildExists == "true") {
+                    build job: 'cloud-replicate', wait: true, parameters: [
+                        string(name: 'STREAM', value: params.SECONDARY_STREAM),
+                        string(name: 'VERSION', value: params.SECONDARY_BUILD_VERSION)
+                    ]
+                } else {
+                    echo "Build ${params.SECONDARY_BUILD_VERSION} not found in ${secondaryBuildsUrl}, skipping cloud-replicate for secondary stream"
+                }
             }
         }
     }
@@ -123,7 +161,7 @@ node {
                 """)
             }
 
-            // Run plume cosa2stream to update the RHCOS bootimage metadata (rhcos.json)
+            // Run plume cosa2stream to update the RHCOS bootimage metadata
             stage('Bump Bootimage Metadata') {
                 shwrap("""
                         cd installer
@@ -138,20 +176,40 @@ node {
                             s390x=${params.BUILD_VERSION} \
                             ppc64le=${params.BUILD_VERSION}
                 """)
+
+                // For dual-stream releases (4.22+), also bump the secondary metadata file
+                if (isDualStream) {
+                    shwrap("""
+                            cd installer
+                            plume cosa2stream \
+                                --target ${SECONDARY_METADATA_FILE} \
+                                --distro ${params.DISTRO} \
+                                --no-signatures \
+                                --name ${params.SECONDARY_STREAM} \
+                                --url ${params.URL} \
+                                x86_64=${params.SECONDARY_BUILD_VERSION} \
+                                aarch64=${params.SECONDARY_BUILD_VERSION} \
+                                s390x=${params.SECONDARY_BUILD_VERSION} \
+                                ppc64le=${params.SECONDARY_BUILD_VERSION}
+                    """)
+                }
             }
 
-            // Commit the updated metadata.
+            // Commit the updated metadata and create PR if there are changes.
             stage('Create Pull Request') {
-                //if (shwrap("git -C installer diff --exit-code") != 0){
-                    pr_title = "${params.BOOTIMAGE_BUG_ID}: Update RHCOS-${RELEASE_BRANCH} bootimage metadata to ${params.BUILD_VERSION}"
-                    commit_message = """
-Update RHCOS ${RELEASE_BRANCH} bootimage metadata to ${params.BUILD_VERSION}
+                if (sh(script: "git -C installer diff --exit-code", returnStatus: true) == 0) {
+                    echo "No changes detected in bootimage metadata, skipping PR creation"
+                    currentBuild.result = 'SUCCESS'
+                    return
+                }
 
-The changes done here will update the RHCOS ${RELEASE_BRANCH} bootimage metadata and address the following issues:
+                    def buildVersions = isDualStream ? "${params.BUILD_VERSION} / ${params.SECONDARY_BUILD_VERSION}" : params.BUILD_VERSION
+                    pr_title = "${params.BOOTIMAGE_BUG_ID}: Update RHCOS-${RELEASE_BRANCH} bootimage metadata to ${buildVersions}"
+
+                    def primary_commit_message = """
+Update ${RHCOS_METADATA_FILE} to ${params.BUILD_VERSION}
 
 ${params.JIRA_ISSUES}
-
-This change was generated using:
 
 ```
 plume cosa2stream --target ${RHCOS_METADATA_FILE}                 \\
@@ -161,14 +219,37 @@ plume cosa2stream --target ${RHCOS_METADATA_FILE}                 \\
     aarch64=${params.BUILD_VERSION}                                      \\
     s390x=${params.BUILD_VERSION}                                        \\
     ppc64le=${params.BUILD_VERSION}
-
 ```
                     """.stripMargin()
                     shwrap ("""
                             cd installer
                             git add ${RHCOS_METADATA_FILE}
-                            git commit -m '${commit_message}'
+                            git commit -m '${primary_commit_message}'
                     """)
+
+                    def secondary_commit_message = ""
+                    if (isDualStream) {
+                        secondary_commit_message = """
+Update ${SECONDARY_METADATA_FILE} to ${params.SECONDARY_BUILD_VERSION}
+
+${params.JIRA_ISSUES}
+
+```
+plume cosa2stream --target ${SECONDARY_METADATA_FILE}                 \\
+    --distro ${params.DISTRO} --no-signatures --name ${params.SECONDARY_STREAM}                     \\
+    --url ${params.URL}  \\
+    x86_64=${params.SECONDARY_BUILD_VERSION}                                       \\
+    aarch64=${params.SECONDARY_BUILD_VERSION}                                      \\
+    s390x=${params.SECONDARY_BUILD_VERSION}                                        \\
+    ppc64le=${params.SECONDARY_BUILD_VERSION}
+```
+                        """.stripMargin()
+                        shwrap ("""
+                                cd installer
+                                git add ${SECONDARY_METADATA_FILE}
+                                git commit -m '${secondary_commit_message}'
+                        """)
+                    }
 
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
@@ -184,21 +265,21 @@ plume cosa2stream --target ${RHCOS_METADATA_FILE}                 \\
                                      "title": "${pr_title}",
                                      "head": "coreosbot-releng:${PR_BRANCH}",
                                      "base": "${RELEASE_BRANCH}",
-                                     "body": "${commit_message.replace("\n", "\\n").replace("\"", "\\\"")}"
+                                     "body": "${(primary_commit_message + secondary_commit_message).replace("\n", "\\n").replace("\"", "\\\"")}"
                                      }' \\
                                     https://api.github.com/repos/openshift/installer/pulls --fail
                         """)
                         def prJson = readJSON(text: prResponse)
                         pr_url = prJson.html_url
                     }
-                //}
             currentBuild.result = 'SUCCESS'
             }
         } catch (e) {
             currentBuild.result = 'FAILURE'
             throw e
         } finally {
-            def message = "[${params.STREAM}][bootimage-bump] #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
+            def streamLabel = isDualStream ? "${params.STREAM} + ${params.SECONDARY_STREAM}" : params.STREAM
+            def message = "[${streamLabel}][bootimage-bump] #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
             if (currentBuild.result == 'SUCCESS') {
                 message = ":sparkles: ${message} <${pr_url}|:pr:>"
             } else if (currentBuild.result == 'UNSTABLE') {
