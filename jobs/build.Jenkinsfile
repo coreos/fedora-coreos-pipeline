@@ -628,12 +628,9 @@ def buildid_has_work_pending(buildID, arches) {
 
 // A function to tell us if we should use versionary for the
 // build versioning or not. Right now we tightly couple this to
-// if we should build with buildah. So we basically say if build-with-buildah
-// is set then we'll definitely use versionary, which is safe for
-// now because all of FCOS is using build-with-buildah (i.e. using
-// versionary), but we are phasing in build-with-buildah in rhel-coreos-config.
+// if a versionary script exists in the src/config repo.
 def should_use_versionary() {
-    if (shwrapRc("source /usr/lib/coreos-assembler/cmdlib.sh; should_build_with_buildah") == 0) {
+    if (shwrapRc("test -f src/config/versionary") == 0) {
         return true
     } else {
         return false
