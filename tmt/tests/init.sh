@@ -8,8 +8,8 @@ cosa ()
     export COREOS_ASSEMBLER_CONTAINER_LATEST="quay.io/coreos-assembler/coreos-assembler:latest"
     set -x;
     podman run --rm --security-opt=label=disable --privileged \
-    -v=${COSA_DIR}:/srv/ --device=/dev/kvm \
-    --device=/dev/fuse --tmpfs=/tmp -v=/var/tmp:/var/tmp --name=cosa ${COREOS_ASSEMBLER_CONTAINER_LATEST} "$@";
+    -v "${COSA_DIR}:/srv" --device=/dev/kvm \
+    --device=/dev/fuse --tmpfs=/tmp -v /var/tmp:/var/tmp --name=cosa "${COREOS_ASSEMBLER_CONTAINER_LATEST}" "$@";
 }
 collect_kola_artifacts() {
     mkdir -p "$TMT_TEST_DATA"
