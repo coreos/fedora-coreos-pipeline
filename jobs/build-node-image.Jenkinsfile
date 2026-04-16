@@ -72,13 +72,15 @@ def unique_tag = ""
 
 lock(resource: "build-node-image") {
     // building actually happens on builders so we don't need much resources
+    // for the building, but we do run x86_64 kola tests in the COSA pod here
+    // so we need resources for that.
     cosaPod(image: params.COREOS_ASSEMBLER_IMAGE,
-            memory: "2.5Gi", kvm: true,
+            memory: "6Gi", cpu: "3", kvm: true,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
                       "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
-    timeout(time: 45, unit: 'MINUTES') {
+    timeout(time: 60, unit: 'MINUTES') {
 
         def registry_staging_repo
         def registry_staging_tags
