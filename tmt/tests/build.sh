@@ -5,7 +5,7 @@ set -x
 source "$HOME/utils.sh"
 
 mkdir -p "$COSA_DIR"
-cosa init --force "${TESTING_FARM_GIT_URL}" --branch "${TESTING_FARM_GIT_REF}"
+cosa init --force "${GIT_URL}" --branch "${GIT_REF}"
 cosa import "docker://$IMAGE_URL"
 CONFIG_COMMIT=$(jq -r ".\"coreos-assembler.oci-imported-labels\".\"vcs-ref\"" "${COSA_DIR}/builds/latest/$(arch)/meta.json")
 pushd "${COSA_DIR}/src/config"

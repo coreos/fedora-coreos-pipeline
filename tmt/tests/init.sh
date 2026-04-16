@@ -27,11 +27,15 @@ EOF
 echo "cosa container: $COREOS_ASSEMBLER_CONTAINER_LATEST"
 echo "arch: $(arch)"
 echo "using image: $IMAGE_URL"
+skopeo inspect "docker://$IMAGE_URL" > meta.json
+GIT_URL=$(cat meta.json | jq -r ".Labels.\"org.opencontainers.image.source\"")
+GIT_REF=$(cat meta.json | jq -r ".Labels.\"com.coreos.stream\"")
+echo "export GIT_URL=${GIT_URL}" >> "$HOME/utils.sh"
+echo "export GIT_REF=${GIT_REF}" >> "$HOME/utils.sh"
 echo "git version: $(git --version)"
-echo "git url: ${TESTING_FARM_GIT_URL}"
-echo "git branch: ${TESTING_FARM_GIT_REF}"
-git clone "${TESTING_FARM_GIT_URL}" /tmp/git-repo
+echo "git url: ${GIT_URL}"
+echo "git branch: ${GIT_REF}"
+git clone "${GIT_URL}" /tmp/git-repo
 pushd /tmp/git-repo
-git checkout "${TESTING_FARM_GIT_REF}"
-# assert commit and $TESTING_FARM_GIT_REF are the same ?
+git checkout "${GIT_REF}"
 echo "git commit message: $(git log --format=%B -n 1 HEAD)"
