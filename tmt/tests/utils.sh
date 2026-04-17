@@ -16,5 +16,5 @@ run_kola(){
     OUTPUT_DIR=$(cd "${COSA_DIR}" && cosa shell -- mktemp -d tmp/kola-XXXX)
     TOKEN="$(uuidgen | cut -f1 -d -)"
     KOLA_ID="${KOLA_ID:-kola}"
-    cd "${COSA_DIR}" && cosa kola "${KOLA_ACTION}" --build=latest --arch="$(arch)" --output-dir="${OUTPUT_DIR}/${KOLA_ID}" "${KOLA_EXTRA_ARGS}"
+    cd "${COSA_DIR}" && cosa kola "${KOLA_ACTION}" --build=latest --arch="$(arch)" --output-dir="${OUTPUT_DIR}/${KOLA_ID}" "${KOLA_EXTRA_ARGS[@]}"
 }
