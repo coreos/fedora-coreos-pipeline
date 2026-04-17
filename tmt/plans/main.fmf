@@ -18,6 +18,7 @@ prepare:
       - virt-install
       - jq
       - git-core
+      - skopeo
   - how: shell
     script: podman pull quay.io/coreos-assembler/coreos-assembler:latest
 execute:
