@@ -2,16 +2,7 @@
 set -eo pipefail
 set -x
 
-source "$HOME/utils.sh"
-
-mkdir -p "$COSA_DIR"
-cosa init --force "${GIT_URL}" --branch "${GIT_REF}"
-cosa import "docker://$IMAGE_URL"
-CONFIG_COMMIT=$(jq -r ".\"coreos-assembler.oci-imported-labels\".\"vcs-ref\"" "${COSA_DIR}/builds/latest/$(arch)/meta.json")
-pushd "${COSA_DIR}/src/config"
-git config --global --add safe.directory "${COSA_DIR}/src/config"
-git checkout "$CONFIG_COMMIT"
-popd
+source "utils.sh"
 
 if [ "$TEST_CASE" = "build-qemu" ]; then
     cosa osbuild qemu

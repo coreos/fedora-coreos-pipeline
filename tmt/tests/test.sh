@@ -2,7 +2,7 @@
 set -eEuo pipefail
 set -x
 
-source "$HOME/utils.sh"
+source "utils.sh"
 trap collect_kola_artifacts ERR
 
 if [ "$TEST_CASE" = "test-qemu" ]; then
