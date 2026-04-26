@@ -894,10 +894,18 @@ def push_manifest(digests, repo, manifest_tag, v2s2) {
     // locally because podman wants user namespacing (yes, even just
     // to push a manifest...)
     pipeutils.withPodmanRemoteArchBuilder(arch: "s390x") {
-        shwrap("""
-        cosa push-container-manifest \
-            --tag ${manifest_tag} --repo ${repo} ${images} ${push_args.join(' ')}
-        """)
+        // Retry to handle transient registry failures (e.g., HTTP 500/503)
+        retry(3) {
+            try {
+                shwrap("""
+                cosa push-container-manifest \
+                    --tag ${manifest_tag} --repo ${repo} ${images} ${push_args.join(' ')}
+                """)
+            } catch (e) {
+                sleep 10
+                throw e
+            }
+        }
     }
     digest = readFile(digest_file)
     shwrap("rm ${digest_file}")
