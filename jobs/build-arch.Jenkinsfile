@@ -348,10 +348,12 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         }
 
         // Run Kola TestISO tests for metal artifacts
-        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-            stage("Kola:TestISO") {
-                kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                            skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+        if (pipeutils.kola_has_testiso()) {
+            if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+                stage("Kola:TestISO") {
+                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+                }
             }
         }
 

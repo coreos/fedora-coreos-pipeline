@@ -429,19 +429,21 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         // Run Kola TestISO tests for metal artifacts
-        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
-            if (pipecfg.hacks?.skip_uefi_tests_on_older_rhcos &&
-                (params.STREAM in ['4.6', '4.7', '4.8', '4.9'])) {
-                // UEFI tests on x86_64 seem to fail on older RHCOS. skip UEFI tests here.
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                                skipUEFI: true,
-                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
-                }
-            } else {
-                stage("Kola:TestISO") {
-                    kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
-                                skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+        if (pipeutils.kola_has_testiso()) {
+            if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+                if (pipecfg.hacks?.skip_uefi_tests_on_older_rhcos &&
+                    (params.STREAM in ['4.6', '4.7', '4.8', '4.9'])) {
+                    // UEFI tests on x86_64 seem to fail on older RHCOS. skip UEFI tests here.
+                    stage("Kola:TestISO") {
+                        kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                                    skipUEFI: true,
+                                    skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+                    }
+                } else {
+                    stage("Kola:TestISO") {
+                        kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
+                                    skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)
+                    }
                 }
             }
         }
