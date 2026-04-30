@@ -338,6 +338,10 @@ ocp_node_builds:
                file: rhel-9.6.repo
            # OPTIONAL: skip upload to brew. Defaults to false
            skip_brew_upload: false
+           # OPTIONAL: pass a build-args file to `cosa remote-build-container`
+           # during node image builds. The filename is derived from the release
+           # (e.g. build-args-9.8-4.22.conf). Defaults to false.
+           build_args_file: true
     # REQUIRED: knobs related to the source config
     registries:
         # REQUIRED: staging repo to push the final image built
