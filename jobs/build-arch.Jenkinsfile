@@ -313,6 +313,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             shwrap("cosa buildextend-qemu")
         }
 
+        // Build the remaining artifacts
+        stage("Build Artifacts") {
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
+        }
+
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
         if (params.KOLA_RUN_SLEEP) {
             echo "Hit KOLA_RUN_SLEEP; going to sleep..."
@@ -328,11 +333,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                  allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
                  skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack,
                  skipKolaTags: stream_info.skip_kola_tags)
-        }
-
-        // Build the remaining artifacts
-        stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
         }
 
         // secex specific tests. 
