@@ -263,8 +263,13 @@ lock(resource: "bump-lockfile") {
                             // OOMkilled.
                             shwrap("cosa shell -- env XZ_DEFAULTS=--memlimit=4G cosa compress --artifact=metal")
                         }
-                        stage("${arch}:kola:testiso") {
-                            kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
+                        // Run kola testiso tests if supported (legacy). On older releases testiso
+                        // tests were run separately from other kola tests. If we are on one of those
+                        // releases run testiso tests now.
+                        if (pipeutils.kola_has_testiso()) {
+                            stage("${arch}:kola:testiso") {
+                                kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
+                            }
                         }
                     }
                     if (arch == "x86_64") {

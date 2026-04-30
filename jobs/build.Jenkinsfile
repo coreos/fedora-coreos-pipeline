@@ -428,8 +428,10 @@ lock(resource: "build-${params.STREAM}") {
             run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
         }
 
-        // Run Kola TestISO tests for metal artifacts
-        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+        // Run kola testiso tests if supported (legacy). On older releases testiso
+        // tests were run separately from other kola tests. If we are on one of those
+        // releases run testiso tests now.
+        if (pipeutils.kola_has_testiso() && shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
             if (pipecfg.hacks?.skip_uefi_tests_on_older_rhcos &&
                 (params.STREAM in ['4.6', '4.7', '4.8', '4.9'])) {
                 // UEFI tests on x86_64 seem to fail on older RHCOS. skip UEFI tests here.

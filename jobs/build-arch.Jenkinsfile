@@ -347,8 +347,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
-        // Run Kola TestISO tests for metal artifacts
-        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+        // Run kola testiso tests if supported (legacy). On older releases testiso
+        // tests were run separately from other kola tests. If we are on one of those
+        // releases run testiso tests now.
+        if (pipeutils.kola_has_testiso() && shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
             stage("Kola:TestISO") {
                 kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
                             skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)

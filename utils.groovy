@@ -1049,4 +1049,9 @@ def should_we_skip_untested_artifacts(pipecfg) {
     }
 }
 
+// Check if kola has testiso command available
+def kola_has_testiso() {
+    return shwrapRc("cosa kola help | grep -q testiso") == 0
+}
+
 return this
