@@ -308,12 +308,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             """)
         }
 
-        // Build QEMU image
-        stage("Build QEMU") {
-            shwrap("cosa buildextend-qemu")
-        }
-
-        // Build the remaining artifacts
+        // Build artifacts (including QEMU)
         stage("Build Artifacts") {
             pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
         }
