@@ -14,6 +14,7 @@ source_config:
 default_artifacts:
   # default artifacts on all arches
   all:
+    - qemu
     - metal
     - metal4k
     - live

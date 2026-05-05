@@ -446,9 +446,8 @@ def get_artifacts_to_build(pipecfg, stream, basearch, skip_untested) {
         artifacts.removeAll(pipecfg.streams[stream].skip_artifacts?."${basearch}" ?: [])
     }
     if (skip_untested) {
-        // Only build the testable artifacts. Note that the QEMU artifact is
-        // usually built before this step so it's not listed here.
-        def testable_artifacts = ["metal", "metal4k", "live"]
+        // Only build the testable artifacts.
+        def testable_artifacts = ["qemu", "metal", "metal4k", "live"]
         for (artifact in artifacts) {
             if (cloud_testing_enabled_for_arch(pipecfg, artifact, basearch)) {
                 testable_artifacts += artifact
@@ -494,10 +493,19 @@ def build_artifacts(pipecfg, stream, basearch, skip_untested) {
             }
         }
         if (!osbuild_artifacts.isEmpty()) {
+            // Remove OSBuild artifacts from the list (including qemu if supported)
             artifacts.removeAll(osbuild_artifacts)
             stage('💽:OSBuild') {
                 shwrap("cosa osbuild ${osbuild_artifacts.join(' ')}")
             }
+        }
+    }
+
+    // Build qemu first if not already built by OSBuild (other artifacts depend on it)
+    if (artifacts.contains('qemu')) {
+        artifacts.remove('qemu')
+        stage('💽:qemu') {
+            shwrap("cosa buildextend-qemu")
         }
     }
 
@@ -1047,6 +1055,11 @@ def should_we_skip_untested_artifacts(pipecfg) {
     } else {
         return false
     }
+}
+
+// Check if kola has testiso command available
+def kola_has_testiso() {
+    return shwrapRc("cosa kola help | grep -q testiso") == 0
 }
 
 return this

@@ -41,6 +41,7 @@ registry_repos:
 
 default_artifacts:
   all:
+    - qemu
     - metal
     - metal4k
     - live

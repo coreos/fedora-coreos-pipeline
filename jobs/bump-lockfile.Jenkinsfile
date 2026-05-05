@@ -252,10 +252,6 @@ lock(resource: "bump-lockfile") {
                         stage("${arch}:OSBuild") {
                             shwrap("cosa osbuild qemu metal metal4k live")
                         }
-                        def n = ncpus - 1 // remove 1 for upgrade test
-                        kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
-                             marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
-                             skipKolaTags: stream_info.skip_kola_tags)
                         stage("${arch}:Compress Metal") {
                             // Test metal4k with an uncompressed image and
                             // metal with a compressed one. Limit to 4G to be
@@ -263,8 +259,17 @@ lock(resource: "bump-lockfile") {
                             // OOMkilled.
                             shwrap("cosa shell -- env XZ_DEFAULTS=--memlimit=4G cosa compress --artifact=metal")
                         }
-                        stage("${arch}:kola:testiso") {
-                            kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
+                        def n = ncpus - 1 // remove 1 for upgrade test
+                        kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
+                             marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
+                             skipKolaTags: stream_info.skip_kola_tags)
+                        // Run kola testiso tests if supported (legacy). On older releases testiso
+                        // tests were run separately from other kola tests. If we are on one of those
+                        // releases run testiso tests now.
+                        if (pipeutils.kola_has_testiso()) {
+                            stage("${arch}:kola:testiso") {
+                                kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
+                            }
                         }
                     }
                     if (arch == "x86_64") {

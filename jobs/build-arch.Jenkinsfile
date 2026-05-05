@@ -308,9 +308,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             """)
         }
 
-        // Build QEMU image
-        stage("Build QEMU") {
-            shwrap("cosa buildextend-qemu")
+        // Build artifacts (including QEMU)
+        stage("Build Artifacts") {
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
         }
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
@@ -330,11 +330,6 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                  skipKolaTags: stream_info.skip_kola_tags)
         }
 
-        // Build the remaining artifacts
-        stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
-        }
-
         // secex specific tests. 
         // Secure Execution support is available since 4.12 (as TechPreview).
         // Starting with 4.13 'qemu-secex' supports IgnitionProtection and has its own kola-tests.
@@ -347,8 +342,10 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         }
 
-        // Run Kola TestISO tests for metal artifacts
-        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+        // Run kola testiso tests if supported (legacy). On older releases testiso
+        // tests were run separately from other kola tests. If we are on one of those
+        // releases run testiso tests now.
+        if (pipeutils.kola_has_testiso() && shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
             stage("Kola:TestISO") {
                 kolaTestIso(cosaDir: env.WORKSPACE, arch: basearch,
                             skipSecureBoot: pipecfg.hotfix?.skip_secureboot_tests_hack)

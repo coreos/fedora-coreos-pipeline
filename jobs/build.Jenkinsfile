@@ -382,9 +382,22 @@ lock(resource: "build-${params.STREAM}") {
             """)
         }
 
-        // Build QEMU image
-        stage("Build QEMU") {
-            shwrap("cosa buildextend-qemu")
+        // Build artifacts (including QEMU)
+        stage("Build Artifacts") {
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
+
+            // Stop the build if the kernel + kernel-rt versions do not match.
+            // This check runs on x86_64 RHCOS builds only.
+            // NOTE: This approach only checks the legacy extensions and not the new extensions
+            // container. This check can be removed for 9.3+ builds when we drop the legacy
+            // oscontainer as the versions will be matched using `match-base-evr` in `extensions.yaml`.
+            if (stream_info.check_kernel_rt_mismatch_rhcos) {
+                echo("Verifying kernel + kernel-rt versions match")
+                def build_meta = [readJSON(file: "builds/latest/${basearch}/commitmeta.json"), readJSON(file: "builds/latest/${basearch}/meta.json")]
+                def kernel_version = build_meta[0]['ostree.linux'].split('.el')[0]
+                def kernel_rt_version = build_meta[1]['extensions']['manifest']['kernel-rt-core'].split('.rt')[0]
+                assert kernel_version == kernel_rt_version : "kernel-rt version: ${kernel_rt_version} does not match kernel version: ${kernel_version}"
+            }
         }
 
         // This is a temporary hack to help debug https://github.com/coreos/fedora-coreos-tracker/issues/1108.
@@ -410,26 +423,10 @@ lock(resource: "build-${params.STREAM}") {
             run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
         }
 
-        // Build the remaining artifacts
-        stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
-
-            // Stop the build if the kernel + kernel-rt versions do not match.
-            // This check runs on x86_64 RHCOS builds only.
-            // NOTE: This approach only checks the legacy extensions and not the new extensions
-            // container. This check can be removed for 9.3+ builds when we drop the legacy
-            // oscontainer as the versions will be matched using `match-base-evr` in `extensions.yaml`.
-            if (stream_info.check_kernel_rt_mismatch_rhcos) {
-                echo("Verifying kernel + kernel-rt versions match")
-                def build_meta = [readJSON(file: "builds/latest/${basearch}/commitmeta.json"), readJSON(file: "builds/latest/${basearch}/meta.json")]
-                def kernel_version = build_meta[0]['ostree.linux'].split('.el')[0]
-                def kernel_rt_version = build_meta[1]['extensions']['manifest']['kernel-rt-core'].split('.rt')[0]
-                assert kernel_version == kernel_rt_version : "kernel-rt version: ${kernel_rt_version} does not match kernel version: ${kernel_version}"
-            }
-        }
-
-        // Run Kola TestISO tests for metal artifacts
-        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+        // Run kola testiso tests if supported (legacy). On older releases testiso
+        // tests were run separately from other kola tests. If we are on one of those
+        // releases run testiso tests now.
+        if (pipeutils.kola_has_testiso() && shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
             if (pipecfg.hacks?.skip_uefi_tests_on_older_rhcos &&
                 (params.STREAM in ['4.6', '4.7', '4.8', '4.9'])) {
                 // UEFI tests on x86_64 seem to fail on older RHCOS. skip UEFI tests here.
