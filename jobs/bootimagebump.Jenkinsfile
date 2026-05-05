@@ -279,9 +279,9 @@ plume cosa2stream --target ${SECONDARY_METADATA_FILE}                 \\
             throw e
         } finally {
             def streamLabel = isDualStream ? "${params.STREAM} + ${params.SECONDARY_STREAM}" : params.STREAM
-            def message = "[${streamLabel}][bootimage-bump] #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
+            def message = "[bootimage-bump][${streamLabel}] #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
             if (currentBuild.result == 'SUCCESS') {
-                message = ":sparkles: ${message} <${pr_url}|:pr:>"
+                message = ":sparkles: :rocket: ${message}${pr_url ? ' <' + pr_url + '|:pr:>' : ''}"
             } else if (currentBuild.result == 'UNSTABLE') {
                 message = ":warning: ${message}"
             } else {
