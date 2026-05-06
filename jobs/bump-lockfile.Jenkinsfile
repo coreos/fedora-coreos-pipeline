@@ -261,6 +261,7 @@ lock(resource: "bump-lockfile") {
                         }
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
+                             extraArgs: "--inst-insecure",
                              marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
                              skipKolaTags: stream_info.skip_kola_tags)
                         // Run kola testiso tests if supported (legacy). On older releases testiso
