@@ -33,7 +33,7 @@ properties([
              trim: true),
       string(name: 'GCP_ZONE',
              description: 'The GCP zone to be used',
-             defaultValue: 'us-central1-a',
+             defaultValue: 'europe-west4-a',
              trim: true),
     ]),
     buildDiscarder(logRotator(
