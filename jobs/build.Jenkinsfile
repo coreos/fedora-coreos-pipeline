@@ -426,7 +426,7 @@ lock(resource: "build-${params.STREAM}") {
         // Run kola testiso tests if supported (legacy). On older releases testiso
         // tests were run separately from other kola tests. If we are on one of those
         // releases run testiso tests now.
-        if (pipeutils.kola_has_testiso() && shwrapCapture("cosa meta --get-value images.live-iso") != "None") {
+        if (shwrapCapture("cosa meta --get-value images.live-iso") != "None" && utils.isTestisoSupported()) {
             if (pipecfg.hacks?.skip_uefi_tests_on_older_rhcos &&
                 (params.STREAM in ['4.6', '4.7', '4.8', '4.9'])) {
                 // UEFI tests on x86_64 seem to fail on older RHCOS. skip UEFI tests here.
