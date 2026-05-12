@@ -266,7 +266,7 @@ lock(resource: "bump-lockfile") {
                         // Run kola testiso tests if supported (legacy). On older releases testiso
                         // tests were run separately from other kola tests. If we are on one of those
                         // releases run testiso tests now.
-                        if (pipeutils.kola_has_testiso()) {
+                        if (utils.isTestisoSupported()) {
                             stage("${arch}:kola:testiso") {
                                 kolaTestIso(cosaDir: env.WORKSPACE, arch: arch, marker: arch)
                             }
