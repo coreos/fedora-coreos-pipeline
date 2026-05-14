@@ -54,6 +54,7 @@ versionary_hack: true
 
 default_artifacts:
   all:
+    - qemu
     - metal
     - metal4k
     - live
