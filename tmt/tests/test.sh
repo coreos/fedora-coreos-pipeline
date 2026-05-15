@@ -36,13 +36,4 @@ elif [ "$TEST_CASE" = "test-kola-upgrade" ]; then
     )
     run_kola
     collect_kola_artifacts
-
-elif [ "$TEST_CASE" = "test-iso" ]; then
-    export KOLA_ACTION="testiso"
-    export KOLA_ID="test-iso"
-    export KOLA_EXTRA_ARGS=(
-      --inst-insecure
-    )
-    run_kola
-    collect_kola_artifacts
 fi

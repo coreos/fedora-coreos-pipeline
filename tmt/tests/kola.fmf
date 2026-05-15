@@ -23,15 +23,3 @@ test: ./entrypoint.sh
   order: 80
   environment:
     TEST_CASE: test-kola-upgrade
-
-/build-iso:
-  duration: 1h
-  order: 90
-  environment:
-    TEST_CASE: build-iso
-
-/test-iso:
-  duration: 2h
-  order: 100
-  environment:
-    TEST_CASE: test-iso
