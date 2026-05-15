@@ -195,7 +195,7 @@ EOF
                 arch: params.ARCH,
                 build: start_version,
                 cosaDir: env.WORKSPACE,
-                extraArgs: "--tag extended-upgrade --append-butane tmp/target_stream.bu",
+                extraArgs: "--debug --tag extended-upgrade --append-butane tmp/target_stream.bu",
                 skipBasicScenarios: true,
                 skipUpgrade: true,
                 skipKolaTags: pipecfg.streams[params.STREAM].skip_kola_tags,
