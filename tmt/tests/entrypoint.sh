@@ -6,10 +6,10 @@ case "$TEST_CASE" in
     "init")
         ./init.sh
         ;;
-    "build-qemu"|"build-iso")
+    "build-qemu")
         ./build.sh
         ;;
-    "test-qemu"|"test-kola-upgrade"|"test-iso")
+    "test-qemu"|"test-kola-upgrade")
         ./test.sh
         ;;
     *)
