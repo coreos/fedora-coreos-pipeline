@@ -52,6 +52,19 @@ def src_config_url = stream_info.source_config.url
 def basearches = params.ARCHES.split() as Set
 def timeout_mins = 300
 
+// Soft per-stage time budgets (minutes). Exceeding a soft budget marks
+// the build UNSTABLE with a console warning but does NOT abort the stage.
+// The global hard timeout (sum of all budgets) is the only thing that
+// can abort execution.
+def stage_budgets = [
+    'Build Node Image':       20,
+    'Build Extensions Image': 20,
+    'Run Tests':              15,
+    'Brew Upload':            10,
+    'Release Manifests':      10,
+]
+def global_timeout_mins = stage_budgets.values().sum()
+
 def cosa_img = params.COREOS_ASSEMBLER_IMAGE
 // Derive the stream class once so both node and extensions builds use
 // the `io.openshift.os.streamclass` label. The streamclass is based on
@@ -80,7 +93,7 @@ lock(resource: "build-node-image") {
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
                       "krb5-conf:krb5.conf:/etc/krb5.conf"]) {
-    timeout(time: 60, unit: 'MINUTES') {
+    timeout(time: global_timeout_mins, unit: 'MINUTES') {
 
         def registry_staging_repo
         def registry_staging_tags
@@ -142,7 +155,7 @@ lock(resource: "build-node-image") {
             }
         }
 
-        stage('Build Node Image') {
+        pipeutils.stageWithTimeoutWarning('Build Node Image', stage_budgets['Build Node Image']) {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
                  def extra_build_args = []
@@ -174,7 +187,7 @@ lock(resource: "build-node-image") {
         }
 
         if (stream_info.extensions != false) {
-            stage('Build Extensions Image') {
+            pipeutils.stageWithTimeoutWarning('Build Extensions Image', stage_budgets['Build Extensions Image']) {
                 withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                     // Use the node image as from
                     def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
@@ -209,7 +222,7 @@ lock(resource: "build-node-image") {
             }
         }
         if (stream_info.run_test != false) {
-            stage("Run Tests") {
+            pipeutils.stageWithTimeoutWarning('Run Tests', stage_budgets['Run Tests']) {
                 withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                     def openshift_stream = params.RELEASE.split("-")[0]
                     def rhel_stream = "rhel-" + params.RELEASE.split("-")[1]
@@ -284,13 +297,13 @@ lock(resource: "build-node-image") {
             }
         }
         if (!skip_brew_upload){
-            stage("Brew Upload") {
+            pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
                 // Use the staging since we already have the digests
                 pipeutils.brew_upload(arches, params.RELEASE, registry_staging_repo, node_image_manifest_digest,
                                       extensions_image_manifest_digest, timestamp, pipecfg)
             }
         }
-        stage("Release Manifests") {
+        pipeutils.stageWithTimeoutWarning('Release Manifests', stage_budgets['Release Manifests']) {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                 // copy the extensions first as the node image existing is a signal
                 // that it's ready for release. So we want all the expected artifacts
@@ -348,4 +361,4 @@ lock(resource: "build-node-image") {
         message = "${message} build-node-image #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> ${build_description}${unique_tag_display} ${pullspec_links}"
         pipeutils.trySlackSend(message: message)
     }
-}}} // cosaPod, timeout, and lock finish here
+}}} // cosaPod, timeout (global_timeout_mins hard), and lock finish here
