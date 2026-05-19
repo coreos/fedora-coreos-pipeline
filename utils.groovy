@@ -1057,4 +1057,28 @@ def should_we_skip_untested_artifacts(pipecfg) {
     }
 }
 
+// Run a stage with a soft timeout warning. If the stage takes longer
+// than budgetMins, a warning is emitted to the console log and the
+// build is marked UNSTABLE, but the stage is NOT aborted. Only the
+// caller's outer hard timeout can abort execution.
+//
+// Usage:
+//   pipeutils.stageWithTimeoutWarning('Build Node Image', 25) {
+//       // ... stage body ...
+//   }
+def stageWithTimeoutWarning(String name, int budgetMins, Closure body) {
+    def start = System.currentTimeMillis()
+    stage(name) {
+        body()
+    }
+    def elapsedMins = (System.currentTimeMillis() - start) / 60000.0
+    if (elapsedMins > budgetMins) {
+        echo "WARNING: stage '${name}' took ${String.format('%.1f', elapsedMins)}m " +
+             "(soft budget: ${budgetMins}m)"
+        if (currentBuild.result == null || currentBuild.result == 'SUCCESS') {
+            currentBuild.result = 'UNSTABLE'
+        }
+    }
+}
+
 return this
