@@ -223,6 +223,14 @@ clouds:
     # OPTIONAL: billing code to create a Windows License Included Image
     # required if using 'create_and_replicate_winli_ami' under the stream mappings
     winli_billing_code: "bp-12345abcde"
+    # OPTIONAL: boolean: whether to periodically check all production AMIs across
+    # all enabled regions and restore their public launch permission if AWS has
+    # silently revoked it due to AMI deprecation age. AWS automatically deprecates
+    # public AMIs after 2 years and removes public sharing after a further period
+    # of inactivity, which causes node scale-up failures for customers on older
+    # releases. When enabled, the check-aws-regions job runs `ore aws ensure-public`
+    # for each enabled region on its daily schedule. Defaults to false.
+    ensure_public: true
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.
