@@ -191,12 +191,17 @@ lock(resource: "build-node-image") {
                 withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                     // Use the node image as from
                     def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
-                    def label_args = []
+                    def extra_build_args = []
                     if (stream_class_label) {
-                        label_args += ["--label", "${stream_class_label}"]
+                        extra_build_args += ["--label", "${stream_class_label}"]
                     }
                     if (unique_tag != "") {
-                        label_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
+                        extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
+                    }
+                    // for now this is opt-in, but once it propagates we can flip
+                    // it to opt-out (or just unconditional)
+                    if (stream_info.build_args_file) {
+                        extra_build_args += ["--build-arg-file", build_args_file]
                     }
 
                     // Check if extensions/Containerfile exists, otherwise fall back to extensions/Dockerfile
@@ -217,7 +222,7 @@ lock(resource: "build-node-image") {
                                                    v2s2: v2s2,
                                                    extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
                                                                       "--git-containerfile", "${extensions_containerfile}", "--force",
-                                                                      "--add-openshift-build-labels"] + label_args)
+                                                                      "--add-openshift-build-labels"] + extra_build_args)
                 }
             }
         }
