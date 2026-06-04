@@ -159,9 +159,6 @@ lock(resource: "build-node-image") {
             withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
                  def build_from = params.FROM ?: stream_info.from
                  def extra_build_args = []
-                 if (stream_class_label) {
-                     extra_build_args += ["--label", "${stream_class_label}"]
-                 }
                  if (unique_tag != "") {
                      extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
                  }
@@ -169,6 +166,10 @@ lock(resource: "build-node-image") {
                  // it to opt-out (or just unconditional)
                  if (stream_info.build_args_file) {
                      extra_build_args += ["--build-arg-file", build_args_file]
+                 } else {
+                     // In the non build_args_file case the stream class
+                     // label needs to be set manually here.
+                     extra_build_args += ["--label", "${stream_class_label}"]
                  }
 
                  node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
@@ -192,9 +193,6 @@ lock(resource: "build-node-image") {
                     // Use the node image as from
                     def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
                     def extra_build_args = []
-                    if (stream_class_label) {
-                        extra_build_args += ["--label", "${stream_class_label}"]
-                    }
                     if (unique_tag != "") {
                         extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
                     }
@@ -202,6 +200,10 @@ lock(resource: "build-node-image") {
                     // it to opt-out (or just unconditional)
                     if (stream_info.build_args_file) {
                         extra_build_args += ["--build-arg-file", build_args_file]
+                    } else {
+                        // In the non build_args_file case the stream class
+                        // label needs to be set manually here.
+                        extra_build_args += ["--label", "${stream_class_label}"]
                     }
 
                     // Check if extensions/Containerfile exists, otherwise fall back to extensions/Dockerfile
