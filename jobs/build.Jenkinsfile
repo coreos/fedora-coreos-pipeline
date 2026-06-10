@@ -587,9 +587,10 @@ def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
                 string(name: 'STREAM', value: params.STREAM),
                 string(name: 'VERSION', value: version),
                 string(name: 'ARCH', value: arch),
+            ] + ((params.PIPECFG_HOTFIX_REPO) ? [
                 string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
                 string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
-            ]
+            ] : [])
         }]}
     }
 }
@@ -606,9 +607,10 @@ def run_release_job(buildID) {
             string(name: 'VERSION', value: buildID),
             booleanParam(name: 'ALLOW_MISSING_ARCHES', value: allow_missing),
             booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
+        ] + ((params.PIPECFG_HOTFIX_REPO) ? [
             string(name: 'PIPECFG_HOTFIX_REPO', value: params.PIPECFG_HOTFIX_REPO),
             string(name: 'PIPECFG_HOTFIX_REF', value: params.PIPECFG_HOTFIX_REF)
-        ]
+        ] : [])
     }
 }
 
