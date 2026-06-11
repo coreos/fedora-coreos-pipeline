@@ -35,6 +35,7 @@ jms-messaging:1.1.28
 pipeline-graph-view:803.vb_88f7a_a_1cb_47
 theme-manager:346.v06cca_64c6a_37
 dark-theme:652.vea_da_dfea_e769
+cloudbees-disk-usage-simple:270.vfb_6898193d8d
 
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
