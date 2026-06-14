@@ -145,6 +145,9 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
         echo "Selected ${start_version} as the starting version to test"
         currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
 
+        // Get the starting major version. Used for some comparisons below.
+        def start_major_version = start_version[0..1]
+
         def remoteSession = ""
         if (params.ARCH != 'x86_64') {
             // If we're on mArch and using QEMU then initialize the
@@ -238,11 +241,11 @@ EOF
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1452
                     // https://github.com/coreos/fedora-coreos-tracker/issues/1452#issuecomment-2835130860
                     def secureboot_start_version = 37
-                    if ((start_version[0..1] as Integer) >= secureboot_start_version) {
+                    if ((start_major_version as Integer) >= secureboot_start_version) {
                         // uefi-secure also tests uefi so no need for a separate uefi run
                         k1 = kolaparams.clone()
                         k1.extraArgs += " --qemu-firmware=uefi-secure"
-                        if ((start_version[0..1] as Integer) <= 37) {
+                        if ((start_major_version as Integer) <= 37) {
                             // workaround a bug where grub would fail to allocate memory
                             // when start_version is <= 37.20230110.2.0
                             // https://github.com/coreos/fedora-coreos-tracker/issues/1456
