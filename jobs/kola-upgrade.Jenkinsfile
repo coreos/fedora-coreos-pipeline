@@ -183,8 +183,8 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                 stage('OSTreeArchiveFetch') {
                     shwrap("""
                     cosa shell -- \
-                        curl -o src/config/tests/kola/upgrade/extended/data/ostree-repo.tar \
-                        https://fcos-upgrade-test-fixtures.s3.us-east-1.amazonaws.com/ostree-repo-${params.STREAM}-${params.ARCH}-starting-f${start_major_version}.tar
+                        curl --retry 3 --fail -o src/config/tests/kola/upgrade/extended/data/ostree-repo.tar \
+                        https://fcos-upgrade-test-fixtures.s3.us-east-1.amazonaws.com/ostree-repo-${start_stream}-${params.ARCH}-starting-f${start_major_version}.tar
                     """)
                 }
             }
