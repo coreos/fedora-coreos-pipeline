@@ -687,6 +687,14 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
     // The Fedora major is the first component of the provided version.
     def max_version = version.tokenize('.')[0] as Integer
 
+    // We decided that we won't test all iterations forever so we'll
+    // limit testing to the past 10 releases of Fedora.
+    // https://github.com/coreos/fedora-coreos-tracker/issues/2146
+    def n_minus_ten = max_version - 10
+    if (min_version < n_minus_ten) {
+        min_version = n_minus_ten
+    }
+
     // A list of all the start versions we want to run tests for
     def start_versions = []
 
