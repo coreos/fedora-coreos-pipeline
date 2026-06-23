@@ -673,7 +673,7 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
     def stream_info = pipecfg.streams[stream]
 
     def min_supported_start_versions = [
-        aarch64: 34,
+        aarch64: 35,
         ppc64le: 38,
         s390x:   36,
         x86_64:  32,
