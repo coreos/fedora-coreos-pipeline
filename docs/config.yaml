@@ -231,6 +231,11 @@ clouds:
     # releases. When enabled, the check-aws-regions job runs `ore aws ensure-public`
     # for each enabled region on its daily schedule. Defaults to false.
     ensure_public: true
+    # OPTIONAL: list of regions to skip in various stages in the pipeline.
+    # This is useful when AWS regions experience outages.
+    skipped_regions:
+      - me-central-1
+      - me-south-1
   aliyun:
     # REQUIRED (if Aliyun build upload credentials provided): the region to do
     # initial image creation in.

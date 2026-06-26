@@ -43,10 +43,12 @@ cosaPod(serviceAccount: "jenkins"){
         if (pipecfg.clouds?.aws?.ensure_public) {
             stage("Restore Public Permissions") {
                 def failed_regions = []
-                def all_regions = shwrapCapture("ore aws list-regions").split('\n').collect { it.trim() }.findAll { it }
+                def skipped_regions = pipecfg.clouds?.aws?.skipped_regions ?: []
                 def all_regions = shwrapCapture("ore aws list-regions").tokenize()
                 for (region in all_regions) {
-                    def rc = sh(script: "ore aws --region ${region} ensure-public", returnStatus: true)
+                    if (region in skipped_regions) {
+                        continue
+                    }
                     def rc = sh(script: "ore aws --region '${region}' ensure-public", returnStatus: true)
                     if (rc != 0) {
                         failed_regions += region
