@@ -92,6 +92,10 @@ clouds:
     # Ref: https://github.com/coreos/fedora-coreos-tracker/issues/1605
     tags:
       - "FedoraGroup=coreos"
+    # These regions are experiencing outages in AWS
+    skipped_regions:
+      - me-central-1
+      - me-south-1
   azure:
     test_resource_group: fedora-coreos-testing
     test_storage_account: fedoracoreostesting
