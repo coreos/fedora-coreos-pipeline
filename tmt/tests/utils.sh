@@ -2,14 +2,14 @@
 set -eEuo pipefail
 set -x
 
-export COREOS_ASSEMBLER_CONTAINER_LATEST="quay.io/coreos-assembler/coreos-assembler:latest"
+export COREOS_ASSEMBLER_CONTAINER_REF="quay.io/coreos-assembler/coreos-assembler:latest"
 export COSA_DIR="$HOME/workspace/build"
 
 cosa ()
 {
     podman run --rm --security-opt=label=disable --privileged \
     -v "${COSA_DIR}:/srv" --device=/dev/kvm \
-    --device=/dev/fuse --tmpfs=/tmp -v /var/tmp:/var/tmp --name=cosa "${COREOS_ASSEMBLER_CONTAINER_LATEST}" "$@";
+    --device=/dev/fuse --tmpfs=/tmp -v /var/tmp:/var/tmp --name=cosa "${COREOS_ASSEMBLER_CONTAINER_REF}" "$@";
 }
 collect_kola_artifacts() {
     mkdir -p "$TMT_TEST_DATA"
@@ -20,5 +20,6 @@ run_kola(){
     OUTPUT_DIR=$(cd "${COSA_DIR}" && cosa shell -- mktemp -d tmp/kola-XXXX)
     TOKEN="$(uuidgen | cut -f1 -d -)"
     KOLA_ID="${KOLA_ID:-kola}"
+
     cd "${COSA_DIR}" && cosa kola "${KOLA_ACTION}" --build=latest --arch="$(arch)" --output-dir="${OUTPUT_DIR}/${KOLA_ID}" "${KOLA_EXTRA_ARGS[@]}"
 }

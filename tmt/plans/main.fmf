@@ -1,32 +1,41 @@
 adjust+:
   - when: arch == x86_64 or arch == aarch64
     provision:
+      image: Fedora-44
       hardware:
         cpu:
           processors: ">= 4"
-        memory: ">= 8 GB"
+        memory: ">= 12 GB"
         disk:
           - size: ">= 50 GB"
         virtualization:
           is-supported: true
+
 prepare:
   - how: install
     package:
+      - jq
+      - git-core
+      - skopeo
+      - podman
+      # required when `virtualization.is-supported` is
+      # passed in the hw requirements
       - libvirt
       - qemu-kvm
       - qemu-img
       - virt-install
-      - jq
-      - git-core
-      - skopeo
   - how: shell
+    # keep in sync with COREOS_ASSEMBLER_CONTAINER_REF in tmt/tests/utils.sh
     script: podman pull quay.io/coreos-assembler/coreos-assembler:latest
 execute:
   how: tmt
   exit-first: true
 
 /kola-qemu:
-  summary: run kola qemu tests
+  summary: run kola qemu tests (build image locally)
+  adjust+:
+    - when: import_qemu == yes
+      enabled: false
   discover+:
     how: fmf
     test:
@@ -35,10 +44,37 @@ execute:
       - test-qemu
 
 /kola-test-upgrade:
-  summary: run kola upgrade test
+  summary: run kola upgrade test (build image locally)
+  adjust+:
+    - when: import_qemu == yes
+      enabled: false
   discover+:
     how: fmf
     test:
       - init
       - build-qemu
+      - test-kola-upgrade
+
+/kola-qemu-import:
+  summary: run kola qemu tests from imported qemu image
+  enabled: false
+  adjust+:
+    - when: import_qemu == yes
+      enabled: true
+  discover+:
+    how: fmf
+    test:
+      - init
+      - test-qemu
+
+/kola-test-upgrade-import:
+  summary: run kola upgrade test from imported qemu image
+  enabled: false
+  adjust+:
+    - when: import_qemu == yes
+      enabled: true
+  discover+:
+    how: fmf
+    test:
+      - init
       - test-kola-upgrade
