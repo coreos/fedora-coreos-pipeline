@@ -17,6 +17,15 @@ echo "git version: $(git --version)"
 echo "git url: ${CONFIG_GIT_URL}"
 echo "git branch: ${CONFIG_GIT_REF}"
 
+# if the `vcs-ref` label is not set, try `org.opencontainers.image.revision`
+if [ "${CONFIG_COMMIT}" == "null" ]; then
+  CONFIG_COMMIT=$(jq -r '.Labels."org.opencontainers.image.revision"' manifest.json)
+fi
+if [ "${CONFIG_COMMIT}" == "null" ]; then
+  echo "invalid git commit"
+  exit 1
+fi
+
 mkdir -p "$COSA_DIR"
 cosa init --force "${CONFIG_GIT_URL}" --branch "${CONFIG_GIT_REF}" --commit "${CONFIG_COMMIT}"
 
