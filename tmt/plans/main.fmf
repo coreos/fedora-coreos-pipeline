@@ -1,7 +1,7 @@
 adjust+:
   - when: arch == x86_64 or arch == aarch64
     provision:
-      image: Fedora-44
+      compose: Fedora-44
       hardware:
         cpu:
           processors: ">= 4"
