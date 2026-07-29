@@ -1,7 +1,7 @@
 # This butane config will do the following:
 #
 # - Merge in the builder-common.ign Ignition file
-# - Allow the builder user to log in with the associated ssh key
+# - Allow the builder and konflux users to log in with the associated ssh keys
 # - Set a hostname
 #
 variant: fcos
@@ -16,6 +16,9 @@ passwd:
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmMuXJ9BSNQo8Dh7KMINvRbos/OfXlUMXCStZw72m6p builder@fcos-pipeline-x86_64
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFb2urqFBm023Po1axRR6Jphvi30mRupwBrz3WM30ShM builder@rhcos-pipeline-x86_64
+    - name: konflux
+      ssh_authorized_keys:
+        - <KONFLUX_SSH_PUBKEY_X86_64>
 storage:
   files:
     - path: /etc/hostname
