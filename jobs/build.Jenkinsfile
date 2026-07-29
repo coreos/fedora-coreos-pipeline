@@ -118,7 +118,8 @@ def strict_build_param = stream_info.type == "mechanical" ? "" : "--strict"
 // developers really need to tweak them.
 // XXX bump an extra 2G (to 10.5) because of an error we are seeing in
 // testiso: https://github.com/coreos/fedora-coreos-tracker/issues/1339
-def cosa_memory_request_mb = 10.5 * 1024 as Integer
+// XXX bump to 12G: https://github.com/coreos/fedora-coreos-tracker/issues/2200
+def cosa_memory_request_mb = 12 * 1024 as Integer
 
 // Now that we've established the memory constraint based on xz above, derive
 // kola parallelism from that. We leave 512M for overhead and VMs are at most
