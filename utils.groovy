@@ -991,8 +991,8 @@ def brew_upload(arches, release, repo, manifest_digest, extensions_manifest_dige
         def extensions_node_image = "${repo}@${extensions_node_digest_arch_map[inspect_arch]}"
 
         // Get metadata files with package information
-        shwrap("""oc image extract $node_image[-1] --file /usr/share/openshift/base/meta.json
-                  oc image extract $extensions_node_image[-1] --file usr/share/rpm-ostree/extensions.json
+        shwrap("""oc image extract $node_image --file /usr/share/openshift/base/meta.json
+                  oc image extract $extensions_node_image --file usr/share/rpm-ostree/extensions.json
         """)
         shwrap("""
             coreos-assembler koji-upload \
