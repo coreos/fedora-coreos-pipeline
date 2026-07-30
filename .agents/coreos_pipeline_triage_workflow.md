@@ -22,6 +22,40 @@ Pull console log and extract key evidence:
 - Call `jenkins_searchBuildLog` with error patterns: `error:`, `FATAL:`, `failed to`, `timeout`, `unauthorized`, `FAILED`
 - Call `jenkins_getTestResults` to check for kola test failures
 
+When kola tests fail, the pipeline uploads log bundles as build artifacts
+(tarballs named `kola-*.tar.xz`). These contain detailed per-test diagnostics:
+
+```
+kola/
+  reports/report.json              # overall test results summary
+  <test-name>/<uuid>/
+    journal.txt                    # systemd journal (primary diagnostic log)
+    console.txt                    # VM console output
+    ignition.json                  # Ignition config used for the test VM
+  rerun/<test-name>/<uuid>/        # rerun attempts (same structure)
+```
+
+When analyzing kola test failures:
+- `journal.txt` is the primary diagnostic log -- look for service failures,
+  kernel errors, and exit codes
+- Compare `journal.txt` between the initial run and `rerun/` to understand
+  if the failure is consistent or intermittent
+- Check `ignition.json` for missing or incorrect storage/file entries if the
+  test involves provisioning
+- Key patterns: systemd unit failures (exit codes), `Error:` / `Failed`,
+  kernel buffer I/O errors, ignition.firstboot issues, ostree deployment errors
+
+*Current limitation:* The Jenkins MCP Server Plugin does not yet support
+downloading or reading build artifacts. See
+https://github.com/jenkinsci/mcp-server-plugin/pull/42 for a potential
+future solution. In the meantime:
+- Use `jenkins_searchBuildLog` to find kola error summaries printed in the
+  console log (kola prints failing test names and error excerpts to stdout)
+- Reference the artifact names and Jenkins build URL in triage summaries so
+  users can download and inspect the tarballs from the Jenkins artifacts tab
+- Note which specific test artifacts would be relevant when drafting Jira
+  tickets
+
 For `build-node-image` failures, also search for:
 - Versionlock conflicts: `is filtered out by exclude filtering`
 - DNF dependency errors: `requires`, `nothing provides`
