@@ -24,6 +24,14 @@ properties([
              description: 'Override the coreos-assembler image to use',
              defaultValue: "quay.io/coreos-assembler/coreos-assembler:latest",
              trim: true),
+      string(name: 'NODE_IMAGE',
+             description: 'Pre-built node image pullspec (e.g. quay.io/repo@sha256:abc...). When set, skips build stages.',
+             defaultValue: '',
+             trim: true),
+      string(name: 'EXTENSIONS_IMAGE',
+             description: 'Pre-built extensions image pullspec (e.g. quay.io/repo@sha256:def...). Required when NODE_IMAGE is set.',
+             defaultValue: '',
+             trim: true),
     ]+ pipeutils.add_hotfix_parameters_if_supported()),
     buildDiscarder(logRotator(
         numToKeepStr: '100',
@@ -48,6 +56,23 @@ def stream_info = pipecfg.ocp_node_builds.release[params.RELEASE]
 def skip_brew_upload = stream_info.skip_brew_upload ?: false
 def src_config_ref = stream_info.source_config.ref
 def src_config_url = stream_info.source_config.url
+
+// Null-safe reads: on the very first run after these params are introduced,
+// Jenkins has not registered them yet and `params.*` would be null. In Groovy
+// `null != ''` is true, which would wrongly enable skip-build mode and then
+// NPE on .split(). Same defensive pattern as `params.FROM ?:` below.
+def node_image = params.NODE_IMAGE ?: ''
+def extensions_image = params.EXTENSIONS_IMAGE ?: ''
+def skip_build = false
+if (node_image != '' || extensions_image != '') {
+    skip_build = true
+    if (node_image == '' || extensions_image == '') {
+        error("NODE_IMAGE and EXTENSIONS_IMAGE must both be set if either is set.")
+    }
+    if (!node_image.contains('@sha256:') || !extensions_image.contains('@sha256:')) {
+        error("NODE_IMAGE and EXTENSIONS_IMAGE must be digest pullspecs (repo@sha256:...)")
+    }
+}
 
 def basearches = params.ARCHES.split() as Set
 def timeout_mins = 300
@@ -100,6 +125,7 @@ lock(resource: "build-node-image") {
         def registry_prod_tags
         def node_image_manifest_digest
         def extensions_image_manifest_digest
+        def image_repo
 
         try {
 
@@ -142,194 +168,224 @@ lock(resource: "build-node-image") {
         pipeutils.addOptionalRootCA()
 
         def yumrepos_file = ""
-        if (stream_info.yumrepo?.url) {
-            stage('Init') {
-                shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
-                for (repo in stream_info.yumrepo.files) {
-                    shwrap("cat yumrepos/${repo} >> all.repo")
-                }
-                yumrepos_file = shwrapCapture("realpath all.repo")
-                // let's archive it also so it's easy to see what the final repo file looked like
-                archiveArtifacts 'all.repo'
-            }
-        }
 
-        pipeutils.stageWithTimeoutWarning('Build Node Image', stage_budgets['Build Node Image']) {
-            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                 def build_from = params.FROM ?: stream_info.from
-                 def extra_build_args = []
-                 if (unique_tag != "") {
-                     extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
-                 }
-                 // for now this is opt-in, but once it propagates we can flip
-                 // it to opt-out (or just unconditional)
-                 if (stream_info.build_args_file) {
-                     extra_build_args += ["--build-arg-file", build_args_file]
-                 } else {
-                     // In the non build_args_file case the stream class
-                     // label needs to be set manually here.
-                     extra_build_args += ["--label", "${stream_class_label}"]
-                 }
+        // Stages shared between the build and skip-build paths. Groovy
+        // closures capture by reference, so image_repo / digest variables
+        // will have the correct values at call time.
+        def do_tests = {
+            if (stream_info.run_test != false) {
+                pipeutils.stageWithTimeoutWarning('Run Tests', stage_budgets['Run Tests']) {
+                    withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                        def openshift_stream = params.RELEASE.split("-")[0]
+                        def rhel_stream = "rhel-" + params.RELEASE.split("-")[1]
 
-                 node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
-                                                src_commit: commit,
-                                                src_url: src_config_url,
-                                                staging_repository: registry_staging_repo,
-                                                image_tag_staging: registry_staging_tag,
-                                                manifest_tag_staging: "${registry_staging_tag}",
-                                                // notsecret (for secret scanners)
-                                                secret: (yumrepos_file ? "id=yumrepos,src=${yumrepos_file}" : ""),
-                                                from: build_from,
-                                                v2s2: v2s2,
-                                                extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force",
-                                                                   "--add-openshift-build-labels"] + extra_build_args)
-            }
-        }
+                        parallel basearches.collectEntries { arch ->
+                            [arch, {
+                                // Define the sequence of cosa commands as a closure to avoid repetition.
+                                def executeCosaCommands = { boolean isRemote ->
+                                    // The 'cosa init' command can exit with an error due to a known issue (coreos/coreos-assembler#4239).
+                                    // Piping to 'true' ignores any non-zero exit code from 'cosa init', preventing the pipeline from failing.
+                                    shwrap("""
+                                        set +o pipefail
+                                        cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
+                                    """)
 
-        if (stream_info.extensions != false) {
-            pipeutils.stageWithTimeoutWarning('Build Extensions Image', stage_budgets['Build Extensions Image']) {
-                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                    // Use the node image as from
-                    def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
-                    def extra_build_args = []
-                    if (unique_tag != "") {
-                        extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
-                    }
-                    // for now this is opt-in, but once it propagates we can flip
-                    // it to opt-out (or just unconditional)
-                    if (stream_info.build_args_file) {
-                        extra_build_args += ["--build-arg-file", build_args_file]
-                    } else {
-                        // In the non build_args_file case the stream class
-                        // label needs to be set manually here.
-                        extra_build_args += ["--label", "${stream_class_label}"]
-                    }
+                                    // Download the node image we just built
+                                    def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
+                                    shwrap("""
+                                        cosa shell skopeo copy --override-arch ${skopeo_arch_override}      \
+                                            --authfile $REGISTRY_AUTH_FILE                                  \
+                                            docker://${image_repo}@${node_image_manifest_digest}            \
+                                            oci-archive:./openshift-${arch}.ociarchive
+                                    """)
 
-                    // Check if extensions/Containerfile exists, otherwise fall back to extensions/Dockerfile
-                    // for backwards compatibility with older branches.
+                                    // Determine the RHCOS build ID that the node image was based on
+                                    def build_id = shwrapCapture("""
+                                        cosa shell skopeo inspect oci-archive:./openshift-${arch}.ociarchive |
+                                            jq -r '.Labels.["org.opencontainers.image.version"]'
+                                    """)
 
-                    def raw_url = src_config_url.replace("github.com", "raw.githubusercontent.com")
-                    def containerfile_exists = shwrapCapture("curl -sfL ${raw_url}/${commit}/extensions/Containerfile >/dev/null 2>&1 && echo true || echo false").trim() == "true"
-                    def extensions_containerfile = containerfile_exists ? "extensions/Containerfile" : "extensions/Dockerfile"
-                    extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
-                                                   src_commit: commit,
-                                                   src_url: src_config_url,
-                                                   staging_repository: registry_staging_repo,
-                                                   image_tag_staging: "${registry_staging_tag}-extensions",
-                                                   manifest_tag_staging: "${registry_staging_tag}-extensions",
-                                                   // notsecret (for secret scanners)
-                                                   secret: (yumrepos_file ? "id=yumrepos,src=${yumrepos_file}" : ""),
-                                                   from: build_from,
-                                                   v2s2: v2s2,
-                                                   extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
-                                                                      "--git-containerfile", "${extensions_containerfile}", "--force",
-                                                                      "--add-openshift-build-labels"] + extra_build_args)
-                }
-            }
-        }
-        if (stream_info.run_test != false) {
-            pipeutils.stageWithTimeoutWarning('Run Tests', stage_budgets['Run Tests']) {
-                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                    def openshift_stream = params.RELEASE.split("-")[0]
-                    def rhel_stream = "rhel-" + params.RELEASE.split("-")[1]
+                                    // The 'cosa shell' prefix directs commands to the correct execution environment:
+                                    // the remote session if active, or the local container otherwise.
+                                    def s3_dir = pipeutils.get_s3_streams_dir(pipecfg, rhel_stream)
+                                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                                        cosa shell mkdir -p tmp
+                                        cosa buildfetch \
+                                            --arch=$arch --artifact qemu --url=s3://${s3_dir}/builds \
+                                            --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --build=${build_id}
+                                    """)
 
-                    parallel basearches.collectEntries { arch ->
-                        [arch, {
-                            // Define the sequence of cosa commands as a closure to avoid repetition.
-                            def executeCosaCommands = { boolean isRemote ->
-                                // The 'cosa init' command can exit with an error due to a known issue (coreos/coreos-assembler#4239).
-                                // Piping to 'true' ignores any non-zero exit code from 'cosa init', preventing the pipeline from failing.
-                                shwrap("""
-                                    set +o pipefail
-                                    cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
-                                """)
-
-                                // Download the node image we just built
-                                def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
-                                shwrap("""
-                                    cosa shell skopeo copy --override-arch ${skopeo_arch_override}      \
-                                        --authfile $REGISTRY_AUTH_FILE                                  \
-                                        docker://${registry_staging_repo}@${node_image_manifest_digest} \
-                                        oci-archive:./openshift-${arch}.ociarchive
-                                """)
-
-                                // Determine the RHCOS build ID that the node image was based on
-                                def build_id = shwrapCapture("""
-                                    cosa shell skopeo inspect oci-archive:./openshift-${arch}.ociarchive |
-                                        jq -r '.Labels.["org.opencontainers.image.version"]'
-                                """)
-
-                                // The 'cosa shell' prefix directs commands to the correct execution environment:
-                                // the remote session if active, or the local container otherwise.
-                                def s3_dir = pipeutils.get_s3_streams_dir(pipecfg, rhel_stream)
-                                pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                                    cosa shell mkdir -p tmp
-                                    cosa buildfetch \
-                                        --arch=$arch --artifact qemu --url=s3://${s3_dir}/builds \
-                                        --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG} --build=${build_id}
-                                """)
-
-                                shwrap("cosa decompress --build ${build_id}")
-                                kola(
-                                    cosaDir: WORKSPACE,
-                                    build: build_id,
-                                    arch: arch,
-                                    skipUpgrade: true,
-                                    extraArgs: "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
-                                )
-                            }
-
-                            // Conditional execution based on architecture
-                            if (arch != 'x86_64') {
-                                // Conditionally create the remote session only if the architecture is NOT x86_64.
-                                pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
-                                    def session = pipeutils.makeCosaRemoteSession(
-                                        expiration: "${timeout_mins}m",
-                                        image: cosa_img,
-                                        workdir: WORKSPACE
+                                    shwrap("cosa decompress --build ${build_id}")
+                                    kola(
+                                        cosaDir: WORKSPACE,
+                                        build: build_id,
+                                        arch: arch,
+                                        skipUpgrade: true,
+                                        extraArgs: "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
                                     )
-                                    withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
-                                        // Execute the commands within the remote session context.
-                                        executeCosaCommands(true)
-                                    }
                                 }
-                            } else {
-                                // For x86_64, execute the commands directly without a remote session.
-                                executeCosaCommands(false)
-                            }
-                        }]
-                    }
-                }
-            }
-        }
-        if (!skip_brew_upload){
-            pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
-                // Use the staging since we already have the digests
-                pipeutils.brew_upload(arches, params.RELEASE, registry_staging_repo, node_image_manifest_digest,
-                                      extensions_image_manifest_digest, timestamp, pipecfg)
-            }
-        }
-        pipeutils.stageWithTimeoutWarning('Release Manifests', stage_budgets['Release Manifests']) {
-            withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
-                // copy the extensions first as the node image existing is a signal
-                // that it's ready for release. So we want all the expected artifacts
-                // to be available when the ART tooling kicks in.
 
-                // Skopeo does not support pushing multiple tags at the same time
-                // So we just recopy the same image multiple times.
-                // https://github.com/containers/skopeo/issues/513
-                if (stream_info.extensions != false) {
-                    for (tag in registry_prod_tags) {
-                        pipeutils.copy_image("${registry_staging_repo}@${extensions_image_manifest_digest}",
-                                         "${registry_prod_repo}:${tag}-extensions")
+                                // Conditional execution based on architecture
+                                if (arch != 'x86_64') {
+                                    // Conditionally create the remote session only if the architecture is NOT x86_64.
+                                    pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
+                                        def session = pipeutils.makeCosaRemoteSession(
+                                            expiration: "${timeout_mins}m",
+                                            image: cosa_img,
+                                            workdir: WORKSPACE
+                                        )
+                                        withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${session}"]) {
+                                            // Execute the commands within the remote session context.
+                                            executeCosaCommands(true)
+                                        }
+                                    }
+                                } else {
+                                    // For x86_64, execute the commands directly without a remote session.
+                                    executeCosaCommands(false)
+                                }
+                            }]
+                        }
                     }
-                }
-                for (tag in registry_prod_tags) {
-                    pipeutils.copy_image("${registry_staging_repo}@${node_image_manifest_digest}",
-                                     "${registry_prod_repo}:${tag}")
                 }
             }
         }
+
+        def do_brew = {
+            if (!skip_brew_upload) {
+                pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
+                    pipeutils.brew_upload(arches, params.RELEASE, image_repo, node_image_manifest_digest,
+                                          extensions_image_manifest_digest, timestamp, pipecfg)
+                }
+            }
+        }
+
+        if (skip_build) {
+            def node_parts = node_image.split('@', 2)
+            image_repo = node_parts[0]
+            node_image_manifest_digest = node_parts[1]
+
+            def ext_parts = extensions_image.split('@', 2)
+            extensions_image_manifest_digest = ext_parts[1]
+
+            build_description = "${build_description} [pre-built]"
+            currentBuild.description = "${build_description} Running"
+
+            do_tests()
+            do_brew()
+        } else {
+            if (stream_info.yumrepo?.url) {
+                stage('Init') {
+                    shwrap("git clone ${stream_info.yumrepo.url} yumrepos")
+                    for (repo in stream_info.yumrepo.files) {
+                        shwrap("cat yumrepos/${repo} >> all.repo")
+                    }
+                    yumrepos_file = shwrapCapture("realpath all.repo")
+                    // let's archive it also so it's easy to see what the final repo file looked like
+                    archiveArtifacts 'all.repo'
+                }
+            }
+
+            pipeutils.stageWithTimeoutWarning('Build Node Image', stage_budgets['Build Node Image']) {
+                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                     def build_from = params.FROM ?: stream_info.from
+                     def extra_build_args = []
+                     if (unique_tag != "") {
+                         extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}"]
+                     }
+                     // for now this is opt-in, but once it propagates we can flip
+                     // it to opt-out (or just unconditional)
+                     if (stream_info.build_args_file) {
+                         extra_build_args += ["--build-arg-file", build_args_file]
+                     } else {
+                         // In the non build_args_file case the stream class
+                         // label needs to be set manually here.
+                         extra_build_args += ["--label", "${stream_class_label}"]
+                     }
+
+                     node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
+                                                    src_commit: commit,
+                                                    src_url: src_config_url,
+                                                    staging_repository: registry_staging_repo,
+                                                    image_tag_staging: registry_staging_tag,
+                                                    manifest_tag_staging: "${registry_staging_tag}",
+                                                    // notsecret (for secret scanners)
+                                                    secret: (yumrepos_file ? "id=yumrepos,src=${yumrepos_file}" : ""),
+                                                    from: build_from,
+                                                    v2s2: v2s2,
+                                                    extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs", "--force",
+                                                                       "--add-openshift-build-labels"] + extra_build_args)
+                }
+            }
+
+            if (stream_info.extensions != false) {
+                pipeutils.stageWithTimeoutWarning('Build Extensions Image', stage_budgets['Build Extensions Image']) {
+                    withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                        // Use the node image as from
+                        def build_from = "${registry_staging_repo}@${node_image_manifest_digest}"
+                        def extra_build_args = []
+                        if (unique_tag != "") {
+                            extra_build_args += ["--label", "coreos.build.manifest-list-tag=${unique_tag}-extensions"]
+                        }
+                        // for now this is opt-in, but once it propagates we can flip
+                        // it to opt-out (or just unconditional)
+                        if (stream_info.build_args_file) {
+                            extra_build_args += ["--build-arg-file", build_args_file]
+                        } else {
+                            // In the non build_args_file case the stream class
+                            // label needs to be set manually here.
+                            extra_build_args += ["--label", "${stream_class_label}"]
+                        }
+
+                        // Check if extensions/Containerfile exists, otherwise fall back to extensions/Dockerfile
+                        // for backwards compatibility with older branches.
+
+                        def raw_url = src_config_url.replace("github.com", "raw.githubusercontent.com")
+                        def containerfile_exists = shwrapCapture("curl -sfL ${raw_url}/${commit}/extensions/Containerfile >/dev/null 2>&1 && echo true || echo false").trim() == "true"
+                        def extensions_containerfile = containerfile_exists ? "extensions/Containerfile" : "extensions/Dockerfile"
+                        extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
+                                                       src_commit: commit,
+                                                       src_url: src_config_url,
+                                                       staging_repository: registry_staging_repo,
+                                                       image_tag_staging: "${registry_staging_tag}-extensions",
+                                                       manifest_tag_staging: "${registry_staging_tag}-extensions",
+                                                       // notsecret (for secret scanners)
+                                                       secret: (yumrepos_file ? "id=yumrepos,src=${yumrepos_file}" : ""),
+                                                       from: build_from,
+                                                       v2s2: v2s2,
+                                                       extra_build_args: ["--security-opt label=disable", "--mount-host-ca-certs",
+                                                                          "--git-containerfile", "${extensions_containerfile}", "--force",
+                                                                          "--add-openshift-build-labels"] + extra_build_args)
+                    }
+                }
+            }
+
+            // Use the staging repo since we already have the digests
+            image_repo = registry_staging_repo
+            do_tests()
+            do_brew()
+
+            pipeutils.stageWithTimeoutWarning('Release Manifests', stage_budgets['Release Manifests']) {
+                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                    // copy the extensions first as the node image existing is a signal
+                    // that it's ready for release. So we want all the expected artifacts
+                    // to be available when the ART tooling kicks in.
+
+                    // Skopeo does not support pushing multiple tags at the same time
+                    // So we just recopy the same image multiple times.
+                    // https://github.com/containers/skopeo/issues/513
+                    if (stream_info.extensions != false) {
+                        for (tag in registry_prod_tags) {
+                            pipeutils.copy_image("${registry_staging_repo}@${extensions_image_manifest_digest}",
+                                             "${registry_prod_repo}:${tag}-extensions")
+                        }
+                    }
+                    for (tag in registry_prod_tags) {
+                        pipeutils.copy_image("${registry_staging_repo}@${node_image_manifest_digest}",
+                                         "${registry_prod_repo}:${tag}")
+                    }
+                }
+            }
+        } // if (skip_build) ... else
         currentBuild.result = 'SUCCESS'
     } catch (e) {
         currentBuild.result = 'FAILURE'
