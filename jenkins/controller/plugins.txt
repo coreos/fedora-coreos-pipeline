@@ -29,7 +29,7 @@ generic-webhook-trigger:2.4.2
 github-oauth:685.v53b_070455063
 jms-messaging:1.1.28
 kubernetes-credentials-provider:1.315.v92008589c044
-mcp-server:0.158.v8e18e64dd93c
+mcp-server:0.194.v6ce5ce41a_02a_
 pipeline-github:2.8-191.cb_1a_07f10b_a_f
 pipeline-graph-view:803.vb_88f7a_a_1cb_47
 slack:795.v4b_9705b_e6d47
@@ -41,3 +41,11 @@ timestamper:1.30
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
 #
+# fast-track: mcp-server 0.194 requires newer versions of these
+git:5.10.1
+jackson-annotations2-api:2.22-19.v10a_a_582ea_26e
+jackson3-api:3.2.1-92.vd25c2e23c180
+script-security:1402.v94c9ce464861
+woodstox-core-api:7.2.1-6.v3718a_a_11f5c4
+workflow-cps:4360.v2020e8819a_d6
+workflow-step-api:724.v538c2362b_dfb_
