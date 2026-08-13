@@ -58,6 +58,7 @@ node {
         def pluginslist
         def pluginsToUpdate = [:]
         def plugins_lockfile = "jenkins/controller/plugins.txt"
+        pr_url = ""
 
         stage("Read plugins.txt") {
             /* Clone the repository and switch to the 'main' branch */
@@ -110,7 +111,7 @@ node {
 
         /* Open a PR if there are plugin updates */
         stage("Open a PR") {
-            if (shwrap("git diff --exit-code") != 0){
+            if (shwrap("git diff --exit-code") != 0) {
                 def message = "jenkins/plugins: update to latest versions"
                 shwrap("""
                     cd fedora-coreos-pipeline
@@ -126,18 +127,20 @@ node {
                         git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
                     """)
                     // Create a PR if one isn't already open for this branch
-                    def existing_pr = shwrapCapture("""
+                    def existing_pr_data = shwrapCapture("""
                         curl -s -H "Authorization: token \${GHTOKEN}" \
-                            'https://api.github.com/repos/${repo}/pulls?head=coreosbot-releng:${pr_branch}&state=open' \
-                            | jq length
+                            'https://api.github.com/repos/${repo}/pulls?head=coreosbot-releng:${pr_branch}&state=open'
                     """).trim()
-                    if (existing_pr == "0") {
-                        shwrap("""
-                            curl -H "Authorization: token \${GHTOKEN}" -X POST \
+                    def pr_count = shwrapCapture("echo '${existing_pr_data}' | jq length").trim()
+                    if (pr_count == "0") {
+                        def new_pr_data = shwrapCapture("""
+                            curl -s -H "Authorization: token \${GHTOKEN}" -X POST \
                                 -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' \
                                 https://api.github.com/repos/${repo}/pulls --fail
                         """)
+                        pr_url = shwrapCapture("echo '${new_pr_data}' | jq -r '.html_url'").trim()
                     } else {
+                        pr_url = shwrapCapture("echo '${existing_pr_data}' | jq -r '.[0].html_url'").trim()
                         println("PR already open for ${pr_branch}, force-pushed updated plugins")
                     }
                 }
@@ -148,15 +151,16 @@ node {
         currentBuild.result = 'FAILURE'
         throw e
     } finally {
-        def message = "bump-jenkins-plugins #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
+        def message
         if (currentBuild.result == 'SUCCESS') {
             currentBuild.description = "bump-jenkins-plugins ⚡"
-            message = ":pr: ${message}"
+            message = ":update: :zap: bump-jenkins-plugins #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
+            if (pr_url) {
+                message = "${message} <${pr_url}|:pr:>"
+            }
         } else {
             currentBuild.description = "bump-jenkins-plugins ❌"
-        }
-        if (currentBuild.result != 'SUCCESS') {
-            message = ":fire: ${message}"
+            message = ":update: :fire: bump-jenkins-plugins #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:>"
         }
         pipeutils.trySlackSend(message: message)
     }
