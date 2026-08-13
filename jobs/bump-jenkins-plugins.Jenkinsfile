@@ -120,12 +120,26 @@ node {
                 withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
-                    // Push to the forked repo & create a PR against "coreos: fedora-coreos-pipeline:main" repo
+                    // Push to the forked repo
                     shwrap("""
                         cd fedora-coreos-pipeline
                         git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${fork_repo} main:${pr_branch}
-                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/${repo}/pulls --fail
                     """)
+                    // Create a PR if one isn't already open for this branch
+                    def existing_pr = shwrapCapture("""
+                        curl -s -H "Authorization: token \${GHTOKEN}" \
+                            'https://api.github.com/repos/${repo}/pulls?head=coreosbot-releng:${pr_branch}&state=open' \
+                            | jq length
+                    """).trim()
+                    if (existing_pr == "0") {
+                        shwrap("""
+                            curl -H "Authorization: token \${GHTOKEN}" -X POST \
+                                -d '{ "title": "${message}", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' \
+                                https://api.github.com/repos/${repo}/pulls --fail
+                        """)
+                    } else {
+                        println("PR already open for ${pr_branch}, force-pushed updated plugins")
+                    }
                 }
             }
         }
