@@ -255,6 +255,18 @@ plume cosa2stream --target ${SECONDARY_METADATA_FILE}                 \\
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
                         shwrap("""
+                                curl -sf \\
+                                     -H "Authorization: token \${GHTOKEN}" \\
+                                     -H "Accept: application/vnd.github+json" \\
+                                     -X POST \\
+                                     -d '{"branch": "${RELEASE_BRANCH}"}' \\
+                                     https://api.github.com/repos/${releng_installer}/merge-upstream \\
+                                || curl -sf \\
+                                     -H "Authorization: token \${GHTOKEN}" \\
+                                     -H "Accept: application/vnd.github+json" \\
+                                     -X POST \\
+                                     -d '{"ref":"refs/heads/${RELEASE_BRANCH}","sha":"'\$(cd installer && git rev-parse upstream/${RELEASE_BRANCH})'"}' \\
+                                     https://api.github.com/repos/${releng_installer}/git/refs
                                 cd installer
                                 git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${releng_installer} ${PR_BRANCH}
                         """)
