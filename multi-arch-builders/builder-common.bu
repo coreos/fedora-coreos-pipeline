@@ -2,11 +2,11 @@
 #
 # - Allow designated users to log in as the core user
 # - Disable kernel mitigations (not a shared instance)
-# - Set up the podman socket for the builder user (podman remote)
+# - Set up the podman socket for the builder and konflux users (podman remote)
 # - Build coreos-assembler on the first boot and once a day
 # - Configure zincati to allow updates at a specific time (early Monday)
-# - Enable linger for builder (so processes can run even if user hasn't
-#   logged in)
+# - Enable linger for builder and konflux (so processes can run even if user
+#   hasn't logged in)
 # - Configure zram
 #
 variant: fcos
@@ -34,6 +34,7 @@ passwd:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPPNI6DP+fuWig4nxs80r/YXA1oqS7cFNulWLjKQe8C6 hhei@redhat
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE5h253p77Ez3dboIen2BBM2r5z4QN3/bLUVRySWiJn0 jcapitao@redhat
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6kvsQxj3uUpKpxB/T4gAjPNF+GKKjF8u3Hcf3JT8QA rolv@fedora
+    - name: konflux
 kernel_arguments:
   should_exist:
     - mitigations=off
@@ -66,6 +67,36 @@ storage:
         name: builder
       group:
         name: builder
+    - path: /home/konflux/.config
+      user:
+        name: konflux
+      group:
+        name: konflux
+    - path: /home/konflux/.config/systemd
+      user:
+        name: konflux
+      group:
+        name: konflux
+    - path: /home/konflux/.config/systemd/user
+      user:
+        name: konflux
+      group:
+        name: konflux
+    - path: /home/konflux/.config/systemd/user/timers.target.wants
+      user:
+        name: konflux
+      group:
+        name: konflux
+    - path: /home/konflux/.config/systemd/user/sockets.target.wants
+      user:
+        name: konflux
+      group:
+        name: konflux
+    - path: /home/konflux/builds
+      user:
+        name: konflux
+      group:
+        name: konflux
   files:
     - path: /etc/systemd/zram-generator.conf
       mode: 0644
@@ -83,6 +114,8 @@ storage:
           start_time = "07:00"
           length_minutes = 60
     - path: /var/lib/systemd/linger/builder
+      mode: 0644
+    - path: /var/lib/systemd/linger/konflux
       mode: 0644
     - path: /home/builder/.config/systemd/user/prune-container-resources.service
       mode: 0644
@@ -115,6 +148,63 @@ storage:
             Persistent=true
             [Install]
             WantedBy=timers.target
+    - path: /home/konflux/.config/systemd/user/prune-container-resources.service
+      mode: 0644
+      user:
+        name: konflux
+      group:
+        name: konflux
+      contents:
+        inline: |
+          [Unit]
+          Description=Prune Dangling and Expired Container Resources
+          [Service]
+          Type=oneshot
+          ExecStart=podman container prune --force --filter until=1h
+          ExecStart=podman volume prune --force --filter="label!=persistent"
+          ExecStart=podman image prune --force
+          ExecStart=podman image prune --all --external --force --filter until=48h
+    - path: /home/konflux/.config/systemd/user/prune-container-resources.timer
+      mode: 0644
+      user:
+        name: konflux
+      group:
+        name: konflux
+      contents:
+        inline: |
+            [Timer]
+            OnCalendar=daily
+            AccuracySec=30m
+            Persistent=true
+            [Install]
+            WantedBy=timers.target
+    - path: /home/konflux/.config/systemd/user/cleanup-builds.service
+      mode: 0644
+      user:
+        name: konflux
+      group:
+        name: konflux
+      contents:
+        inline: |
+          [Unit]
+          Description=Clean up old build directories
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/find /home/konflux/builds -mindepth 1 -maxdepth 1 -type d -mtime +0 -exec rm -rf {} +
+    - path: /home/konflux/.config/systemd/user/cleanup-builds.timer
+      mode: 0644
+      user:
+        name: konflux
+      group:
+        name: konflux
+      contents:
+        inline: |
+            [Timer]
+            OnCalendar=daily
+            AccuracySec=30m
+            Persistent=true
+            [Install]
+            WantedBy=timers.target
   links:
     - path: /home/builder/.config/systemd/user/timers.target.wants/prune-container-resources.timer
       target: /home/builder/.config/systemd/user/prune-container-resources.timer
@@ -122,10 +212,29 @@ storage:
         name: builder
       group:
         name: builder
-    # enable podman socket (used by podman remote) for the user
+    # enable podman socket (used by podman remote) for the builder user
     - path: /home/builder/.config/systemd/user/sockets.target.wants/podman.socket
       target: /usr/lib/systemd/user/podman.socket
       user:
         name: builder
       group:
         name: builder
+    - path: /home/konflux/.config/systemd/user/timers.target.wants/prune-container-resources.timer
+      target: /home/konflux/.config/systemd/user/prune-container-resources.timer
+      user:
+        name: konflux
+      group:
+        name: konflux
+    - path: /home/konflux/.config/systemd/user/timers.target.wants/cleanup-builds.timer
+      target: /home/konflux/.config/systemd/user/cleanup-builds.timer
+      user:
+        name: konflux
+      group:
+        name: konflux
+    # enable podman socket (used by podman remote) for the konflux user
+    - path: /home/konflux/.config/systemd/user/sockets.target.wants/podman.socket
+      target: /usr/lib/systemd/user/podman.socket
+      user:
+        name: konflux
+      group:
+        name: konflux
