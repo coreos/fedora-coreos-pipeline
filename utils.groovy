@@ -459,10 +459,17 @@ def get_artifacts_to_build(pipecfg, stream, basearch, skip_untested) {
 }
 
 // Build all the artifacts requested from the pipeline config for this arch.
-def build_artifacts(pipecfg, stream, basearch, skip_untested) {
+// imported_artifacts: list of artifacts already imported (e.g. from OCI),
+// which should be skipped during the build.
+def build_artifacts(pipecfg, stream, basearch, skip_untested, imported_artifacts=[]) {
 
     // First get the list of artifacts to build from the config
     def artifacts = get_artifacts_to_build(pipecfg, stream, basearch, skip_untested)
+
+    // Remove any artifacts that were already imported (e.g. via cosa import --download)
+    if (imported_artifacts) {
+        artifacts.removeAll(imported_artifacts)
+    }
 
     // If `cosa osbuild` is supported then let's build what we can using OSBuild
     if (shwrapRc("cosa shell -- test -e /usr/lib/coreos-assembler/cmd-osbuild") == 0) {
