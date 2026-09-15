@@ -35,6 +35,8 @@ passwd:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE5h253p77Ez3dboIen2BBM2r5z4QN3/bLUVRySWiJn0 jcapitao@redhat
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6kvsQxj3uUpKpxB/T4gAjPNF+GKKjF8u3Hcf3JT8QA rolv@fedora
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEQprhjsbA4cFEjBWLKk7aNKHeODZ/gNKPLkFIhpUzib bbnaraya@redhat.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDGk+q330LTNLQ1xXxySIjETCv0ZWNkrk8M5IqojrPu7 Aditya.Honkalas@ibm.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG/ypz2MTxzpIMrr0rgg/z1K+904/1VnImV123NZKCow amanshrivastava@Amans-MacBook-Pro.local
 kernel_arguments:
   should_exist:
     - mitigations=off
