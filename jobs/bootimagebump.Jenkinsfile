@@ -78,9 +78,13 @@ node {
     // For OCP 4.22+, the metadata file is split by RHEL major version
     // (coreos-rhel-9.json / coreos-rhel-10.json) instead of rhcos.json
     isDualStream = params.SECONDARY_STREAM != '' && params.SECONDARY_BUILD_VERSION != ''
-    def ocpMinor = RELEASE_BRANCH.tokenize('-.')[2]
+    def ocpVersion = RELEASE_BRANCH.replaceFirst('^release-', '').tokenize('.')
+    def ocpMajor = ocpVersion[0] as Integer
+    def ocpMinor = ocpVersion[1] as Integer
+    def usesSplitMetadata = ocpMajor > 4 || (ocpMajor == 4 && ocpMinor >= 22)
+
     def rhelMajor = streamSplit.length > 1 ? streamSplit[1].tokenize('.')[0] : null
-    if (ocpMinor && (ocpMinor as Integer) >= 22 && rhelMajor) {
+    if (usesSplitMetadata && rhelMajor) {
         RHCOS_METADATA_FILE = "data/data/coreos/coreos-rhel-${rhelMajor}.json"
     } else {
         RHCOS_METADATA_FILE = "data/data/coreos/rhcos.json"
@@ -254,12 +258,27 @@ plume cosa2stream --target ${SECONDARY_METADATA_FILE}                 \\
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                   usernameVariable: 'GHUSER',
                                                   passwordVariable: 'GHTOKEN')]) {
+                        // Sync the fork's release branch before pushing the PR branch so that
+                        // GitHub preserves the release branch history and computes the correct merge base.
                         shwrap("""
+                                curl -sSf \\
+                                     -H "Authorization: token \${GHTOKEN}" \\
+                                     -H "Accept: application/vnd.github+json" \\
+                                     -X POST \\
+                                     -d '{"branch": "${RELEASE_BRANCH}"}' \\
+                                     https://api.github.com/repos/${releng_installer}/merge-upstream \\
+                                || curl -sSf \\
+                                     -H "Authorization: token \${GHTOKEN}" \\
+                                     -H "Accept: application/vnd.github+json" \\
+                                     -X POST \\
+                                     -d '{"ref":"refs/heads/${RELEASE_BRANCH}","sha":"'\$(cd installer && git rev-parse upstream/${RELEASE_BRANCH})'"}' \\
+                                     https://api.github.com/repos/${releng_installer}/git/refs
                                 cd installer
                                 git push -f https://\${GHUSER}:\${GHTOKEN}@github.com/${releng_installer} ${PR_BRANCH}
                         """)
                         def prResponse = shwrapCapture("""
-                                curl -H "Authorization: token \${GHTOKEN}" \\
+                                curl -sSf \\
+                                     -H "Authorization: token \${GHTOKEN}" \\
                                      -X POST \\
                                      -d '{
                                      "title": "${pr_title}",
