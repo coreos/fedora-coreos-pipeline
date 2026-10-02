@@ -65,14 +65,18 @@ node {
             shwrapCapture("""
                 git clone --depth=1 --branch main https://github.com/${repo}.git
             """)
-            /* Read the plugins from the lockfile */
-            pluginslist = shwrapCapture("grep -v ^# ${plugins_lockfile}").split('\n')
+            /* Read the plugins from the lockfile, skipping comment and blank lines */
+            pluginslist = shwrapCapture('grep -vE "^(#|$)" ' + plugins_lockfile).split('\n')
         }
 
         stage("Check for plugin updates") {
             def pluginUrl
             def pluginsUpdateList = []
-            pluginslist.each { plugin ->
+            pluginslist.each { rawPlugin ->
+                def plugin = rawPlugin.trim()
+                if (plugin.isEmpty()) {
+                    return
+                }
                 def parts = plugin.split(':')
                 if (parts.size() != 2) {
                     error("Invalid plugin format: ${plugin}")
