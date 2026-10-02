@@ -23,7 +23,7 @@
 # [3] https://github.com/openshift/jenkins#plugin-installation-for-centos7-v410
 antisamy-markup-formatter:173.v680e3a_b_69ff3
 basic-branch-build-strategies:317.v85b_331d6cc42
-cloudbees-disk-usage-simple:274.v5e87a_f798201
+cloudbees-disk-usage-simple:275.v56e74c9dd0d3
 dark-theme:652.vea_da_dfea_e769
 generic-webhook-trigger:2.4.3
 github-oauth:685.v53b_070455063
@@ -31,7 +31,7 @@ jms-messaging:2.0.6
 kubernetes-credentials-provider:1.315.v92008589c044
 mcp-server:0.211.v5d12e5b_b_437e
 pipeline-github:2.8-191.cb_1a_07f10b_a_f
-pipeline-graph-view:803.vb_88f7a_a_1cb_47
+pipeline-graph-view:998.vc30deece0e36
 slack:795.v4b_9705b_e6d47
 splunk-devops:1.11.2
 splunk-devops-extend:1.11.2
