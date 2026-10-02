@@ -82,9 +82,16 @@ objects:
             value: ${ENABLE_FATAL_ERROR_LOG_FILE}
           - name: JENKINS_UC_INSECURE
             value: ${JENKINS_UC_INSECURE}
-          # DELTA: point c-as-c plugin to config map files; see below
+          # DELTA: point c-as-c plugin to explicit config files instead of the
+          # mount directory. CasC's directory scan also follows the Kubernetes
+          # ConfigMap `..data/` symlink dir, which causes each YAML file to be
+          # read twice. Since several files share the `unclassified` top-level
+          # key, this triggers a merge conflict that aborts the Jenkins boot
+          # entirely. Listing files explicitly avoids the directory scan.
+          # NOTE: keep this list in sync with the keys of the jenkins-casc-cfg
+          # ConfigMap (defined in pipeline.yaml).
           - name: CASC_JENKINS_CONFIG
-            value: /var/lib/jenkins/configuration-as-code
+            value: "/var/lib/jenkins/configuration-as-code/base/coreos-ci-lib.yaml,/var/lib/jenkins/configuration-as-code/base/generic-webhook-trigger.yaml,/var/lib/jenkins/configuration-as-code/base/github-webhook.yaml,/var/lib/jenkins/configuration-as-code/base/k8s.yaml,/var/lib/jenkins/configuration-as-code/base/seed.yaml,/var/lib/jenkins/configuration-as-code/base/slack.yaml,/var/lib/jenkins/configuration-as-code/base/timestamper.yaml"
           # DELTA:
           #   - Tell Jenkins to use UTF-8 so emojis in log outputs work
           #     https://stackoverflow.com/questions/27960996/jenkins-console-output-characters
