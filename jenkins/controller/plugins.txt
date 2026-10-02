@@ -23,15 +23,15 @@
 # [3] https://github.com/openshift/jenkins#plugin-installation-for-centos7-v410
 antisamy-markup-formatter:173.v680e3a_b_69ff3
 basic-branch-build-strategies:317.v85b_331d6cc42
-cloudbees-disk-usage-simple:274.v5e87a_f798201
+cloudbees-disk-usage-simple:275.v56e74c9dd0d3
 dark-theme:652.vea_da_dfea_e769
-generic-webhook-trigger:2.4.2
+generic-webhook-trigger:2.4.3
 github-oauth:685.v53b_070455063
-jms-messaging:1.1.28
+jms-messaging:2.0.6
 kubernetes-credentials-provider:1.315.v92008589c044
-mcp-server:0.194.v6ce5ce41a_02a_
+mcp-server:0.211.v5d12e5b_b_437e
 pipeline-github:2.8-191.cb_1a_07f10b_a_f
-pipeline-graph-view:803.vb_88f7a_a_1cb_47
+pipeline-graph-view:1041.v107d70db_b_1a_f
 slack:795.v4b_9705b_e6d47
 splunk-devops:1.11.2
 splunk-devops-extend:1.11.2
@@ -44,8 +44,8 @@ timestamper:1.30
 # fast-track: mcp-server 0.194 requires newer versions of these
 git:5.10.1
 jackson-annotations2-api:2.22-19.v10a_a_582ea_26e
-jackson3-api:3.2.1-92.vd25c2e23c180
-script-security:1402.v94c9ce464861
-woodstox-core-api:7.2.1-6.v3718a_a_11f5c4
-workflow-cps:4360.v2020e8819a_d6
+jackson3-api:3.2.3-101.v69fc84453a_8e
+script-security:1429.v0810f1b_530f5
+woodstox-core-api:7.2.2-10.vcb_629759b_2c2
+workflow-cps:4383.v04fa_a_3d67b_d9
 workflow-step-api:724.v538c2362b_dfb_
