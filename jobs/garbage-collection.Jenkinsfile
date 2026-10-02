@@ -28,10 +28,12 @@ properties([
 
 def cosa_img = 'quay.io/coreos-assembler/coreos-assembler:main'
 // def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
-// Let's keep container_env as empty map temporarily to prune on disabled streams 
+// Let's keep container_env as empty map temporarily to prune on disabled streams
 def container_env = [:]
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 def dry_run = params.DRY_RUN ? "--dry-run" : ""
+def aws_skipped_regions = pipecfg.clouds?.aws?.skipped_regions ?: []
+def aws_skip_regions = aws_skipped_regions ? "--aws-skip-regions ${aws_skipped_regions.join(' ')}" : ""
 def build_description = "[${params.STREAM}] ${params.DRY_RUN ? '[dry-run]' : ''}"
 
 lock(resource: "gc-${params.STREAM}") {
@@ -68,7 +70,7 @@ lock(resource: "gc-${params.STREAM}") {
                 stage('Garbage Collection') {
                     shwrap("""
                     cosa coreos-prune --policy ${new_gc_policy_path} \
-                    --stream ${params.STREAM} ${dry_run} \
+                    --stream ${params.STREAM} ${dry_run} ${aws_skip_regions} \
                     --gcp-json-key=\${GCP_KOLA_TESTS_CONFIG} \
                     --acl=${acl} \
                     --registry-auth-file=\${REGISTRY_SECRET} \
