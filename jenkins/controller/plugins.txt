@@ -23,7 +23,7 @@
 # [3] https://github.com/openshift/jenkins#plugin-installation-for-centos7-v410
 antisamy-markup-formatter:173.v680e3a_b_69ff3
 basic-branch-build-strategies:317.v85b_331d6cc42
-cloudbees-disk-usage-simple:275.v56e74c9dd0d3
+cloudbees-disk-usage-simple:274.v5e87a_f798201
 dark-theme:652.vea_da_dfea_e769
 generic-webhook-trigger:2.4.3
 github-oauth:685.v53b_070455063
@@ -31,7 +31,7 @@ jms-messaging:2.0.6
 kubernetes-credentials-provider:1.315.v92008589c044
 mcp-server:0.211.v5d12e5b_b_437e
 pipeline-github:2.8-191.cb_1a_07f10b_a_f
-pipeline-graph-view:1041.v107d70db_b_1a_f
+pipeline-graph-view:803.vb_88f7a_a_1cb_47
 slack:795.v4b_9705b_e6d47
 splunk-devops:1.11.2
 splunk-devops-extend:1.11.2
@@ -41,7 +41,7 @@ timestamper:1.30
 # The below list are plugins that are also in base-plugins.txt but for
 # some reason or other we need to temporarily freeze or fast-track.
 #
-# fast-track: mcp-server 0.194 requires newer versions of these
+# fast-track: mcp-server 0.211 requires newer versions of these
 git:5.10.1
 jackson-annotations2-api:2.22-19.v10a_a_582ea_26e
 jackson3-api:3.2.3-101.v69fc84453a_8e
