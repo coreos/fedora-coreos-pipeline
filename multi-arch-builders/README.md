@@ -14,11 +14,10 @@ HISTCONTROL='ignoreboth'
  export AWS_SECRET_ACCESS_KEY=YYYYYYYY
 ```
 
-Create the Ignition config
+Grab the Butane config:
 
 ```bash
-cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat coreos-aarch64-builder.bu | butane --pretty --strict --files-dir=. > coreos-aarch64-builder.ign
+curl -O https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-aarch64-builder.bu
 ```
 
 Bring the instance up with appropriate details:
@@ -30,7 +29,7 @@ TYPE='a1.metal'
 DISK='200'
 SUBNET='subnet-09b21d23b5feffd3c'
 SECURITY_GROUPS='sg-01e9626e414e468f1'
-USERDATA="${PWD}/coreos-aarch64-builder.ign"
+USERDATA="${PWD}/coreos-aarch64-builder.bu"
 aws ec2 run-instances                     \
     --output json                         \
     --image-id $AMI                       \
@@ -91,12 +90,11 @@ This machine is a VM on a koji builder set up for us by Kevin Fenzi
 (nirik). We'll work to automate this bringup and store the information
 about how to provision this machine here in the future.
 
-To create the Ignition config for this machine:
+When provisioning share with the engineer doing the provisioning that
+they can use the Butane file from:
 
-```bash
-cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat coreos-ppc64le-builder.bu | butane --pretty --strict --files-dir=. > coreos-ppc64le-builder.ign
-cat coreos-ppc64le-fcos-builder.bu | butane --pretty --strict --files-dir=. > coreos-ppc64le-fcos-builder.ign
+```
+curl -O https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-ppc64le-builder.bu
 ```
 
 To connect to this machine first add 
@@ -223,11 +221,10 @@ HISTCONTROL='ignoreboth'
  export AWS_SECRET_ACCESS_KEY=YYYYYYYY
 ```
 
-Create the Ignition config
+Grab the Butane config:
 
 ```bash
-cat builder-common.bu | butane --pretty --strict > builder-common.ign
-cat coreos-x86_64-builder.bu | butane --pretty --strict --files-dir=. > coreos-x86_64-builder.ign
+curl -O https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-x86_64-builder.bu
 ```
 
 Bring the instance up with appropriate details:
@@ -236,10 +233,10 @@ Bring the instance up with appropriate details:
 NAME="coreos-x86_64-builder-$(date +%Y%m%d)"
 AMI=''
 TYPE='c6a.xlarge'
-DISK='100'
+DISK='200'
 SUBNET='subnet-050b478f586723c62'
 SECURITY_GROUPS='sg-0ff537e445349ca0e'
-USERDATA="${PWD}/coreos-x86_64-builder.ign"
+USERDATA="${PWD}/coreos-x86_64-builder.bu"
 aws ec2 run-instances                     \
     --output json                         \
     --image-id $AMI                       \
