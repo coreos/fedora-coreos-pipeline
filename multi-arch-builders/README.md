@@ -224,7 +224,7 @@ HISTCONTROL='ignoreboth'
 Grab the Butane config:
 
 ```bash
-curl -O https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-x86_64-builder.bu
+curl -O https://github.com/dustymabe/fedora-coreos-pipeline/raw/refs/heads/dusty-butane-example/multi-arch-builders/coreos-x86_64-builder.bu
 ```
 
 Bring the instance up with appropriate details:
