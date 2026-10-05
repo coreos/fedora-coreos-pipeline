@@ -26,7 +26,8 @@
                 "ec2:DescribeAvailabilityZones",
                 "ec2:DescribeVolumes",
                 "ec2:DescribeRegions",
-                "ec2:DescribeConversionTasks"
+                "ec2:DescribeConversionTasks",
+                "ec2:DescribeTags"
             ],
             "Resource": "*"
         },
