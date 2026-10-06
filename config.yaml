@@ -12,7 +12,8 @@ streams:
     type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: development
-    konflux_driven: true
+    import_from_konflux: true
+    konflux_application: fedora-coreos-rawhide
   # branched:
   #   type: development
 
@@ -29,6 +30,11 @@ s3:
   # just upload as public-read for now, but see discussions in
   # https://github.com/coreos/fedora-coreos-tracker/issues/189
   acl: public-read
+
+konflux:
+  api_url: https://api.kflux-fedora-01.84db.p1.openshiftapps.com:6443
+  token_credential: konflux-bot-0
+  namespace: coreos-tenant
 
 registry_repos:
   oscontainer:

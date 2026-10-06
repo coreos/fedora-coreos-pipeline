@@ -24,9 +24,6 @@ node {
     if (scheduled_streams) {
         development_streams = scheduled_streams
     }
-    // Filter out streams that are managed by konflux
-    development_streams = pipeutils.non_konflux_driven_streams(pipecfg, development_streams)
-
     parallel development_streams.collectEntries { stream -> [stream, {
         // If there is a bump-lockfile job running for this stream
         // let's wait until it is done before we kick off the daily
@@ -36,6 +33,8 @@ node {
             echo "Triggering build for development stream: ${stream}"
             build job: 'build', wait: false, propagate: false, parameters: [
               string(name: 'STREAM', value: stream),
+              booleanParam(name: 'IMPORT_FROM_KONFLUX',
+                           value: pipeutils.is_stream_konflux_driven(pipecfg, stream)),
               booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
             ]
         }
