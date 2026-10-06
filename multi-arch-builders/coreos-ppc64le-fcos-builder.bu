@@ -1,6 +1,6 @@
 # This butane config will do the following:
 #
-# - Merge in the coreos-ppc64le-builder.ign Ignition file
+# - Merge in the coreos-ppc64le-builder.bu Butane file
 # - Add bond + DHCP configuration specific to the fcos ppc64le builder
 #     - We have two NICs and must be on 711 vlan (builder network)
 #
@@ -8,8 +8,7 @@ variant: fcos
 version: 1.6.0
 ignition:
   config:
-    merge:
-      - local: coreos-ppc64le-builder.ign
+      - source: https://github.com/coreos/fedora-coreos-pipeline/raw/refs/heads/main/multi-arch-builders/coreos-ppc64le-builder.bu
 kernel_arguments:
   should_exist:
     - net.ifnames=0
