@@ -63,6 +63,14 @@ streams:
       # OPTIONAL: Whether to skip building ostree in the build pipeline.
       # The build would be imported using `cosa import` with the specified image uri.
       import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
+      # OPTIONAL: source the latest validated Snapshot from Konflux when the
+      # IMPORT_FROM_KONFLUX build parameter is enabled.
+      konflux_driven: true
+      konflux_api_url: https://api.kflux-fedora-01.84db.p1.openshiftapps.com
+      konflux_namespace: coreos-tenant
+      konflux_application: fedora-coreos-testing-devel
+      # Jenkins secret-text credential containing a Konflux API token.
+      konflux_token_credential: konflux-api-token
       # OPTIONAL: make the release job trigger build-node-image for the
       # following OCP releases once successful
       build_node_images: ["4.19-9.6"]

@@ -21,6 +21,9 @@ properties([
              description: 'Override import_oci_image image to use. If set, the STREAM parameter must match the image labels.',
              defaultValue: "",
              trim: true),
+      booleanParam(name: 'IMPORT_FROM_KONFLUX',
+                   defaultValue: false,
+                   description: 'Import the latest validated Snapshot image from Konflux.'),
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
              defaultValue: '',
@@ -130,8 +133,30 @@ def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
 def import_oci_image = params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
 boolean import_oci = import_oci_image != ""
-if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
-    error("STREAMS that are driven by Konflux must import an OCI image")
+// TODO: change this
+// if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
+//     error("STREAMS that are driven by Konflux must import an OCI image")
+//}
+
+boolean import_from_konflux = params.IMPORT_FROM_KONFLUX ?: stream_info.get("import_from_konflux", false)
+if (import_from_konflux && import_oci_image) {
+    error("IMPORT_FROM_KONFLUX and IMPORT_OCI_IMAGE are mutually exclusive")
+}
+
+def konflux_snapshot = ""
+def konflux_container = ""
+
+if (import_from_konflux) {
+    def required_konflux_config = [
+        "konflux_api_url",
+        "konflux_namespace",
+        "konflux_application",
+        "konflux_token_credential",
+    ]
+    def missing_konflux_config = required_konflux_config.findAll { !stream_info.get(it) }
+    if (missing_konflux_config) {
+        error("Missing Konflux configuration for ${params.STREAM}: ${missing_konflux_config.join(', ')}")
+    }
 }
 
 echo "Waiting for build-${params.STREAM} lock"
@@ -201,10 +226,62 @@ lock(resource: "build-${params.STREAM}") {
         // add any additional root CA cert before we do anything that fetches
         pipeutils.addOptionalRootCA()
 
+        if (import_from_konflux) {
+            stage('Find validated Konflux Snapshot') {
+                def konflux_snapshot_data
+                withEnv([
+                    "KONFLUX_API_URL=${stream_info.konflux_api_url}",
+                    "KONFLUX_NAMESPACE=${stream_info.konflux_namespace}",
+                    "KONFLUX_APPLICATION=${stream_info.konflux_application}",
+                ]) {
+                    withCredentials([string(credentialsId: stream_info.konflux_token_credential,
+                                            variable: 'KONFLUX_API_TOKEN')]) {
+                        konflux_snapshot_data = readJSON(text: shwrapCapture('''
+                        curl -vk \
+                            --connect-timeout 10 \
+                            --max-time 15 \
+                            --output /dev/null \
+                            "${KONFLUX_API_URL}/api" && \
+                        oc login \
+                            --server="${KONFLUX_API_URL}" \
+                            --token="${KONFLUX_API_TOKEN}" \
+                            >/dev/null && \
+                        oc get snapshots \
+                            --namespace="${KONFLUX_NAMESPACE}" \
+                            --selector="appstudio.openshift.io/application=${KONFLUX_APPLICATION}" \
+                            --sort-by=.metadata.creationTimestamp \
+                            --output=json | \
+                        jq -ec '
+                            [ .items[] | select(any(.status.conditions[]?; .type == "AppStudioTestSucceeded" and .status == "True"))]
+                            | last
+                            | if . == null then
+                                error("No validated Konflux Snapshot found")
+                              elif (.spec.components | length) != 1 then
+                                error("Validated Konflux Snapshot must contain exactly one component")
+                              else
+                                .
+                              end
+                        '
+                        '''))
+                    }
+                }
+                konflux_snapshot = konflux_snapshot_data.metadata.name
+                konflux_container = konflux_snapshot_data.spec.components[0].containerImage
+                echo "Importing validated Konflux Snapshot ${konflux_snapshot}: ${konflux_container}"
+            }
+        }
+
         def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
         def src_config_commit = ""
         if (import_oci) {
             src_config_commit = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"org.opencontainers.image.revision\"'")
+        } else if (konflux_container) {
+            withCredentials([string(credentialsId: stream_info.konflux_token_credential,
+                                    variable: 'KONFLUX_API_TOKEN')]) {
+                src_config_commit = shwrapCapture("""
+                skopeo inspect --creds "konflux-bot-0:\${KONFLUX_API_TOKEN}" -n --retry-times 3 docker://${konflux_container} | jq -r '.Labels.\"org.opencontainers.image.revision\"'
+                """)
+            }
         } else {
             src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
         }
@@ -283,7 +360,7 @@ lock(resource: "build-${params.STREAM}") {
             parent_arg = "--parent-build ${parent_version}"
         }
 
-        if (!import_oci) {
+        if (!import_oci && !konflux_container) {
             // fetch from repos for the current build
             stage('Fetch') {
                 // Dont run this for production builds
@@ -341,7 +418,7 @@ lock(resource: "build-${params.STREAM}") {
                         // goal is to get a complete build.
                         run_multiarch_jobs(missing_arches, rev, buildID, import_oci_image, cosa_img, true)
                         if (stream_info.type != "production") {
-                            run_release_job(buildID)
+                            run_release_job(buildID, konflux_snapshot, konflux_container)
                         }
                     }
                 }
@@ -492,7 +569,7 @@ lock(resource: "build-${params.STREAM}") {
         // released before continuing so that they can test upgrading
         // from the actual containers pushed to the registry and signed.
         if (uploading && stream_info.type != "production") {
-            run_release_job(newBuildID)
+            run_release_job(newBuildID, konflux_snapshot, konflux_container)
         }
 
         // Now that the metadata is uploaded go ahead and kick off some followup tests.
@@ -595,7 +672,7 @@ def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
     }
 }
 
-def run_release_job(buildID) {
+def run_release_job(buildID, konflux_snapshot, konflux_container) {
     stage('Publish') {
         // For FCOS development/mechanical builds, we will allow missing architectures for flexibility.
         // However, for RHCOS, we can keep the default behavior of not allowing missing architectures.
@@ -605,6 +682,8 @@ def run_release_job(buildID) {
             string(name: 'STREAM', value: params.STREAM),
             string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
             string(name: 'VERSION', value: buildID),
+            string(name: 'KONFLUX_SNAPSHOT', value: konflux_snapshot),
+            string(name: 'KONFLUX_CONTAINER', value: konflux_container),
             booleanParam(name: 'ALLOW_MISSING_ARCHES', value: allow_missing),
             booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
         ] + ((params.PIPECFG_HOTFIX_REPO) ? [

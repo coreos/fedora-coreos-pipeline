@@ -20,6 +20,14 @@ properties([
              description: 'CoreOS version to release',
              defaultValue: '',
              trim: true),
+      string(name: 'KONFLUX_SNAPSHOT',
+             description: 'Konflux Snapshot used for this build',
+             defaultValue: '',
+             trim: true),
+      string(name: 'KONFLUX_CONTAINER',
+             description: 'Konflux container image imported for this build',
+             defaultValue: '',
+             trim: true),
       string(name: 'ADDITIONAL_ARCHES',
              description: "Override additional architectures (space-separated). " +
                           "Use 'none' to only release for x86_64. " +
