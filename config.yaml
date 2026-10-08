@@ -52,6 +52,7 @@ default_artifacts:
     - gcp
     - hetzner
     - hyperv
+    - kubevirt
     - oraclecloud
   ppc64le:
     - powervs
