@@ -5,7 +5,6 @@ node {
     pipecfg = pipeutils.load_pipecfg()
 }
 
-repo = "coreos/fedora-coreos-config"
 botCreds = "github-coreosbot-token-username-password"
 
 def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
@@ -51,6 +50,16 @@ def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
 
+// Resolve source config repo and ref for this stream
+def (src_config_url, src_config_ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
+def repo = src_config_url.replaceAll('https://github.com/', '')
+
+// Determine if lockfiles live in a stream-specific subdirectory.
+// FCOS: lockfiles at repo root, one branch per stream.
+// RHCOS: lockfiles in lockfiles/${stream}/, all streams on main.
+def uses_lockfile_subdir = (src_config_ref != params.STREAM)
+def lockfile_prefix = uses_lockfile_subdir ? "lockfiles/${params.STREAM}/" : ""
+
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
@@ -92,12 +101,17 @@ lock(resource: "bump-lockfile") {
           git config --global user.email "coreosbot@fedoraproject.org"
         """)
 
-        def branch = params.STREAM
+        def branch = src_config_ref
         def forceTimestamp = false
         def haveChanges = false
         def src_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} refs/heads/${branch} | cut -d \$'\t' -f 1")
         def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
         shwrap("cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}")
+
+        // Ensure lockfile directory exists for stream-specific layouts
+        if (uses_lockfile_subdir) {
+            shwrap("mkdir -p src/config/${lockfile_prefix}")
+        }
 
         def lockfile, pkgChecksum, pkgTimestamp
         def skip_tests_arches = params.SKIP_TESTS_ARCHES.split()
@@ -107,7 +121,7 @@ lock(resource: "bump-lockfile") {
             def arch = architecture
             // initialize some data
             archinfo[arch]['session'] = ""
-            lockfile = "src/config/manifest-lock.${arch}.json"
+            lockfile = "src/config/${lockfile_prefix}manifest-lock.${arch}.json"
             (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
             archinfo[arch]['prevPkgChecksum'] = pkgChecksum
             archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
@@ -176,12 +190,12 @@ lock(resource: "bump-lockfile") {
                                 --url=s3://${s3_stream_dir}/builds
                             # Delete the non-overrides lockfile so this build will be
                             # unlocked so we'll get new RPM updates.
-                            cosa shell -- rm src/config/manifest-lock.${arch}.json
+                            cosa shell -- rm src/config/${lockfile_prefix}manifest-lock.${arch}.json
                             cosa build --force
                             # Copy the generated lockfile into place.
                             # NOTE: if on a remote builder this will copy to the x86_64 pod
                             cosa shell -- cat builds/latest/${arch}/manifest-lock.generated.${arch}.json \
-                                > src/config/manifest-lock.${arch}.json
+                                > src/config/${lockfile_prefix}manifest-lock.${arch}.json
                         """)
                     }
                 }
@@ -191,7 +205,7 @@ lock(resource: "bump-lockfile") {
 
         for (architecture in archinfo.keySet()) {
             def arch = architecture
-            lockfile = "src/config/manifest-lock.${arch}.json"
+            lockfile = "src/config/${lockfile_prefix}manifest-lock.${arch}.json"
             (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
             archinfo[arch]['newPkgChecksum'] = pkgChecksum
             archinfo[arch]['newPkgTimestamp'] = pkgTimestamp
@@ -226,7 +240,7 @@ lock(resource: "bump-lockfile") {
           # do this separately so set -e kicks in if it fails
           files=\$(git -C src/config ls-files --modified --deleted)
           for f in \${files}; do
-            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|build-args\\.conf) ]]; then
+            if ! [[ \${f} =~ ^(${lockfile_prefix}manifest-lock\\.[0-9a-z_]+\\.json|build-args\\.conf) ]]; then
               echo "Unexpected modified file \${f}"
               exit 1
             fi
@@ -319,7 +333,7 @@ lock(resource: "bump-lockfile") {
                 message="lockfiles: bump timestamp"
             }
 
-            shwrap("git -C src/config add manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
+            shwrap("git -C src/config add ${lockfile_prefix}manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
             shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
             withCredentials([usernamePassword(credentialsId: botCreds,
                                               usernameVariable: 'GHUSER',
