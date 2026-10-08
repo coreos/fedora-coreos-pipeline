@@ -21,6 +21,11 @@ properties([
              description: 'Override import_oci_image image to use. If set, the STREAM parameter must match the image labels.',
              defaultValue: "",
              trim: true),
+      string(name: 'IMPORT_ARTIFACTS',
+             description: "Space-separated list of disk image artifacts to download from the OCI image (e.g. qemu metal)." +
+                          "Requires IMPORT_OCI_IMAGE to be set.",
+             defaultValue: "",
+             trim: true),
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
              defaultValue: '',
@@ -133,6 +138,12 @@ boolean import_oci = import_oci_image != ""
 if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
     error("STREAMS that are driven by Konflux must import an OCI image")
 }
+
+def import_artifacts = params.IMPORT_ARTIFACTS ?: ""
+if (import_artifacts && !import_oci) {
+    error("IMPORT_ARTIFACTS requires a value in IMPORT_OCI_IMAGE")
+}
+def imported_artifacts = import_artifacts ? import_artifacts.split() as List : []
 
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "${build_description} Waiting"
@@ -353,7 +364,8 @@ lock(resource: "build-${params.STREAM}") {
         } else {
             stage("Import OCI image") {
                 echo "Skipping build : Importing OCI : $import_oci_image"
-                shwrap("cosa import docker://${import_oci_image} --skip-prune ${parent_arg}")
+                def download_arg = imported_artifacts ? "--download ${imported_artifacts.join(',')}" : ""
+                shwrap("cosa import docker://${import_oci_image} --skip-prune ${parent_arg} ${download_arg}")
                 def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
                 def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
                 if (params.STREAM != oci_stream) {
@@ -384,7 +396,7 @@ lock(resource: "build-${params.STREAM}") {
 
         // Build artifacts (including QEMU)
         stage("Build Artifacts") {
-            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts)
+            pipeutils.build_artifacts(pipecfg, params.STREAM, basearch, skip_untested_artifacts, imported_artifacts)
 
             // Stop the build if the kernel + kernel-rt versions do not match.
             // This check runs on x86_64 RHCOS builds only.
