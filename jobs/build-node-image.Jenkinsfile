@@ -225,12 +225,37 @@ lock(resource: "build-node-image", priority: queue_priority) {
                                     """)
 
                                     shwrap("cosa decompress --build ${build_id}")
+
+                                    // Generate a Butane config to pass the extensions image
+                                    // pullspec and registry pull secret into kola test VMs.
+                                    def kolaExtraArgs = "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
+                                    if (extensions_image_manifest_digest) {
+                                        def extensionsPullspec = "${image_repo}@${extensions_image_manifest_digest}"
+                                        shwrap("""
+                                            PULL_SECRET_B64=\$(base64 -w0 \$REGISTRY_AUTH_FILE)
+                                            cat > extensions-test.bu << BUTANE_EOF
+variant: openshift
+version: 4.18.0
+storage:
+  files:
+    - path: /etc/extensions-image
+      mode: 0644
+      contents:
+        inline: ${extensionsPullspec}
+    - path: /etc/extensions-pull-secret.json
+      mode: 0600
+      contents:
+        source: "data:;base64,\${PULL_SECRET_B64}"
+BUTANE_EOF
+                                        """)
+                                        kolaExtraArgs += " --append-butane extensions-test.bu"
+                                    }
                                     kola(
                                         cosaDir: WORKSPACE,
                                         build: build_id,
                                         arch: arch,
                                         skipUpgrade: true,
-                                        extraArgs: "--tag openshift --oscontainer openshift-${arch}.ociarchive --denylist-stream ${params.RELEASE}"
+                                        extraArgs: kolaExtraArgs
                                     )
                                 }
 
