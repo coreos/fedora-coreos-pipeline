@@ -9,6 +9,7 @@ node {
 
 def brew_principal = pipecfg.brew?.principal
 def brew_profile = pipecfg.brew?.profile
+def konflux = pipecfg.konflux ?: [:]
 
 properties([
     pipelineTriggers([]),
@@ -18,6 +19,10 @@ properties([
              description: 'CoreOS stream to release'),
       string(name: 'VERSION',
              description: 'CoreOS version to release',
+             defaultValue: '',
+             trim: true),
+      string(name: 'KONFLUX_SNAPSHOT',
+             description: 'Konflux Snapshot used for this build',
              defaultValue: '',
              trim: true),
       string(name: 'ADDITIONAL_ARCHES',
@@ -85,6 +90,35 @@ def stream_info = pipecfg.streams[params.STREAM]
 build_description += "[${basearches.join(' ')}][${params.VERSION}]"
 currentBuild.description = "${build_description} Waiting"
 
+// Create a Konflux Release resource and return its name
+// Returns null if the releasePlan is not available
+def createKonfluxRelease(namespace, releasePlan, snapshot, kubeconfig) {
+    // Verify that the releasePlan exists
+    def exitCode = sh(
+        script: "KUBECONFIG=${kubeconfig} oc get releaseplan ${releasePlan} -n ${namespace} >/dev/null 2>&1",
+        returnStatus: true
+    )
+    if (exitCode != 0) {
+        echo "ReleasePlan '${releasePlan}' not available in namespace '${namespace}', skipping Konflux release"
+        return null
+    }
+
+    def manifest = """\
+apiVersion: appstudio.redhat.com/v1alpha1
+kind: Release
+metadata:
+  generateName: release-container-image-
+  namespace: ${namespace}
+  labels:
+    release.appstudio.openshift.io/automated: "false"
+    release.appstudio.openshift.io/author: jenkins
+spec:
+  releasePlan: ${releasePlan}
+  snapshot: ${snapshot}
+"""
+    return shwrapCapture("KUBECONFIG=${kubeconfig} oc create -f - -o jsonpath='{.metadata.name}' <<< '${manifest}'").trim()
+}
+
 // Take a lock for the stream to make sure only one of these run at a
 // time and also synchronize with the kola-upgrade job. Take this lock
 // early (i.e. don't wait for all the arch specific locks) and hold it
@@ -126,6 +160,100 @@ lock(resource: locks.remove(0).resource, extra: locks) {
                 --arch=all --url=s3://${s3_stream_dir}/builds \
                 --aws-config-file \${AWS_BUILD_UPLOAD_CONFIG}
             """)
+        }
+
+        if (params.KONFLUX_SNAPSHOT) {
+            stage('Konflux Release') {
+                if (!konflux.api_url || !konflux.token_credential || !konflux.namespace) {
+                    error("Missing Konflux configuration.")
+                }
+
+                withEnv(["KONFLUX_API_URL=${konflux.api_url}",
+                         "KONFLUX_NAMESPACE=${konflux.namespace}",
+                         "KONFLUX_SNAPSHOT=${params.KONFLUX_SNAPSHOT}",
+                         "KUBECONFIG=/tmp/konflux-kubeconfig"]) {
+                    withCredentials([string(credentialsId: konflux.token_credential,
+                                            variable: 'KONFLUX_API_TOKEN')]) {
+                        // Fetch the snapshot and extract the containerImage
+                        shwrap('''
+                            oc login \
+                                --server="${KONFLUX_API_URL}" \
+                                --token="${KONFLUX_API_TOKEN}" \
+                                >/dev/null
+                        ''')
+                        def snapshot_json = shwrapCapture('''
+                            oc get snapshot ${KONFLUX_SNAPSHOT} --namespace="${KONFLUX_NAMESPACE}" -o json
+                        ''')
+                        def snapshot = readJSON(text: snapshot_json)
+                        def container_image = snapshot.spec.components[0].containerImage
+                        env.KONFLUX_APPLICATION = snapshot.spec.application
+
+                        // Get image access configuration (with optional proxy)
+                        def access_config = pipeutils.getImageAccessConfig(
+                            image: container_image,
+                            proxy_domain: konflux.proxy_domain,
+                            auth_user: konflux.token_credential,
+                            auth_password: 'KONFLUX_API_TOKEN'
+                        )
+                        container_image = access_config.image
+
+                        // Verify that the image version matches VERSION
+                        def image_version = shwrapCapture("""
+                            ${access_config.login_cmd} skopeo inspect ${access_config.auth_file_arg} \
+                                -n --retry-times 3 docker://${container_image} | \
+                                jq -r '.Labels."org.opencontainers.image.version"'
+                        """).trim()
+
+                        if (image_version != params.VERSION) {
+                            error("Version mismatch: VERSION=${params.VERSION} but image has version ${image_version}")
+                        }
+
+                        // Create the Konflux Release (oc is already logged in)
+                        def release_name = createKonfluxRelease(
+                            KONFLUX_NAMESPACE, KONFLUX_APPLICATION, KONFLUX_SNAPSHOT, env.KUBECONFIG
+                        )
+
+                        if (!release_name) {
+                            // ReleasePlan not available, skip the release polling
+                            return
+                        }
+
+                        echo "Created Konflux Release: ${release_name}"
+
+                        // Poll for release completion (10 minutes timeout, 30s interval)
+                        def max_attempts = 20
+                        def attempt = 0
+                        def release_status = ""
+
+                        while (attempt < max_attempts) {
+                            attempt++
+                            echo "Waiting for release ${release_name}... (attempt ${attempt}/${max_attempts})"
+
+                            release_status = shwrapCapture("""
+                                oc get release ${release_name} -n ${KONFLUX_NAMESPACE} \
+                                    -o jsonpath='{.status.conditions[?(@.type=="Released")].reason}'
+                            """).trim()
+
+                            if (release_status == "Succeeded") {
+                                echo "Konflux Release ${release_name} succeeded!"
+                                break
+                            } else if (release_status == "Failed") {
+                                def message = shwrapCapture("""
+                                    oc get release ${release_name} -n ${KONFLUX_NAMESPACE} \
+                                        -o jsonpath='{.status.conditions[?(@.type=="Released")].message}'
+                                """).trim()
+                                error("Konflux Release failed: ${message}")
+                            }
+
+                            sleep(30)
+                        }
+
+                        if (release_status != "Succeeded") {
+                            error("Konflux Release timed out after 10 minutes")
+                        }
+                    }
+                }
+            }
         }
 
         def missing_arches = false
