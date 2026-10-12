@@ -879,24 +879,38 @@ def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
         build_args += ["--from", from]
     }
     build_args += extra_build_args
-    def digest_list = []
     parallel arches.collectEntries { arch ->
         [arch, {
             pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                 def final_args = build_args + ["--arch", arch, "--tag", "${tag}-${arch}"]
                 final_args += ["--write-digest-to-file", "${tag}-${arch}"]
                 shwrap("cosa remote-build-container ${final_args.join(' ')}")
-                digest_list += readFile("${tag}-${arch}")
-                shwrap("""rm -f ${tag}-${arch} """)
             }
         }]
+    }
+    // Read digest files sequentially after parallel completes to
+    // avoid a race condition with concurrent list append.
+    def digest_list = []
+    for (arch in arches) {
+        def digest = readFile("${tag}-${arch}").trim()
+        if (!digest) {
+            error("Empty or missing digest for arch ${arch} from file ${tag}-${arch}")
+        }
+        digest_list += digest
+        shwrap("rm -f ${tag}-${arch}")
     }
     return digest_list
 }
 
 def push_manifest(digests, repo, manifest_tag, v2s2) {
+    if (!digests) {
+        error("No digests provided to push_manifest")
+    }
     def images = ""
     for (digest in digests) {
+        if (!digest?.trim()) {
+            error("Empty digest found in push_manifest digest list")
+        }
         images += " --image=docker://${repo}@${digest}"
     }
     def digest = ""
