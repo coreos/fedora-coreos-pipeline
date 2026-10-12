@@ -1103,4 +1103,42 @@ def stageWithTimeoutWarning(String name, int budgetMins, Closure body) {
     }
 }
 
+// Prepare image access configuration, optionally through a proxy.
+//
+// Parameters:
+//   image:             string -- The container image URL
+//   proxy_domain:      string -- (optional) Proxy domain to use instead of quay.io
+//   auth_user:         string -- Username for authentication
+//   auth_password:     string -- Password for authentication
+//   auth_file_path:    string -- (optional) Path for auth file, defaults to /tmp/auth.json
+//
+// Returns a map with:
+//   - image:         the image URL (modified if proxy is used)
+//   - auth_file:     the auth file path (or empty string)
+//   - auth_file_arg: the --authfile argument for skopeo (or empty string)
+//   - login_cmd:     the skopeo login command prefix (or empty string)
+def getImageAccessConfig(Map params) {
+    def image = params.image
+    def proxy_domain = params.proxy_domain
+    def auth_user = params.auth_user
+    def auth_password = params.auth_password
+    def auth_file_path = params.get('auth_file_path', '/tmp/auth.json')
+
+    def result = [
+        image: image,
+        auth_file: "",
+        auth_file_arg: "",
+        login_cmd: ""
+    ]
+
+    if (proxy_domain) {
+        result.image = image.replace("quay.io", proxy_domain)
+        result.auth_file = auth_file_path
+        result.auth_file_arg = "--authfile ${auth_file_path}"
+        result.login_cmd = "skopeo login ${result.auth_file_arg} -u ${auth_user} -p \${${auth_password}} ${proxy_domain} >/dev/null &&"
+    }
+
+    return result
+}
+
 return this
