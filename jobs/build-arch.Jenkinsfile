@@ -265,7 +265,11 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
 
             stage('Build OSTree') {
                 def version_arg = "--version ${params.VERSION}"
+                def container_file = ""
                 def force = params.FORCE ? "--force" : ""
+                if (stream_info.get('container_file')) {
+                    container_file = "--file ${stream_info.get('container_file')}"
+                }
                 // Downstream we need a pull secret to pull the boot
                 // builder image from either registry.stage.redhat.io
                 // or registry.redhat.io.
@@ -274,7 +278,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                                                                    credentialsId: pull_secret_name)]) {
                     shwrap("""
                     cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE:-} \
-                        cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
+                        cosa build ostree ${strict_build_param} ${container_file} --skip-prune ${force} ${version_arg} ${parent_arg}
                     """)
                 }
             }
