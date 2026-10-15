@@ -57,6 +57,9 @@ def (src_config_url, src_config_ref) = pipeutils.get_source_config_for_stream(pi
 def uses_lockfiles_subdir = pipecfg.source_config.lockfiles_subdir ?: false
 def lockfile_prefix = uses_lockfiles_subdir ? "lockfiles/${params.STREAM}/" : ""
 
+// Registry pull secret for pulling builder images from registry.redhat.io
+def pull_secret_name = stream_info.get('builder_pull_secret') ?: pipecfg.misc?.builder_pull_secret ?: ""
+
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
 
@@ -181,6 +184,8 @@ lock(resource: "bump-lockfile") {
                 parallelruns[arch] = {
                     pipeutils.withOptionalExistingCosaRemoteSession(
                             arch: arch, session: archinfo[arch]['session']) {
+                        pipeutils.withOptionalRegistryPullCredential([file(variable: 'REGISTRY_AUTH_FILE',
+                                                                          credentialsId: pull_secret_name)]) {
                         pipeutils.shwrapWithAWSBuildUploadCredentials("""
                             # buildfetch the previous build so we can log a RPM diff
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
@@ -189,12 +194,14 @@ lock(resource: "bump-lockfile") {
                             # Delete the non-overrides lockfile so this build will be
                             # unlocked so we'll get new RPM updates.
                             cosa shell -- rm -f src/config/${lockfile_prefix}manifest-lock.${arch}.json
-                            cosa build --force
+                            cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE:-} \
+                                cosa build --force
                             # Copy the generated lockfile into place.
                             # NOTE: if on a remote builder this will copy to the x86_64 pod
                             cosa shell -- cat builds/latest/${arch}/manifest-lock.generated.${arch}.json \
                                 > src/config/${lockfile_prefix}manifest-lock.${arch}.json
                         """)
+                        }
                     }
                 }
             }
