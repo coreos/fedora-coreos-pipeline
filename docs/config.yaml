@@ -42,6 +42,18 @@ hacks:
 # If unset, defaults to `quay.io/coreos-assembler/coreos-assembler:main`.
 cosa_img: quay.io/jlebon/coreos-assembler:pr3139-${STREAM}
 
+# OPTIONAL: shared Konflux connection settings. API URL, namespace, and token
+# credential are required when resolving Snapshots from Konflux.
+konflux:
+  api_url: https://api.kflux-fedora-01.84db.p1.openshiftapps.com
+  # Jenkins secret-text credential containing a Konflux API token.
+  # The credential ID is also used as the image proxy username.
+  token_credential: konflux-bot-0
+  # OPTIONAL: image proxy registry hostname (optionally host:port), without a
+  # URL scheme or path. Omit for public images such as FCOS on quay.io.
+  proxy_domain: image-rbac-proxy.apps.kflux-fedora-01.84db.p1.openshiftapps.com
+  namespace: coreos-tenant
+
 # REQUIRED: streams to build
 streams:
     testing-devel:
@@ -63,6 +75,12 @@ streams:
       # OPTIONAL: Whether to skip building ostree in the build pipeline.
       # The build would be imported using `cosa import` with the specified image uri.
       import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
+      # OPTIONAL: enable latest validated Snapshot imports by default.
+      # An IMPORT_FROM_KONFLUX build parameter also enables imports. This cannot
+      # be combined with import_oci_image or IMPORT_OCI_IMAGE.
+      import_from_konflux: false
+      # REQUIRED when importing from Konflux:
+      konflux_application: fedora-coreos-testing-devel
       # OPTIONAL: make the release job trigger build-node-image for the
       # following OCP releases once successful
       build_node_images: ["4.19-9.6"]
