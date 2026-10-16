@@ -7,9 +7,7 @@ node {
 
 botCreds = "github-coreosbot-token-username-password"
 
-def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
-def mechanical_streams = pipeutils.streams_of_type(pipecfg, 'mechanical')
-locked_streams = development_streams + mechanical_streams
+locked_streams = pipeutils.bump_lockfile_streams(pipecfg)
 
 properties([
     // we're only triggered by bump-lockfiles

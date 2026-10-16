@@ -14,9 +14,7 @@ node {
     checkout scm
     def pipeutils = load("utils.groovy")
     def pipecfg = pipeutils.load_pipecfg()
-    def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
-    def mechanical_streams = pipeutils.streams_of_type(pipecfg, 'mechanical')
-    streams_to_bump = development_streams + mechanical_streams
+    streams_to_bump = pipeutils.bump_lockfile_streams(pipecfg)
 
     parallel streams_to_bump.collectEntries { stream -> [stream, {
         build job: 'bump-lockfile', wait: false, parameters: [
