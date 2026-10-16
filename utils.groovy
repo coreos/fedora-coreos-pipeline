@@ -392,6 +392,13 @@ def streams_of_type(config, type) {
     return config.streams.findAll{k, v -> v.type == type}.collect{k, v -> k}
 }
 
+def bump_lockfile_streams(config) {
+    def global_enabled = config.enable_bump_lockfile ?: false
+    return config.streams.findAll{k, v ->
+        (v.enable_bump_lockfile != null) ? v.enable_bump_lockfile : global_enabled
+    }.collect{k, v -> k}
+}
+
 // Returns a list of stream names from `streams_subset` that have `scheduled: true` set
 def scheduled_streams(config, streams_subset) {
     return streams_subset.findAll{stream ->
