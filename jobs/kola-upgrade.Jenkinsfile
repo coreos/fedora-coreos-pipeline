@@ -70,10 +70,15 @@ currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version
 
 // Set the memory request to a reasonable value.
 def cosa_memory_request_mb = 1024
+// set the CPU request to the cosaPod default
+def cosa_cpu_request = 2
 if (params.ARCH == 'x86_64') {
     // local (qemu+x86_64) testing will require more memory
-    // bios=1024, uefi-secure=1536, overhead=512
-    cosa_memory_request_mb = 1024 + 1536 + 512
+    // bios=1536, uefi-secure=1536, overhead=1024
+    cosa_memory_request_mb = 1536 + 1536 + 1024
+
+    // for x86_64 we'll give 2 CPUs for each parallel kola/qemu VM (bios + uefi-secure)
+    cosa_cpu_request = 4
 }
 
 
@@ -85,7 +90,8 @@ lock(resource: "release-${params.STREAM}") {
 echo "release-${params.STREAM} lock released"
 try {
 lock(resource: "kola-upgrade-${params.ARCH}") {
-    cosaPod(memory: "${cosa_memory_request_mb}Mi",
+    cosaPod(cpu: "${cosa_cpu_request}",
+            memory: "${cosa_memory_request_mb}Mi",
             image: params.COREOS_ASSEMBLER_IMAGE,
             serviceAccount: "jenkins") {
     timeout(time: 150, unit: 'MINUTES') {
