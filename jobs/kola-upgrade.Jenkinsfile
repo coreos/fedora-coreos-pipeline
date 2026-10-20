@@ -83,12 +83,12 @@ lock(resource: "release-${params.STREAM}") {
     echo "release-${params.STREAM} lock acquired"
 }
 echo "release-${params.STREAM} lock released"
+try {
 lock(resource: "kola-upgrade-${params.ARCH}") {
     cosaPod(memory: "${cosa_memory_request_mb}Mi",
             image: params.COREOS_ASSEMBLER_IMAGE,
             serviceAccount: "jenkins") {
     timeout(time: 150, unit: 'MINUTES') {
-    try {
 
         // Determine the target version. If no params.TARGET_VERSION was
         // specified then it will be the latest in the params.STREAM.
@@ -279,12 +279,18 @@ EOF
         }
         currentBuild.result = 'SUCCESS'
 
-    } catch (e) {
-        currentBuild.result = 'FAILURE'
-        throw e
-    } finally {
-        if (currentBuild.result != 'SUCCESS') {
+    }}} // lock, cosaPod and timeout finish here
+} catch (e) {
+    currentBuild.result = 'FAILURE'
+    throw e
+} finally {
+    // Run this on a plain controller-side node, not the cosaPod agent,
+    // so the Slack notification still fires even if the pod/agent that
+    // ran the kola tests was killed (e.g. OOMKilled) and is no longer
+    // around to execute steps.
+    if (currentBuild.result != 'SUCCESS') {
+        node {
             pipeutils.trySlackSend(message: "kola-upgrade ${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${params.STREAM}][${params.ARCH}] (${start_version}->${target_version})")
         }
     }
-}}} // lock, cosaPod and timeout finish here
+}
