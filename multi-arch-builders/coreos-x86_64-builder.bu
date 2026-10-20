@@ -8,6 +8,7 @@ variant: fcos
 version: 1.4.0
 ignition:
   config:
+    merge:
       - source: https://github.com/dustymabe/fedora-coreos-pipeline/raw/refs/heads/dusty-butane-example/multi-arch-builders/builder-common.bu
 passwd:
   users:
