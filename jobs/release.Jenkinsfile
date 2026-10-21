@@ -203,7 +203,7 @@ lock(resource: locks.remove(0).resource, extra: locks) {
 
                         // Verify that the image version matches VERSION
                         def image_version = shwrapCapture("""
-                            ${access_config.login_cmd} skopeo inspect ${access_config.auth_file_arg} \
+                            ${access_config.login_cmd} && skopeo inspect ${access_config.auth_file_arg} \
                                 -n --retry-times 3 docker://${container_image} | \
                                 jq -r '.Labels."org.opencontainers.image.version"'
                         """).trim()

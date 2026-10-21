@@ -4,20 +4,27 @@ streams:
   stable:
     type: production
     enable_bump_lockfile: false
+    konflux_application: fedora-coreos-stable
   testing:
     type: production
     enable_bump_lockfile: false
+    konflux_application: fedora-coreos-testing
   next:
     type: production
     enable_bump_lockfile: false
+    konflux_application: fedora-coreos-next
   testing-devel:
     type: development
     default: true
+    konflux_application: fedora-coreos-testing-devel
   next-devel:         # do not touch; line managed by `next-devel/manage.py`
     type: development # do not touch; line managed by `next-devel/manage.py`
+    konflux_application: fedora-coreos-next-devel
   rawhide:
     type: development
     konflux_driven: true
+    build_in_konflux: true
+    konflux_application: fedora-coreos-rawhide
   # branched:
   #   type: development
 
@@ -126,3 +133,8 @@ misc:
   run_extended_upgrade_test_fcos: true
   allow_missing_architectures_when_autotriggering_release_job: true
   allow_skip_of_untested_artifacts: true
+
+konflux:
+  api_url: https://api.kflux-fedora-01.84db.p1.openshiftapps.com:6443
+  namespace: coreos-tenant
+  token_credential: konflux-bot-0
