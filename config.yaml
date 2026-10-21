@@ -18,6 +18,7 @@ streams:
   rawhide:
     type: development
     konflux_driven: true
+    build_in_konflux: true
   # branched:
   #   type: development
 

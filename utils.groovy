@@ -1138,13 +1138,273 @@ def getImageAccessConfig(Map params) {
         login_cmd: ""
     ]
 
-    if (proxy_domain) {
+    // Only apply proxy for Konflux internal registry
+    if (proxy_domain && image.contains("quay.io/redhat-user-workloads/")) {
         result.image = image.replace("quay.io", proxy_domain)
         result.auth_file = auth_file_path
         result.auth_file_arg = "--authfile ${auth_file_path}"
-        result.login_cmd = "skopeo login ${result.auth_file_arg} -u ${auth_user} -p \${${auth_password}} ${proxy_domain} >/dev/null &&"
+        result.login_cmd = "skopeo login ${result.auth_file_arg} -u ${auth_user} -p \${${auth_password}} ${proxy_domain} &&"
     }
 
+    return result
+}
+
+// Permanent KUBECONFIG file for Konflux operations
+KONFLUX_KUBECONFIG = "/tmp/konflux-kubeconfig"
+
+// Validate Konflux configuration for a stream.
+// Throws an error if required configuration is missing.
+// Returns the konflux config map for convenience.
+//
+// Parameters:
+//   pipecfg:     map -- Pipeline configuration
+//   stream_info: map -- Stream-specific configuration
+//   stream:      string -- Stream name (for error messages)
+def validate_konflux_config(pipecfg, stream_info, stream) {
+    def konflux = pipecfg.konflux ?: [:]
+    def required_konflux_config = [
+        "api_url",
+        "namespace",
+        "token_credential",
+    ]
+    def missing_konflux_config = required_konflux_config.findAll { !konflux.get(it) }
+    if (!stream_info.konflux_application) {
+        missing_konflux_config += "konflux_application"
+    }
+    if (missing_konflux_config) {
+        error("Missing Konflux configuration for ${stream}: ${missing_konflux_config.join(', ')}")
+    }
+    return konflux
+}
+
+// Ensure we are logged into the Konflux cluster.
+// Uses a permanent KUBECONFIG file and only logs in if not already authenticated.
+//
+// Parameters:
+//   konflux_config:  map -- Konflux configuration (api_url, namespace, token_credential)
+def ensure_konflux_login(konflux_config) {
+    withEnv([
+        "KUBECONFIG=${KONFLUX_KUBECONFIG}",
+        "KONFLUX_API_URL=${konflux_config.api_url}",
+    ]) {
+        withCredentials([string(credentialsId: konflux_config.token_credential,
+                                variable: 'KONFLUX_API_TOKEN')]) {
+            shwrap('''
+                # Check if already logged in to the correct server
+                if oc whoami --show-server 2>/dev/null | grep -q "${KONFLUX_API_URL}"; then
+                    echo "Already logged in to Konflux"
+                else
+                    echo "Logging in to Konflux..."
+                    oc login \
+                        --server="${KONFLUX_API_URL}" \
+                        --token="${KONFLUX_API_TOKEN}" \
+                        >/dev/null
+                fi
+            ''')
+        }
+    }
+}
+
+// Trigger a Konflux build by annotating the component.
+//
+// Parameters:
+//   konflux_config:  map -- Konflux configuration (api_url, namespace, token_credential)
+//   component_name:  string -- Name of the Konflux component to build
+//
+// Returns a map with:
+//   - component:     the component name
+//   - trigger_time:  timestamp when the build was triggered (for filtering PipelineRuns)
+def trigger_konflux_build(konflux_config, component_name) {
+    ensure_konflux_login(konflux_config)
+
+    def trigger_time
+    withEnv([
+        "KUBECONFIG=${KONFLUX_KUBECONFIG}",
+        "KONFLUX_NAMESPACE=${konflux_config.namespace}",
+        "KONFLUX_COMPONENT=${component_name}",
+    ]) {
+        trigger_time = shwrapCapture('''
+            # Get current timestamp before triggering
+            date -u +%Y-%m-%dT%H:%M:%SZ
+
+            # Trigger the build
+            oc annotate components/${KONFLUX_COMPONENT} \
+                --namespace="${KONFLUX_NAMESPACE}" \
+                build.appstudio.openshift.io/request=trigger-pac-build \
+                --overwrite
+        ''').split('\n')[0]
+    }
+    echo "Triggered Konflux build for component ${component_name} at ${trigger_time}"
+    return [
+        component: component_name,
+        trigger_time: trigger_time
+    ]
+}
+
+// Wait for a Konflux PipelineRun to complete.
+//
+// Parameters:
+//   konflux_config:       map -- Konflux configuration (api_url, namespace, token_credential)
+//   component_name:       string -- Name of the Konflux component
+//   trigger_time:         string -- ISO timestamp to filter PipelineRuns created after this time
+//   timeout_mins:         int -- Maximum time to wait in minutes (default: 60)
+//   poll_interval_secs:   int -- Polling interval in seconds (default: 60)
+//   snapshot_retry_count: int -- Number of retries to fetch snapshot after success (default: 5)
+//   snapshot_retry_delay: int -- Delay in seconds between snapshot retries (default: 10)
+//
+// Returns a map with:
+//   - name:            PipelineRun name
+//   - status:          "Succeeded" or "Failed"
+//   - reason:          Completion reason
+//   - snapshot:        Snapshot name (only on success)
+//   - container_image: Container image URL (only on success)
+//   - commit_sha:      Source commit SHA (only on success)
+def wait_for_konflux_pipelinerun(Map params) {
+    def konflux_config = params.konflux_config
+    def component_name = params.component_name
+    def trigger_time = params.trigger_time
+    def timeout_mins = params.get('timeout_mins', 60)
+    def poll_interval_secs = params.get('poll_interval_secs', 60)
+
+    // Login once before the polling loop
+    ensure_konflux_login(konflux_config)
+
+    def result
+    def timeout_ms = timeout_mins * 60 * 1000
+    def start_time = System.currentTimeMillis()
+    def pipelinerun_name = ""  // Will be set once discovered
+    def snapshot_name = ""     // Will be set once discovered
+
+    withEnv([
+        "KUBECONFIG=${KONFLUX_KUBECONFIG}",
+        "KONFLUX_NAMESPACE=${konflux_config.namespace}",
+        "KONFLUX_COMPONENT=${component_name}",
+        "TRIGGER_TIME=${trigger_time}",
+    ]) {
+        while (true) {
+            def elapsed = System.currentTimeMillis() - start_time
+            if (elapsed > timeout_ms) {
+                error("Timeout waiting for Konflux Snapshot after ${timeout_mins} minutes")
+            }
+
+            def snapshot_data
+            if (snapshot_name == "") {
+                // Phase 1: Discovery - search for PipelineRun then Snapshot
+                if (pipelinerun_name == "") {
+                    // Step 1a: Find the PipelineRun by selector
+                    def pipelinerun_json = shwrapCapture('''
+                        # Get PipelineRuns for this component created after trigger_time
+                        oc get pipelineruns \
+                            --namespace="${KONFLUX_NAMESPACE}" \
+                            --selector="appstudio.openshift.io/component=${KONFLUX_COMPONENT}" \
+                            --sort-by=.metadata.creationTimestamp \
+                            --output=json | \
+                        jq -ec --arg trigger_time "${TRIGGER_TIME}" '
+                            [.items[] | select(.metadata.creationTimestamp >= $trigger_time)]
+                            | last
+                            | if . == null then
+                                {name: ""}
+                              else
+                                {name: .metadata.name}
+                              end
+                        '
+                    ''')
+                    def pipelinerun_data = readJSON(text: pipelinerun_json)
+
+                    if (pipelinerun_data.name != "") {
+                        pipelinerun_name = pipelinerun_data.name
+                        echo "Found PipelineRun: ${pipelinerun_name}"
+                    }
+                }
+
+                if (pipelinerun_name != "") {
+                    // Step 1b: Find the Snapshot associated with this PipelineRun
+                    def snapshot_json = shwrapCapture("""
+                        oc get snapshot \
+                            --namespace="\${KONFLUX_NAMESPACE}" \
+                            --selector="appstudio.openshift.io/build-pipelinerun=${pipelinerun_name}" \
+                            --output=json | \\
+                        jq -ec '
+                            .items[0]
+                            | if . == null then
+                                {name: ""}
+                              else
+                                {name: .metadata.name}
+                              end
+                        '
+                    """)
+                    snapshot_data = readJSON(text: snapshot_json)
+
+                    if (snapshot_data.name != "") {
+                        snapshot_name = snapshot_data.name
+                        echo "Found Snapshot: ${snapshot_name}"
+                    }
+                }
+
+                // Still in discovery phase, show progress
+                if (snapshot_name == "") {
+                    def elapsed_mins = String.format('%.1f', elapsed / 60000.0)
+                    if (pipelinerun_name != "") {
+                        echo "Waiting for Snapshot to be created for PipelineRun ${pipelinerun_name}... (${elapsed_mins}m elapsed)"
+                    } else {
+                        echo "Waiting for PipelineRun to be created... (${elapsed_mins}m elapsed)"
+                    }
+                    sleep(poll_interval_secs)
+                    continue
+                }
+            }
+
+            // Phase 2: Tracking - get the specific Snapshot by name
+            def snapshot_json = shwrapCapture("""
+                oc get snapshot/${snapshot_name} \
+                    --namespace="\${KONFLUX_NAMESPACE}" \
+                    --output=json | \\
+                jq -ec --arg component "${component_name}" '
+                    {
+                      name: .metadata.name,
+                      status: (
+                        if .status.conditions == null then "running"
+                        elif any(.status.conditions[]; .type == "AppStudioTestSucceeded" and .status == "True") then "Succeeded"
+                        elif any(.status.conditions[]; .type == "AppStudioTestSucceeded" and .status == "False") then "Failed"
+                        else "running"
+                        end
+                      ),
+                      reason: (
+                        .status.conditions // [] | map(select(.type == "AppStudioTestSucceeded")) | .[0].reason // "Unknown"
+                      ),
+                      commit_sha: .metadata.annotations["build.appstudio.redhat.com/commit_sha"],
+                      container_image: (
+                        .spec.components[]
+                        | select(.name == \$component)
+                        | .containerImage
+                      )
+                    }
+                '
+            """)
+            snapshot_data = readJSON(text: snapshot_json)
+
+            def status = snapshot_data.status
+            def name = snapshot_data.name
+
+            if (status == "Succeeded") {
+                echo "Snapshot ${name} completed successfully"
+                result = [
+                    name: snapshot_data.name,
+                    container_image: snapshot_data.container_image,
+                    commit_sha: snapshot_data.commit_sha,
+                    status: snapshot_data.status,
+                    reason: snapshot_data.reason
+                ]
+                break
+            } else if (status == "Failed") {
+                error("Snapshot ${name} failed: ${snapshot_data.reason}")
+            } else {
+                def elapsed_mins = String.format('%.1f', elapsed / 60000.0)
+                echo "Waiting for Snapshot ${name}... (${elapsed_mins}m elapsed, status: ${status})"
+                sleep(poll_interval_secs)
+            }
+        }
+    }
     return result
 }
 

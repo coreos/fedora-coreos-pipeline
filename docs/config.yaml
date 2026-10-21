@@ -65,6 +65,15 @@ streams:
       # OPTIONAL: Whether to skip building ostree in the build pipeline.
       # The build would be imported using `cosa import` with the specified image uri.
       import_oci_image: quay.io/coreos-devel/fedora-coreos:rawhide
+      # OPTIONAL: Trigger a Konflux build and import the resulting image.
+      # When enabled, the build pipeline will trigger a Konflux PipelineRun,
+      # wait for it to complete, and import the resulting container image.
+      # Requires `konflux_application` to be set and top-level `konflux` config.
+      # Default: false
+      build_in_konflux: true
+      # OPTIONAL: The Konflux application/component name for this stream.
+      # Required when `build_from_konflux` is true.
+      konflux_application: fedora-coreos-rawhide
       # OPTIONAL: make the release job trigger build-node-image for the
       # following OCP releases once successful
       build_node_images: ["4.19-9.6"]
@@ -330,6 +339,19 @@ misc:
   # build. This corresponds to a kubernetes secret in the cluster which is mapped
   # into Jenkins.
   builder_pull_secret: 'bootc-builder-img-pull-registry-secret'
+
+# OPTIONAL: Konflux integration configuration
+# Required when using `build_from_konflux` in stream configuration.
+konflux:
+  # REQUIRED: Konflux API server URL
+  api_url: https://api.kflux-fedora-01.84db.p1.openshiftapps.com:6443
+  # REQUIRED: Konflux namespace/tenant
+  namespace: coreos-tenant
+  # REQUIRED: Jenkins credential ID for Konflux API token
+  token_credential: konflux-bot-0
+  # OPTIONAL: Proxy domain for image access (replaces quay.io in image URLs)
+  # Used when images require authenticated access through a proxy.
+  proxy_domain: image-rbac-proxy.apps.kflux-p01.p1.openshiftapps.com
 
 # OPTIONAL: Node image keys
 ocp_node_builds:
