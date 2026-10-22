@@ -405,18 +405,6 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
-// Returns a list of stream names from `streams_subset` that do not have `konflux_driven: true` set
-def non_konflux_driven_streams(config, streams_subset) {
-    return streams_subset.findAll{stream ->
-        !config.streams[stream]?.konflux_driven ?: false}.collect{k, v -> k}
-}
-
-// Return true if the STREAM is driven by Konflux, else false
-def is_stream_konflux_driven(pipecfg, stream) {
-    def stream_info = pipecfg.streams[stream]
-    return stream_info.konflux_driven ?: false
-}
-
 def get_streams_choices(config, node = null) {
     def stream_source = node ? config.ocp_node_builds.release : config.streams
 

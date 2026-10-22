@@ -17,7 +17,6 @@ streams:
     type: development # do not touch; line managed by `next-devel/manage.py`
   rawhide:
     type: development
-    konflux_driven: true
     build_in_konflux: true
   # branched:
   #   type: development
