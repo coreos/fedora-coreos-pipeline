@@ -111,9 +111,7 @@ def ncpus = 1
 
 def source_oci_image = params.SOURCE_OCI_IMAGE ?: stream_info.get("source_oci_image", "")
 boolean import_oci = source_oci_image != ""
-if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
-    error("STREAMS that are driven by Konflux must import an OCI image")
-}
+def konflux = pipecfg.konflux ?: [:]
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
 currentBuild.description = "${build_description} Waiting"
@@ -285,7 +283,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
         } else {
             stage("Import OCI image") {
                 echo "Skipping build : Importing OCI : $source_oci_image"
-                shwrap("cosa import docker://${source_oci_image} --skip-prune ${parent_arg}")
+                pipeutils.run_cosa_import(konflux, source_oci_image, parent_arg)
                 def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
                 def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
                 if (params.STREAM != oci_stream) {
