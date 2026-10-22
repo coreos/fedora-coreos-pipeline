@@ -22,7 +22,6 @@ streams:
     konflux_application: fedora-coreos-next-devel
   rawhide:
     type: development
-    konflux_driven: true
     build_in_konflux: true
     konflux_application: fedora-coreos-rawhide
   # branched:
