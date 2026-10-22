@@ -104,7 +104,9 @@ lock(resource: "bump-lockfile") {
         def haveChanges = false
         def src_config_commit = shwrapCapture("git ls-remote ${src_config_url} refs/heads/${branch} | cut -d \$'\t' -f 1")
         def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-        shwrap("cosa init --branch ${branch} ${variant} --commit=${src_config_commit} ${src_config_url}")
+        def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+        def yumrepos_ref = pipecfg.source_config.yumrepos_ref ? "--yumrepos-branch ${pipecfg.source_config.yumrepos_ref}" : ""
+        shwrap("cosa init --branch ${branch} ${variant} ${yumrepos} ${yumrepos_ref} --commit=${src_config_commit} ${src_config_url}")
 
         // Ensure lockfile directory exists for stream-specific layouts
         if (uses_lockfiles_subdir) {
@@ -160,8 +162,10 @@ lock(resource: "bump-lockfile") {
                             workdir: WORKSPACE,
                         )
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
+                            // sync the root CA cert over to this remote session too
+                            pipeutils.addOptionalRootCA()
                             shwrap("""
-                            cosa init --branch ${branch} ${variant} --commit=${src_config_commit} ${src_config_url}
+                            cosa init --branch ${branch} ${variant} ${yumrepos} ${yumrepos_ref} --commit=${src_config_commit} ${src_config_url}
                             # Also sync over the upate to the bootc builder image
                             cosa remote-session sync {,:}src/config/build-args.conf
                             """)
