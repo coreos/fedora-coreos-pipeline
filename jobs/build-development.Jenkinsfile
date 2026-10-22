@@ -24,8 +24,6 @@ node {
     if (scheduled_streams) {
         development_streams = scheduled_streams
     }
-    // Filter out streams that are managed by konflux
-    development_streams = pipeutils.non_konflux_driven_streams(pipecfg, development_streams)
 
     parallel development_streams.collectEntries { stream -> [stream, {
         // If there is a bump-lockfile job running for this stream
