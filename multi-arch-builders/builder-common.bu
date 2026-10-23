@@ -99,10 +99,32 @@ storage:
           Description=Prune Dangling and Expired Container Resources
           [Service]
           Type=oneshot
-          ExecStart=podman container prune --force --filter until=1h
-          ExecStart=podman volume prune --force --filter="label!=persistent"
-          ExecStart=podman image prune --force
-          ExecStart=podman image prune --all --external --force --filter until=48h
+          ExecStart=/usr/local/bin/prune-container-resources.sh
+    - path: /usr/local/bin/prune-container-resources.sh
+      mode: 0755
+      contents:
+        inline: |
+          #!/bin/bash
+          set -euo pipefail
+          podman container prune --force --filter until=1h
+          podman volume prune --force --filter="label!=persistent"
+          # Remove build containers (e.g. left behind by failed `podman build`
+          # runs) older than 24h. These are "external" containers (command
+          # "buildah") that `podman container prune` does not see.
+          #
+          # We don't use `podman image prune --external` for this because its
+          # `until` filter is on the image creation date, not the container's.
+          # A build that pulls a base image created more than 48h ago (e.g.
+          # ubi9/ubi:latest) would get its build container deleted mid-build
+          # and fail with "identifier is not a container".
+          # Once podman can prune external containers itself, replace this with
+          # `podman container prune --external`:
+          # https://github.com/podman-container-tools/podman/issues/30030
+          podman ps --external --filter until=24h --filter command=buildah --format '{{.ID}}' \
+            | xargs --no-run-if-empty podman rm --force \
+            || echo "warning: failed to remove old build containers" >&2
+          podman image prune --force
+          podman image prune --all --force --filter until=48h
     - path: /home/builder/.config/systemd/user/prune-container-resources.timer
       mode: 0644
       user:
