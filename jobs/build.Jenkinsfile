@@ -296,12 +296,16 @@ lock(resource: "build-${params.STREAM}") {
 
             stage('Build OSTree') {
                 def version_arg = ""
+                def container_file = ""
                 if (params.VERSION) {
                     version_arg = "--version ${params.VERSION}"
                 } else {
                     if (should_use_versionary()) {
                         version_arg = "--versionary"
                     }
+                }
+                if (stream_info.get('container_file')) {
+                    container_file = "--file ${stream_info.get('container_file')}"
                 }
                 def force = params.FORCE ? "--force" : ""
                 // Downstream we need a pull secret to pull the boot
@@ -312,7 +316,7 @@ lock(resource: "build-${params.STREAM}") {
                                                                    credentialsId: pull_secret_name)]) {
                     shwrap("""
                     cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE:-} \
-                        cosa build ostree ${strict_build_param} --skip-prune ${force} ${version_arg} ${parent_arg}
+                        cosa build ostree ${strict_build_param} ${container_file} --skip-prune ${force} ${version_arg} ${parent_arg}
                     """)
                 }
             }

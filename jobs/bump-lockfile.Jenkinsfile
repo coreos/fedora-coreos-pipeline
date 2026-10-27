@@ -5,12 +5,9 @@ node {
     pipecfg = pipeutils.load_pipecfg()
 }
 
-repo = "coreos/fedora-coreos-config"
 botCreds = "github-coreosbot-token-username-password"
 
-def development_streams = pipeutils.streams_of_type(pipecfg, 'development')
-def mechanical_streams = pipeutils.streams_of_type(pipecfg, 'mechanical')
-locked_streams = development_streams + mechanical_streams
+locked_streams = pipeutils.bump_lockfile_streams(pipecfg)
 
 properties([
     // we're only triggered by bump-lockfiles
@@ -50,6 +47,16 @@ currentBuild.description = "[${params.STREAM}] Waiting"
 def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
 
 def stream_info = pipecfg.streams[params.STREAM]
+
+// Resolve source config repo and ref for this stream
+def (src_config_url, src_config_ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
+
+// FCOS: lockfiles at repo root. RHCOS: lockfiles in lockfiles/${stream}/.
+def uses_lockfiles_subdir = pipecfg.source_config.lockfiles_subdir ?: false
+def lockfile_prefix = uses_lockfiles_subdir ? "lockfiles/${params.STREAM}/" : ""
+
+// Registry pull secret for pulling builder images from registry.redhat.io
+def pull_secret_name = stream_info.get('builder_pull_secret') ?: pipecfg.misc?.builder_pull_secret ?: ""
 
 // Grab any environment variables we should set
 def container_env = pipeutils.get_env_vars_for_stream(pipecfg, params.STREAM)
@@ -92,12 +99,19 @@ lock(resource: "bump-lockfile") {
           git config --global user.email "coreosbot@fedoraproject.org"
         """)
 
-        def branch = params.STREAM
+        def branch = src_config_ref
         def forceTimestamp = false
         def haveChanges = false
-        def src_config_commit = shwrapCapture("git ls-remote https://github.com/${repo} refs/heads/${branch} | cut -d \$'\t' -f 1")
+        def src_config_commit = shwrapCapture("git ls-remote ${src_config_url} refs/heads/${branch} | cut -d \$'\t' -f 1")
         def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
-        shwrap("cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}")
+        def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+        def yumrepos_ref = pipecfg.source_config.yumrepos_ref ? "--yumrepos-branch ${pipecfg.source_config.yumrepos_ref}" : ""
+        shwrap("cosa init --branch ${branch} ${variant} ${yumrepos} ${yumrepos_ref} --commit=${src_config_commit} ${src_config_url}")
+
+        // Ensure lockfile directory exists for stream-specific layouts
+        if (uses_lockfiles_subdir) {
+            shwrap("mkdir -p src/config/${lockfile_prefix}")
+        }
 
         def lockfile, pkgChecksum, pkgTimestamp
         def skip_tests_arches = params.SKIP_TESTS_ARCHES.split()
@@ -107,13 +121,14 @@ lock(resource: "bump-lockfile") {
             def arch = architecture
             // initialize some data
             archinfo[arch]['session'] = ""
-            lockfile = "src/config/manifest-lock.${arch}.json"
+            lockfile = "src/config/${lockfile_prefix}manifest-lock.${arch}.json"
             (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
             archinfo[arch]['prevPkgChecksum'] = pkgChecksum
             archinfo[arch]['prevPkgTimestamp'] = pkgTimestamp
         }
 
-        if (!params.SKIP_BOOTC_IMAGE_BUMP) {
+        // For RHCOS/SCOS, MintMaker handles the bootc image digest bump.
+        if (!params.SKIP_BOOTC_IMAGE_BUMP && !uses_lockfiles_subdir) {
             stage("Bump bootc") {
                 shwrap('''
                     builder_img_repo=$(
@@ -147,8 +162,10 @@ lock(resource: "bump-lockfile") {
                             workdir: WORKSPACE,
                         )
                         withEnv(["COREOS_ASSEMBLER_REMOTE_SESSION=${archinfo[arch]['session']}"]) {
+                            // sync the root CA cert over to this remote session too
+                            pipeutils.addOptionalRootCA()
                             shwrap("""
-                            cosa init --branch ${branch} ${variant} --commit=${src_config_commit} https://github.com/${repo}
+                            cosa init --branch ${branch} ${variant} ${yumrepos} ${yumrepos_ref} --commit=${src_config_commit} ${src_config_url}
                             # Also sync over the upate to the bootc builder image
                             cosa remote-session sync {,:}src/config/build-args.conf
                             """)
@@ -169,6 +186,8 @@ lock(resource: "bump-lockfile") {
                 parallelruns[arch] = {
                     pipeutils.withOptionalExistingCosaRemoteSession(
                             arch: arch, session: archinfo[arch]['session']) {
+                        pipeutils.withOptionalRegistryPullCredential([file(variable: 'REGISTRY_AUTH_FILE',
+                                                                          credentialsId: pull_secret_name)]) {
                         pipeutils.shwrapWithAWSBuildUploadCredentials("""
                             # buildfetch the previous build so we can log a RPM diff
                             cosa buildfetch --arch=${arch} --find-build-for-arch \
@@ -176,13 +195,15 @@ lock(resource: "bump-lockfile") {
                                 --url=s3://${s3_stream_dir}/builds
                             # Delete the non-overrides lockfile so this build will be
                             # unlocked so we'll get new RPM updates.
-                            cosa shell -- rm src/config/manifest-lock.${arch}.json
-                            cosa build --force
+                            cosa shell -- rm -f src/config/${lockfile_prefix}manifest-lock.${arch}.json
+                            cosa shell -- env REGISTRY_AUTH_FILE=\${REGISTRY_AUTH_FILE:-} \
+                                cosa build --force
                             # Copy the generated lockfile into place.
                             # NOTE: if on a remote builder this will copy to the x86_64 pod
                             cosa shell -- cat builds/latest/${arch}/manifest-lock.generated.${arch}.json \
-                                > src/config/manifest-lock.${arch}.json
+                                > src/config/${lockfile_prefix}manifest-lock.${arch}.json
                         """)
+                        }
                     }
                 }
             }
@@ -191,7 +212,7 @@ lock(resource: "bump-lockfile") {
 
         for (architecture in archinfo.keySet()) {
             def arch = architecture
-            lockfile = "src/config/manifest-lock.${arch}.json"
+            lockfile = "src/config/${lockfile_prefix}manifest-lock.${arch}.json"
             (pkgChecksum, pkgTimestamp) = getLockfileInfo(lockfile)
             archinfo[arch]['newPkgChecksum'] = pkgChecksum
             archinfo[arch]['newPkgTimestamp'] = pkgTimestamp
@@ -226,7 +247,7 @@ lock(resource: "bump-lockfile") {
           # do this separately so set -e kicks in if it fails
           files=\$(git -C src/config ls-files --modified --deleted)
           for f in \${files}; do
-            if ! [[ \${f} =~ ^(manifest-lock\\.[0-9a-z_]+\\.json|build-args\\.conf) ]]; then
+            if ! [[ \${f} =~ ^(${lockfile_prefix}manifest-lock\\.[0-9a-z_]+\\.json|build-args\\.conf) ]]; then
               echo "Unexpected modified file \${f}"
               exit 1
             fi
@@ -262,7 +283,8 @@ lock(resource: "bump-lockfile") {
                         def n = ncpus - 1 // remove 1 for upgrade test
                         kola(cosaDir: env.WORKSPACE, parallel: n, arch: arch,
                              marker: arch, allowUpgradeFail: params.ALLOW_KOLA_UPGRADE_FAILURE,
-                             skipKolaTags: stream_info.skip_kola_tags)
+                             skipKolaTags: stream_info.skip_kola_tags,
+                             skipUpgrade: pipecfg.hacks?.skip_upgrade_tests)
                         // Run kola testiso tests if supported (legacy). On older releases testiso
                         // tests were run separately from other kola tests. If we are on one of those
                         // releases run testiso tests now.
@@ -319,7 +341,7 @@ lock(resource: "bump-lockfile") {
                 message="lockfiles: bump timestamp"
             }
 
-            shwrap("git -C src/config add manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
+            shwrap("git -C src/config add ${lockfile_prefix}manifest-lock.*.json build-args.conf ${TRIGGER_PATH}")
             shwrap("git -C src/config commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-lockfile.Jenkinsfile'")
             withCredentials([usernamePassword(credentialsId: botCreds,
                                               usernameVariable: 'GHUSER',
@@ -327,7 +349,7 @@ lock(resource: "bump-lockfile") {
               // gracefully handle race conditions
               sh("""
                 rev=\$(git -C src/config rev-parse origin/${branch})
-                if ! git -C src/config push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${branch}; then
+                if ! git -C src/config push https://\${GHUSER}:\${GHTOKEN}@${src_config_url.replaceAll('https://', '')} ${branch}; then
                     git -C src/config fetch origin
                     if [ "\$rev" != \$(git -C src/config rev-parse origin/${branch}) ]; then
                         touch ${env.WORKSPACE}/rerun

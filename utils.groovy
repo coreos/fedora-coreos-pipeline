@@ -392,6 +392,13 @@ def streams_of_type(config, type) {
     return config.streams.findAll{k, v -> v.type == type}.collect{k, v -> k}
 }
 
+def bump_lockfile_streams(config) {
+    def global_enabled = config.enable_bump_lockfile ?: false
+    return config.streams.findAll{k, v ->
+        (v.enable_bump_lockfile != null) ? v.enable_bump_lockfile : global_enabled
+    }.collect{k, v -> k}
+}
+
 // Returns a list of stream names from `streams_subset` that have `scheduled: true` set
 def scheduled_streams(config, streams_subset) {
     return streams_subset.findAll{stream ->
@@ -879,24 +886,38 @@ def build_remote_image(arches, commit, url, repo, tag, secret=None, from=None,
         build_args += ["--from", from]
     }
     build_args += extra_build_args
-    def digest_list = []
     parallel arches.collectEntries { arch ->
         [arch, {
             pipeutils.withPodmanRemoteArchBuilder(arch: arch) {
                 def final_args = build_args + ["--arch", arch, "--tag", "${tag}-${arch}"]
                 final_args += ["--write-digest-to-file", "${tag}-${arch}"]
                 shwrap("cosa remote-build-container ${final_args.join(' ')}")
-                digest_list += readFile("${tag}-${arch}")
-                shwrap("""rm -f ${tag}-${arch} """)
             }
         }]
+    }
+    // Read digest files sequentially after parallel completes to
+    // avoid a race condition with concurrent list append.
+    def digest_list = []
+    for (arch in arches) {
+        def digest = readFile("${tag}-${arch}").trim()
+        if (!digest) {
+            error("Empty or missing digest for arch ${arch} from file ${tag}-${arch}")
+        }
+        digest_list += digest
+        shwrap("rm -f ${tag}-${arch}")
     }
     return digest_list
 }
 
 def push_manifest(digests, repo, manifest_tag, v2s2) {
+    if (!digests) {
+        error("No digests provided to push_manifest")
+    }
     def images = ""
     for (digest in digests) {
+        if (!digest?.trim()) {
+            error("Empty digest found in push_manifest digest list")
+        }
         images += " --image=docker://${repo}@${digest}"
     }
     def digest = ""
@@ -1087,6 +1108,44 @@ def stageWithTimeoutWarning(String name, int budgetMins, Closure body) {
             currentBuild.result = 'UNSTABLE'
         }
     }
+}
+
+// Prepare image access configuration, optionally through a proxy.
+//
+// Parameters:
+//   image:             string -- The container image URL
+//   proxy_domain:      string -- (optional) Proxy domain to use instead of quay.io
+//   auth_user:         string -- Username for authentication
+//   auth_password:     string -- Password for authentication
+//   auth_file_path:    string -- (optional) Path for auth file, defaults to /tmp/auth.json
+//
+// Returns a map with:
+//   - image:         the image URL (modified if proxy is used)
+//   - auth_file:     the auth file path (or empty string)
+//   - auth_file_arg: the --authfile argument for skopeo (or empty string)
+//   - login_cmd:     the skopeo login command prefix (or empty string)
+def getImageAccessConfig(Map params) {
+    def image = params.image
+    def proxy_domain = params.proxy_domain
+    def auth_user = params.auth_user
+    def auth_password = params.auth_password
+    def auth_file_path = params.get('auth_file_path', '/tmp/auth.json')
+
+    def result = [
+        image: image,
+        auth_file: "",
+        auth_file_arg: "",
+        login_cmd: ""
+    ]
+
+    if (proxy_domain) {
+        result.image = image.replace("quay.io", proxy_domain)
+        result.auth_file = auth_file_path
+        result.auth_file_arg = "--authfile ${auth_file_path}"
+        result.login_cmd = "skopeo login ${result.auth_file_arg} -u ${auth_user} -p \${${auth_password}} ${proxy_domain} >/dev/null &&"
+    }
+
+    return result
 }
 
 return this

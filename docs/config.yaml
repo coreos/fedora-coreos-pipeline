@@ -58,6 +58,8 @@ streams:
       source_config_url: https://github.com/jlebon/fedora-coreos-config
       # OPTIONAL: override source config ref to use for this stream
       source_config_ref: main
+      # OPTIONAL: Use a different rootdir for the ContainerFile
+      container_file: off-layering/nvidia/Containerfile
       # OPTIONAL: override OS variant to use for this stream
       variant: rhcos-9.0
       # OPTIONAL: Whether to skip building ostree in the build pipeline.

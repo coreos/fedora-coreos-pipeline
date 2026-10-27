@@ -1,10 +1,15 @@
+enable_bump_lockfile: true
+
 streams:
   stable:
     type: production
+    enable_bump_lockfile: false
   testing:
     type: production
+    enable_bump_lockfile: false
   next:
     type: production
+    enable_bump_lockfile: false
   testing-devel:
     type: development
     default: true
@@ -52,6 +57,7 @@ default_artifacts:
     - gcp
     - hetzner
     - hyperv
+    - kubevirt
     - oraclecloud
   ppc64le:
     - powervs
