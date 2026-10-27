@@ -306,7 +306,8 @@ lock(resource: "build-node-image", priority: queue_priority) {
                      // for now this is opt-in, but once it propagates we can flip
                      // it to opt-out (or just unconditional)
                      if (stream_info.get('build_args_file')) {
-                         extra_build_args += ["--build-arg-file", "${stream_info.get('build_args_file')}"]
+                         def baf = (stream_info.get('build_args_file') == true) ? build_args_file : stream_info.get('build_args_file')
+                         extra_build_args += ["--build-arg-file", "${baf}"]
                      } else {
                          // In the non build_args_file case the stream class
                          // label needs to be set manually here.
@@ -343,7 +344,8 @@ lock(resource: "build-node-image", priority: queue_priority) {
                         // for now this is opt-in, but once it propagates we can flip
                         // it to opt-out (or just unconditional)
                         if (stream_info.get('build_args_file')) {
-                            extra_build_args += ["--build-arg-file", "${stream_info.get('build_args_file')}"]
+                            def baf = (stream_info.get('build_args_file') == true) ? build_args_file : stream_info.get('build_args_file')
+                            extra_build_args += ["--build-arg-file", "${baf}"]
                         } else {
                             // In the non build_args_file case the stream class
                             // label needs to be set manually here.
