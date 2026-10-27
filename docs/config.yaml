@@ -355,8 +355,9 @@ ocp_node_builds:
            # OPTIONAL: skip upload to brew. Defaults to false
            skip_brew_upload: false
            # OPTIONAL: pass a build-args file to `cosa remote-build-container`
-           # during node image builds. The filename is derived from the release
-           # (e.g. build-args-9.8-4.22.conf). Defaults to false.
+           # during node image builds. Set to `true` to use the default filename
+           # derived from the release (e.g. build-args-4.22-9.8.conf), or set to
+           # a custom path (e.g. "my-custom-build-args.conf"). Defaults to false.
            build_args_file: true
     # REQUIRED: knobs related to the source config
     registries:
