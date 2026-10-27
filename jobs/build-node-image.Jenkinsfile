@@ -305,12 +305,15 @@ lock(resource: "build-node-image", priority: queue_priority) {
                      }
                      // for now this is opt-in, but once it propagates we can flip
                      // it to opt-out (or just unconditional)
-                     if (stream_info.build_args_file) {
-                         extra_build_args += ["--build-arg-file", build_args_file]
+                     if (stream_info.get('build_args_file')) {
+                         extra_build_args += ["--build-arg-file", "${stream_info.get('build_args_file')}"]
                      } else {
                          // In the non build_args_file case the stream class
                          // label needs to be set manually here.
                          extra_build_args += ["--label", "${stream_class_label}"]
+                     }
+                     if (stream_info.get('container_file')) {
+                         extra_build_args  += ["--git-containerfile", "${stream_info.get('container_file')}"]
                      }
 
                      node_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
@@ -339,8 +342,8 @@ lock(resource: "build-node-image", priority: queue_priority) {
                         }
                         // for now this is opt-in, but once it propagates we can flip
                         // it to opt-out (or just unconditional)
-                        if (stream_info.build_args_file) {
-                            extra_build_args += ["--build-arg-file", build_args_file]
+                        if (stream_info.get('build_args_file')) {
+                            extra_build_args += ["--build-arg-file", "${stream_info.get('build_args_file')}"]
                         } else {
                             // In the non build_args_file case the stream class
                             // label needs to be set manually here.
@@ -349,10 +352,15 @@ lock(resource: "build-node-image", priority: queue_priority) {
 
                         // Check if extensions/Containerfile exists, otherwise fall back to extensions/Dockerfile
                         // for backwards compatibility with older branches.
-
-                        def raw_url = src_config_url.replace("github.com", "raw.githubusercontent.com")
-                        def containerfile_exists = shwrapCapture("curl -sfL ${raw_url}/${commit}/extensions/Containerfile >/dev/null 2>&1 && echo true || echo false").trim() == "true"
-                        def extensions_containerfile = containerfile_exists ? "extensions/Containerfile" : "extensions/Dockerfile"
+                        def extensions_containerfile = ""
+                        if (stream_info.get('extensions_container_file')) {
+                            extensions_containerfile = stream_info.get('extensions_container_file')
+                        }
+                        else {
+                            def raw_url = src_config_url.replace("github.com", "raw.githubusercontent.com")
+                            def containerfile_exists = shwrapCapture("curl -sfL ${raw_url}/${commit}/extensions/Containerfile >/dev/null 2>&1 && echo true || echo false").trim() == "true"
+                            extensions_containerfile = containerfile_exists ? "extensions/Containerfile" : "extensions/Dockerfile"
+                        }
                         extensions_image_manifest_digest = pipeutils.build_and_push_image(arches: arches,
                                                        src_commit: commit,
                                                        src_url: src_config_url,
