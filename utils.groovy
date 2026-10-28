@@ -1137,6 +1137,54 @@ def getImageAccessConfig(Map params) {
     return result
 }
 
+// Import a Konflux-built OCI container image using cosa import.
+//
+// This function handles authentication to the Konflux registry (via proxy
+// if configured) and imports the container image into the cosa build.
+//
+// Parameters:
+//   oci_image:       string -- The Konflux OCI image URL to import
+//   konflux_config:  map -- Konflux configuration (proxy_domain, token_credential)
+//   parent_arg:      string -- Parent build argument for cosa import (e.g., "--parent-build X.Y.Z")
+//   stream:          string -- Expected stream name for validation
+//
+// Returns a map with:
+//   - buildid:       the build ID from the imported image
+//   - build_meta:    the full build metadata
+def import_konflux_oci_image(Map params) {
+    def oci_image = params.oci_image
+    def konflux_config = params.konflux_config ?: [:]
+    def parent_arg = params.get('parent_arg', '')
+    def stream = params.stream
+
+    echo "Importing Konflux OCI image: ${oci_image}"
+
+    // Use getImageAccessConfig to handle proxy authentication if needed
+    def access_config = getImageAccessConfig(
+        image: oci_image,
+        proxy_domain: konflux_config.proxy_domain,
+        auth_user: konflux_config.token_credential,
+        auth_password: 'KONFLUX_API_TOKEN'
+    )
+
+    withCredentials([string(credentialsId: konflux_config.token_credential, variable: 'KONFLUX_API_TOKEN')]) {
+        shwrap("""
+        cosa shell -- env KONFLUX_API_TOKEN=\${KONFLUX_API_TOKEN} bash -c '${access_config.login_cmd} && REGISTRY_AUTH_FILE=${access_config.auth_file} cosa import docker://${access_config.image} --skip-prune ${parent_arg}'
+        """)
+    }
+
+    def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
+    def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
+    if (stream != oci_stream) {
+        error("STREAM parameter value '${stream}' does not match the one from the OCI image '${oci_stream}'")
+    }
+
+    return [
+        buildid: build_meta.buildid,
+        build_meta: build_meta
+    ]
+}
+
 // Permanent KUBECONFIG file for Konflux operations
 KONFLUX_KUBECONFIG = "/tmp/konflux-kubeconfig"
 

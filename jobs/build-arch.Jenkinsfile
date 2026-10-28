@@ -282,24 +282,12 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             }
         } else {
             stage("Import OCI image") {
-                echo "Importing OCI : $source_oci_image"
-                // Use getImageAccessConfig to handle proxy authentication if needed
-                def access_config = pipeutils.getImageAccessConfig(
-                    image: source_oci_image,
-                    proxy_domain: konflux.proxy_domain,
-                    auth_user: konflux.token_credential,
-                    auth_password: 'KONFLUX_API_TOKEN'
+                pipeutils.import_konflux_oci_image(
+                    oci_image: source_oci_image,
+                    konflux_config: konflux,
+                    parent_arg: parent_arg,
+                    stream: params.STREAM
                 )
-                withCredentials([string(credentialsId: konflux.token_credential, variable: 'KONFLUX_API_TOKEN')]) {
-                    shwrap("""
-                    cosa shell -- env KONFLUX_API_TOKEN=\${KONFLUX_API_TOKEN} bash -c '${access_config.login_cmd} && REGISTRY_AUTH_FILE=${access_config.auth_file} cosa import docker://${access_config.image} --skip-prune ${parent_arg}'
-                    """)
-                }
-                def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
-                def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
-                if (params.STREAM != oci_stream) {
-                    error("STREAM parameter value does not match the one from the OCI image")
-                }
             }
         }
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
