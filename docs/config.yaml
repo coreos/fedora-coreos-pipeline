@@ -230,8 +230,9 @@ clouds:
     # silently revoked it due to AMI deprecation age. AWS automatically deprecates
     # public AMIs after 2 years and removes public sharing after a further period
     # of inactivity, which causes node scale-up failures for customers on older
-    # releases. When enabled, the check-aws-regions job runs `ore aws ensure-public`
-    # for each enabled region on its daily schedule. Defaults to false.
+    # releases. When enabled, the ensure-public-amis job runs `ore aws gc` and
+    # `ore aws ensure-public` for each enabled region on its daily schedule.
+    # Defaults to false.
     ensure_public: true
     # OPTIONAL: list of regions to skip in various stages in the pipeline.
     # This is useful when AWS regions experience outages.
