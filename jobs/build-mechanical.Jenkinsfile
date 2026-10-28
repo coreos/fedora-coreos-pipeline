@@ -23,13 +23,12 @@ node {
     if (scheduled_streams) {
         mechanical_streams = scheduled_streams
     }
-    // Filter out streams that are managed by konflux
-    mechanical_streams = pipeutils.non_konflux_driven_streams(pipecfg, mechanical_streams)
-
     mechanical_streams.each{
         echo "Triggering build for mechanical stream: ${it}"
         build job: 'build', wait: true, propagate: false, parameters: [
           string(name: 'STREAM', value: it),
+          booleanParam(name: 'IMPORT_FROM_KONFLUX',
+                       value: pipeutils.is_stream_konflux_driven(pipecfg, it)),
           booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
         ]
     }

@@ -331,6 +331,76 @@ def withOptionalRegistryPullCredential(creds, Closure body) {
     }
 }
 
+// Return the newest Snapshot that passed all integration tests for an application.
+def get_latest_validated_snapshot(konflux_config, application) {
+    def snapshot
+    withEnv([
+        "KONFLUX_API_URL=${konflux_config.api_url}",
+        "KONFLUX_NAMESPACE=${konflux_config.namespace}",
+        "KONFLUX_APPLICATION=${application}",
+    ]) {
+        withCredentials([string(credentialsId: konflux_config.token_credential,
+                                variable: 'KONFLUX_API_TOKEN')]) {
+            snapshot = readJSON(text: shwrapCapture('''
+                export KUBECONFIG="$(mktemp)"
+                trap 'rm -f "${KUBECONFIG}"' EXIT
+
+                oc login \
+                    --server="${KONFLUX_API_URL}" \
+                    --token="${KONFLUX_API_TOKEN}" \
+                    >/dev/null
+                oc get snapshots \
+                    --namespace="${KONFLUX_NAMESPACE}" \
+                    --selector="appstudio.openshift.io/application=${KONFLUX_APPLICATION}" \
+                    --sort-by=.metadata.creationTimestamp \
+                    --output=json | \
+                jq -ec --arg component "${KONFLUX_APPLICATION}" '
+                    [.items[] | select(any(.status.conditions[]?;
+                        .type == "AppStudioTestSucceeded" and .status == "True"))]
+                    | last
+                    | if . == null then
+                        error("No validated Konflux Snapshot found")
+                      else
+                        .spec.components |= map(select(.name == $component))
+                        | if (.spec.components | length) != 1 then
+                            error("Snapshot must contain exactly one component matching the application name")
+                          elif (.spec.components[0].containerImage // "") == "" then
+                            error("Selected component must contain a container image")
+                          else
+                            .
+                          end
+                      end
+                '
+            '''))
+        }
+    }
+    return snapshot
+}
+
+// Import an OCI image using `cosa import`. Authenticates with skopeo login if the image is from konflux
+def run_cosa_import(konflux_config, image, parent_arg = "") {
+    def access_config = getImageAccessConfig(
+        image: image,
+        proxy_domain: konflux_config.proxy_domain,
+        auth_user: konflux_config.token_credential,
+        auth_password: 'KONFLUX_API_TOKEN'
+    )
+    if (!access_config.auth_file) {
+        shwrap("cosa import docker://${access_config.image} --skip-prune ${parent_arg}")
+        return
+    }
+    withCredentials([string(credentialsId: konflux_config.token_credential, variable: 'KONFLUX_API_TOKEN')]) {
+        def login_cmd = access_config.login_cmd.replace('-p ${KONFLUX_API_TOKEN}', '--password-stdin')
+        shwrap("""
+            set +x
+            printf '%s\\n' "\${KONFLUX_API_TOKEN}" | \
+                cosa shell -- env REGISTRY_AUTH_FILE=${access_config.auth_file} bash -euo pipefail -c '
+                    ${login_cmd} cosa import docker://${access_config.image} --skip-prune ${parent_arg}
+                '
+        """)
+    }
+}
+
 // Returns true if the build was triggered by a push notification.
 def triggered_by_push() {
     return (currentBuild.getBuildCauses('com.cloudbees.jenkins.GitHubPushCause').size() > 0)
@@ -405,16 +475,10 @@ def scheduled_streams(config, streams_subset) {
         config.streams[stream].scheduled}.collect{k, v -> k}
 }
 
-// Returns a list of stream names from `streams_subset` that do not have `konflux_driven: true` set
-def non_konflux_driven_streams(config, streams_subset) {
-    return streams_subset.findAll{stream ->
-        !config.streams[stream]?.konflux_driven ?: false}.collect{k, v -> k}
-}
-
 // Return true if the STREAM is driven by Konflux, else false
 def is_stream_konflux_driven(pipecfg, stream) {
     def stream_info = pipecfg.streams[stream]
-    return stream_info.konflux_driven ?: false
+    return stream_info.import_from_konflux ?: false
 }
 
 def get_streams_choices(config, node = null) {
