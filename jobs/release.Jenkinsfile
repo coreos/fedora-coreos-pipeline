@@ -130,12 +130,17 @@ def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
 lock(resource: locks.remove(0).resource, extra: locks) {
     // We should probably try to change this behavior in the coreos-ci-lib
     // So we won't need to handle the secret case here.
-    // Request 4.5Gi: in the worst case, we need to upload 4 container images in
+    // Request 5Gi: in the worst case, we need to upload 4 container images in
     // parallel via supermin and each VM is 1G.
-    def cosaPodDefinition =  [cpu: "1", memory: "4608Mi", image: cosa_img,
+    // Bumped from 4608Mi/1cpu: releases #813/#814/#817/#819/#820 OOMed
+    // (pod OOMKilled, and once with an explicit
+    // "OSError: [Errno 12] Cannot allocate memory") during the Fetch
+    // Artifacts stage while buildfetching ostree+kubevirt+extensions-container
+    // +legacy-oscontainer across 4 archs sequentially in the same pod.
+    def cosaPodDefinition =  [cpu: "2", memory: "5120Mi", image: cosa_img,
             serviceAccount: "jenkins"]
     if (brew_profile) {
-        cosaPodDefinition = [cpu: "1", memory: "4608Mi", image: cosa_img,
+        cosaPodDefinition = [cpu: "2", memory: "5120Mi", image: cosa_img,
             serviceAccount: "jenkins",
             secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
                       "koji-conf:koji.conf:/etc/koji.conf",
