@@ -295,7 +295,11 @@ lock(resource: "build-${params.STREAM}") {
                 konflux_oci_image = snapshot.container_image
                 // Verify the commit SHA from Konflux matches what we used for cosa init
                 if (snapshot.commit_sha != src_config_commit) {
-                    error("Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit})")
+                    echo "WARNING: Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit}). Re-running cosa init with the Konflux commit."
+                    src_config_commit = snapshot.commit_sha
+                    shwrap("""
+                    cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
+                    """)
                 }
                 echo "Konflux build completed. Snapshot: ${konflux_snapshot}, Container image: ${konflux_oci_image}, Commit: ${src_config_commit}"
             }
