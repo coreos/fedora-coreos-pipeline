@@ -17,8 +17,8 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to build'),
-      string(name: 'SOURCE_OCI_IMAGE',
-             description: 'Override source_oci_image image to use. If set, the STREAM and VERSION parameters will be ignored.',
+      string(name: 'KONFLUX_IMAGE',
+             description: 'Konflux image to use. If set, the STREAM and VERSION parameters will be ignored.',
              defaultValue: '',
              trim: true),
       string(name: 'VERSION',
@@ -109,8 +109,8 @@ def cosa_memory_request_mb = 2.5 * 1024 as Integer
 // can be conservative with our request
 def ncpus = 1
 
-def source_oci_image = params.SOURCE_OCI_IMAGE ?: stream_info.get("source_oci_image", "")
-boolean import_oci = source_oci_image != ""
+def konflux_image = params.KONFLUX_IMAGE ?: ""
+boolean import_konflux_image = konflux_image != ""
 def konflux = pipecfg.konflux ?: [:]
 
 echo "Waiting for build-${params.STREAM}-${params.ARCH} lock"
@@ -253,7 +253,7 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
             parent_arg = "--parent-build ${parent_version}"
         }
 
-        if (!import_oci) {
+        if (!import_konflux_image) {
             // fetch from repos for the current build
             stage('Fetch') {
                 shwrap("""
@@ -281,9 +281,9 @@ lock(resource: "build-${params.STREAM}-${basearch}") {
                 }
             }
         } else {
-            stage("Import OCI image") {
+            stage("Import Konflux image") {
                 pipeutils.import_konflux_oci_image(
-                    oci_image: source_oci_image,
+                    oci_image: konflux_image,
                     konflux_config: konflux,
                     parent_arg: parent_arg,
                     stream: params.STREAM

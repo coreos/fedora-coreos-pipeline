@@ -295,12 +295,16 @@ lock(resource: "build-${params.STREAM}") {
                 konflux_oci_image = snapshot.container_image
                 // Verify the commit SHA from Konflux matches what we used for cosa init
                 if (snapshot.commit_sha != src_config_commit) {
-                    error("Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit})")
+                    echo "WARNING: Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit}). Re-running cosa init with the Konflux commit."
+                    src_config_commit = snapshot.commit_sha
+                    shwrap("""
+                    cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
+                    """)
                 }
                 echo "Konflux build completed. Snapshot: ${konflux_snapshot}, Container image: ${konflux_oci_image}, Commit: ${src_config_commit}"
             }
 
-            stage("Import OCI image") {
+            stage("Import Konflux image") {
                 def result = pipeutils.import_konflux_oci_image(
                     oci_image: konflux_oci_image,
                     konflux_config: konflux,
@@ -601,7 +605,7 @@ def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                 string(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
-                string(name: 'SOURCE_OCI_IMAGE', value: src_oci),
+                string(name: 'KONFLUX_IMAGE', value: src_oci),
                 string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
                 string(name: 'STREAM', value: params.STREAM),
                 string(name: 'VERSION', value: version),
