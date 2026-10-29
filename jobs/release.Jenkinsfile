@@ -123,6 +123,7 @@ spec:
 // time and also synchronize with the kola-upgrade job. Take this lock
 // early (i.e. don't wait for all the arch specific locks) and hold it
 // so we can synchronize with the kola-upgrade job.
+try {
 lock(resource: "release-${params.STREAM}") {
 // Also lock version-arch-specific locks to make sure these builds are finished.
 def locks = basearches.collect{[resource: "release-${params.VERSION}-${it}"]}
@@ -141,8 +142,6 @@ lock(resource: locks.remove(0).resource, extra: locks) {
                       "krb5-conf:krb5.conf:/etc/krb5.conf"]]
     }
     cosaPod(cosaPodDefinition) {
-    try {
-
         currentBuild.description = "${build_description} Running"
 
         def s3_stream_dir = pipeutils.get_s3_streams_dir(pipecfg, params.STREAM)
@@ -545,8 +544,7 @@ lock(resource: locks.remove(0).resource, extra: locks) {
 
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${build_description} ✓"
-
-// main try finishes here
+}}} // cosaPod and both locks finish here
 } catch (e) {
     currentBuild.result = 'FAILURE'
     throw e
@@ -555,5 +553,8 @@ lock(resource: locks.remove(0).resource, extra: locks) {
     if (pipecfg.hotfix) {
         stream += "-${pipecfg.hotfix.name}"
     }
-    pipeutils.trySlackSend(message: ":bullettrain_front: release #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
-}}}} // try-catch-finally, cosaPod and lock and lock finish here
+    // The cosaPod agent can disappear on failure, so notify from a separate node.
+    node {
+        pipeutils.trySlackSend(message: ":bullettrain_front: release #${env.BUILD_NUMBER} <${env.BUILD_URL}|:jenkins:> <${env.RUN_DISPLAY_URL}|:ocean:> [${stream}][${basearches.join(' ')}] (${params.VERSION})")
+    }
+}
