@@ -17,10 +17,6 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to build'),
-      string(name: 'IMPORT_OCI_IMAGE',
-             description: 'Override import_oci_image image to use. If set, the STREAM parameter must match the image labels.',
-             defaultValue: "",
-             trim: true),
       string(name: 'VERSION',
              description: 'Override default versioning mechanism',
              defaultValue: '',
@@ -128,11 +124,12 @@ def cosa_memory_request_mb = 10.5 * 1024 as Integer
 // cleaner
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
 
-def import_oci_image = params.IMPORT_OCI_IMAGE ?: stream_info.get("import_oci_image", "")
-boolean import_oci = import_oci_image != ""
-if (!import_oci && pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
-    error("STREAMS that are driven by Konflux must import an OCI image")
-}
+boolean build_in_konflux = stream_info.get("build_in_konflux", false)
+
+// Validate and get Konflux configuration if build_in_konflux is enabled
+def konflux = build_in_konflux ?
+    pipeutils.validate_konflux_config(pipecfg, stream_info, params.STREAM) :
+    [:]
 
 echo "Waiting for build-${params.STREAM} lock"
 currentBuild.description = "${build_description} Waiting"
@@ -202,12 +199,7 @@ lock(resource: "build-${params.STREAM}") {
         pipeutils.addOptionalRootCA()
 
         def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
-        def src_config_commit = ""
-        if (import_oci) {
-            src_config_commit = shwrapCapture("skopeo inspect -n --retry-times 3 docker://$import_oci_image | jq -r '.Labels.\"org.opencontainers.image.revision\"'")
-        } else {
-            src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
-        }
+        def src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
 
         stage('Init') {
             def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
@@ -283,7 +275,45 @@ lock(resource: "build-${params.STREAM}") {
             parent_arg = "--parent-build ${parent_version}"
         }
 
-        if (!import_oci) {
+        if (build_in_konflux) {
+            // Trigger a Konflux build and wait for it to complete
+            stage('Build in Konflux') {
+                def component_name = stream_info.konflux_application
+                echo "Triggering Konflux build for component: ${component_name}"
+
+                // Trigger the build
+                def trigger_result = pipeutils.trigger_konflux_build(konflux, component_name)
+
+                // Wait for the Snapshot to be ready
+                def snapshot = pipeutils.wait_for_konflux_pipelinerun(
+                    konflux_config: konflux,
+                    component_name: component_name,
+                    trigger_time: trigger_result.trigger_time,
+                    commit_sha: src_config_commit
+                )
+                konflux_snapshot = snapshot.name
+                konflux_oci_image = snapshot.container_image
+                // Verify the commit SHA from Konflux matches what we used for cosa init
+                if (snapshot.commit_sha != src_config_commit) {
+                    echo "WARNING: Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit}). Re-running cosa init with the Konflux commit."
+                    src_config_commit = snapshot.commit_sha
+                    shwrap("""
+                    cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
+                    """)
+                }
+                echo "Konflux build completed. Snapshot: ${konflux_snapshot}, Container image: ${konflux_oci_image}, Commit: ${src_config_commit}"
+            }
+
+            stage("Import Konflux image") {
+                def result = pipeutils.import_konflux_oci_image(
+                    oci_image: konflux_oci_image,
+                    konflux_config: konflux,
+                    parent_arg: parent_arg,
+                    stream: params.STREAM
+                )
+                newBuildID = result.buildid
+            }
+        } else {
             // fetch from repos for the current build
             stage('Fetch') {
                 // Dont run this for production builds
@@ -343,7 +373,7 @@ lock(resource: "build-${params.STREAM}") {
                         // Run the mArch jobs and wait. We wait here because if they fail
                         // we don't want to bother running the release job again since the
                         // goal is to get a complete build.
-                        run_multiarch_jobs(missing_arches, rev, buildID, import_oci_image, cosa_img, true)
+                        run_multiarch_jobs(missing_arches, rev, buildID, konflux_oci_image, cosa_img, true)
                         if (stream_info.type != "production") {
                             run_release_job(buildID)
                         }
@@ -354,17 +384,6 @@ lock(resource: "build-${params.STREAM}") {
                 return
             }
             newBuildID = buildID
-        } else {
-            stage("Import OCI image") {
-                echo "Skipping build : Importing OCI : $import_oci_image"
-                shwrap("cosa import docker://${import_oci_image} --skip-prune ${parent_arg}")
-                def build_meta = readJSON(text: shwrapCapture("cosa meta --dump"))
-                def oci_stream = build_meta['coreos-assembler.oci-imported-labels']['com.coreos.stream'] ?: ''
-                if (params.STREAM != oci_stream) {
-                    error("STREAM parameter value does not match the one from the OCI image")
-                }
-                newBuildID = build_meta.buildid
-            }
         }
 
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
@@ -424,7 +443,7 @@ lock(resource: "build-${params.STREAM}") {
         // If desired let's go ahead and archive+fork the multi-arch jobs
         if (params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, konflux_oci_image, cosa_img, false)
         }
 
         // Run kola testiso tests if supported (legacy). On older releases testiso
@@ -459,7 +478,7 @@ lock(resource: "build-${params.STREAM}") {
         // jobs let's go ahead and do those pieces now
         if (!params.EARLY_ARCH_JOBS && uploading) {
             archive_ostree(newBuildID, basearch, s3_stream_dir)
-            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, import_oci_image, cosa_img, false)
+            run_multiarch_jobs(additional_arches, src_config_commit, newBuildID, konflux_oci_image, cosa_img, false)
         }
 
         stage('Archive') {
@@ -496,7 +515,7 @@ lock(resource: "build-${params.STREAM}") {
         // released before continuing so that they can test upgrading
         // from the actual containers pushed to the registry and signed.
         if (uploading && stream_info.type != "production") {
-            run_release_job(newBuildID)
+            run_release_job(newBuildID, konflux_snapshot)
         }
 
         // Now that the metadata is uploaded go ahead and kick off some followup tests.
@@ -586,7 +605,7 @@ def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
                 booleanParam(name: 'ALLOW_KOLA_UPGRADE_FAILURE', value: params.ALLOW_KOLA_UPGRADE_FAILURE),
                 string(name: 'SKIP_UNTESTED_ARTIFACTS', value: params.SKIP_UNTESTED_ARTIFACTS),
                 string(name: 'SRC_CONFIG_COMMIT', value: src_commit),
-                string(name: 'SOURCE_OCI_IMAGE', value: src_oci),
+                string(name: 'KONFLUX_IMAGE', value: src_oci),
                 string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa_img),
                 string(name: 'STREAM', value: params.STREAM),
                 string(name: 'VERSION', value: version),
@@ -599,7 +618,7 @@ def run_multiarch_jobs(arches, src_commit, version, src_oci, cosa_img, wait) {
     }
 }
 
-def run_release_job(buildID) {
+def run_release_job(buildID, konflux_snapshot = "") {
     stage('Publish') {
         // For FCOS development/mechanical builds, we will allow missing architectures for flexibility.
         // However, for RHCOS, we can keep the default behavior of not allowing missing architectures.
@@ -609,6 +628,7 @@ def run_release_job(buildID) {
             string(name: 'STREAM', value: params.STREAM),
             string(name: 'ADDITIONAL_ARCHES', value: params.ADDITIONAL_ARCHES),
             string(name: 'VERSION', value: buildID),
+	    string(name: 'KONFLUX_SNAPSHOT', value: konflux_snapshot),
             booleanParam(name: 'ALLOW_MISSING_ARCHES', value: allow_missing),
             booleanParam(name: 'CLOUD_REPLICATION', value: params.CLOUD_REPLICATION),
         ] + ((params.PIPECFG_HOTFIX_REPO) ? [
