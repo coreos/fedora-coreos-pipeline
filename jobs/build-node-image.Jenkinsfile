@@ -225,6 +225,18 @@ lock(resource: "build-node-image", priority: queue_priority) {
                                     """)
 
                                     shwrap("cosa decompress --build ${build_id}")
+
+                                    // Export extensions image as OCI archive for kola tests
+                                    if (extensions_image_manifest_digest) {
+                                        shwrap("""
+                                            mkdir -p tmp
+                                            cosa shell skopeo copy --override-arch ${skopeo_arch_override} \\
+                                                --authfile \$REGISTRY_AUTH_FILE \\
+                                                docker://${image_repo}@${extensions_image_manifest_digest} \\
+                                                oci-archive:tmp/extensions.ociarchive
+                                        """)
+                                    }
+
                                     kola(
                                         cosaDir: WORKSPACE,
                                         build: build_id,
