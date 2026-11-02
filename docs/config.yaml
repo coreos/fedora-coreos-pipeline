@@ -9,6 +9,15 @@ source_config:
   yumrepos: https://gitlab.example.com/sooper/seekret
   # OPTIONAL: git repo ref for yumrepos
   yumrepos_ref: devel
+  # OPTIONAL: write bump-lockfile output to lockfiles/${STREAM}/ instead of
+  # the repo root, for repos where several streams share a branch (RHCOS).
+  # Also skips bumping BUILDER_IMG in build-args.conf, since MintMaker
+  # handles that for RHCOS. Defaults to false.
+  lockfiles_subdir: false
+
+# OPTIONAL: run bump-lockfile on all streams. A stream can override this
+# with its own enable_bump_lockfile. If unset, defaults to false.
+enable_bump_lockfile: true
 
 # OPTIONAL: default artifacts to build per architecture
 default_artifacts:
@@ -47,10 +56,12 @@ streams:
     testing-devel:
       # REQUIRED: stream type
       # Three kinds of streams are supported:
-      # - development: lockfiles, auto-bumping, auto-triggering
-      # - production: lockfiles, no auto-bumping, no auto-triggering
+      # - development: lockfiles, auto-triggering
+      # - production: lockfiles, no auto-triggering
       # - mechanical: no lockfiles, auto-triggering
       type: development
+      # enable_bump_lockfile is not set, so this stream inherits the
+      # top-level default (true).
       # OPTIONAL: set a stream as the default one
       # This will be the default stream for jobs that take a 'STREAMS' parameter
       default: true
@@ -83,6 +94,9 @@ streams:
       builder_pull_secret: 'bootc-builder-img-pull-registry-secret'
     stable:
       type: production
+      # OPTIONAL: override the top-level enable_bump_lockfile for this stream.
+      # Production streams get lockfiles via promotion, not bumps.
+      enable_bump_lockfile: false
       # OPTIONAL: override cosa image to use for this stream
       cosa_image: "quay.io/jlebon/coreos-assembler:stable"
       # OPTIONAL: additional artifacts to build for this stream
