@@ -55,9 +55,8 @@ def (src_config_url, src_config_ref) = pipeutils.get_source_config_for_stream(pi
 def uses_lockfiles_subdir = pipecfg.source_config.lockfiles_subdir ?: false
 def lockfile_prefix = uses_lockfiles_subdir ? "lockfiles/${params.STREAM}/" : ""
 
-// Whether to skip running tests before pushing the lockfile bump. Used by
-// RHCOS.
-def skip_tests = pipecfg.skip_bump_lockfile_tests ?: false
+// Whether to skip running tests before pushing the lockfile bump.
+def skip_tests = pipecfg.misc?.skip_bump_lockfile_tests ?: false
 
 // Registry pull secret for pulling builder images from registry.redhat.io
 def pull_secret_name = stream_info.get('builder_pull_secret') ?: pipecfg.misc?.builder_pull_secret ?: ""
@@ -310,8 +309,7 @@ lock(resource: "bump-lockfile") {
             } // end for loop
             parallel outerparallelruns
         } else if (haveChanges) {
-            // Tests were skipped via the `skip_bump_lockfile_tests` pipecfg
-            // knob.
+            // Tests were skipped via the `skip_bump_lockfile_tests` pipecfg knob
             echo "Skipping tests; pushing lockfile bump untested"
         }
 
