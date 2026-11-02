@@ -1,3 +1,8 @@
+# OPTIONAL: skip the tests run by the bump-lockfile job before pushing the
+# result. Set this when builds and tests are handled elsewhere.
+# Defaults to false.
+skip_bump_lockfile_tests: true
+
 # REQUIRED: knobs related to the source config
 source_config:
   # REQUIRED: source config repo URL to build
