@@ -1,8 +1,3 @@
-# OPTIONAL: skip the tests run by the bump-lockfile job before pushing the
-# result. Set this when builds and tests are handled elsewhere.
-# Defaults to false.
-skip_bump_lockfile_tests: true
-
 # REQUIRED: knobs related to the source config
 source_config:
   # REQUIRED: source config repo URL to build
@@ -335,6 +330,10 @@ misc:
   # build. This corresponds to a kubernetes secret in the cluster which is mapped
   # into Jenkins.
   builder_pull_secret: 'bootc-builder-img-pull-registry-secret'
+  # OPTIONAL: skip the tests run by the bump-lockfile job before pushing the
+  # lockfile bump. Set this when builds and tests are handled elsewhere
+  # Defaults to false.
+  skip_bump_lockfile_tests: true
 
 # OPTIONAL: Node image keys
 ocp_node_builds:
