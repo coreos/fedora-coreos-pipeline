@@ -55,6 +55,10 @@ def (src_config_url, src_config_ref) = pipeutils.get_source_config_for_stream(pi
 def uses_lockfiles_subdir = pipecfg.source_config.lockfiles_subdir ?: false
 def lockfile_prefix = uses_lockfiles_subdir ? "lockfiles/${params.STREAM}/" : ""
 
+// Whether to skip running tests before pushing the lockfile bump. Used by
+// RHCOS.
+def skip_tests = pipecfg.skip_bump_lockfile_tests ?: false
+
 // Registry pull secret for pulling builder images from registry.redhat.io
 def pull_secret_name = stream_info.get('builder_pull_secret') ?: pipecfg.misc?.builder_pull_secret ?: ""
 
@@ -256,7 +260,7 @@ lock(resource: "bump-lockfile") {
 
         // The bulk of the work (build, test, etc) is done in the following.
         // We only need to do that work if we have changes.
-        if (haveChanges) {
+        if (haveChanges && !skip_tests) {
             // Run tests across all architectures in parallel
             def outerparallelruns = [:]
             for (architecture in archinfo.keySet()) {
@@ -305,6 +309,10 @@ lock(resource: "bump-lockfile") {
                 } // end outerparallelruns
             } // end for loop
             parallel outerparallelruns
+        } else if (haveChanges) {
+            // Tests were skipped via the `skip_bump_lockfile_tests` pipecfg
+            // knob.
+            echo "Skipping tests; pushing lockfile bump untested"
         }
 
         // Destroy the remote sessions. We don't need them anymore
@@ -368,7 +376,7 @@ lock(resource: "bump-lockfile") {
         } else if (!haveChanges && forceTimestamp) {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
         } else {
-            currentBuild.description = "[${params.STREAM}] ⚡ (pushed)"
+            currentBuild.description = skip_tests ? "[${params.STREAM}] ⚡ (pushed, tests skipped)" : "[${params.STREAM}] ⚡ (pushed)"
             if(!pipeutils.is_stream_konflux_driven(pipecfg, params.STREAM)) {
                 stage("Trigger Build") {
                     echo "Triggering build for stream: ${params.STREAM}"
