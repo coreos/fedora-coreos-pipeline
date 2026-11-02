@@ -202,7 +202,8 @@ lock(resource: "build-node-image", priority: queue_priority) {
                                     // Download the node image we just built
                                     def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
                                     shwrap("""
-                                        cosa shell skopeo copy --override-arch ${skopeo_arch_override}      \
+                                        cosa shell skopeo copy --retry-times 5                              \
+                                            --override-arch ${skopeo_arch_override}                         \
                                             --authfile $REGISTRY_AUTH_FILE                                  \
                                             docker://${image_repo}@${node_image_manifest_digest}            \
                                             oci-archive:./openshift-${arch}.ociarchive
