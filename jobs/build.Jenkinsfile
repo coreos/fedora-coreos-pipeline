@@ -136,6 +136,11 @@ currentBuild.description = "${build_description} Waiting"
 
 // declare these early so we can use them in `finally` block
 def newBuildID, basearch
+// these are only set when building in Konflux; declare them early so that
+// non-Konflux builds can still reference them when passing empty values
+// to the multi-arch and release jobs
+def konflux_oci_image = ""
+def konflux_snapshot = ""
 
 // matches between build/build-arch job
 def timeout_mins = 300
