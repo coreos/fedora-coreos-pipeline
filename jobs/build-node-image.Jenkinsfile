@@ -190,11 +190,15 @@ lock(resource: "build-node-image", priority: queue_priority) {
                             [arch, {
                                 // Define the sequence of cosa commands as a closure to avoid repetition.
                                 def executeCosaCommands = { boolean isRemote ->
-                                    // The 'cosa init' command can exit with an error due to a known issue (coreos/coreos-assembler#4239).
-                                    // Piping to 'true' ignores any non-zero exit code from 'cosa init', preventing the pipeline from failing.
+                                    // 'cosa init' exits with an error due to missing resources in openshift/os
+                                    // as this repo isn't a coreos-config style repo anymore.
+                                    // See https://github.com/coreos/coreos-assembler/issues/4239
+                                    // We ignore errors with `|| true`
+                                    // While we could fix this in cosa this whole thing will move to Konflux in
+                                    // the near future anyway
                                     shwrap("""
                                         set +o pipefail
-                                        cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
+                                        cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force || true
                                     """)
 
                                     // sync across the auth credentials to remote sessions
