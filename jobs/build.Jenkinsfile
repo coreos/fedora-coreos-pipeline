@@ -316,7 +316,6 @@ lock(resource: "build-${params.STREAM}") {
                     parent_arg: parent_arg,
                     stream: params.STREAM
                 )
-                newBuildID = result.buildid
             }
         } else {
             // fetch from repos for the current build
@@ -355,42 +354,42 @@ lock(resource: "build-${params.STREAM}") {
                     """)
                 }
             }
-
-            def buildID = shwrapCapture("readlink builds/latest")
-            if (prevBuildID == buildID) {
-                currentBuild.result = 'SUCCESS'
-                currentBuild.description = "${build_description} 💤 (no new build)"
-
-                // Nothing changed since the latest build. Check if it's missing
-                // some arches and retrigger `build-arch` only for the missing
-                // arches, and the follow-up `release` job. Match the exact src
-                // config commit that was used. But only do this if there isn't
-                // already outstanding work in progress for that build ID. Skip if
-                // not uploading since it's required for multi-arch.
-                if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
-                    def builds = readJSON file: "builds/builds.json"
-                    assert buildID == builds.builds[0].id
-                    def missing_arches = additional_arches - builds.builds[0].arches
-                    if (missing_arches) {
-                        def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
-                        def rev = meta["coreos-assembler.container-config-git"]["commit"]
-                        currentBuild.description = "${build_description} 🔨 ${buildID}"
-                        // Run the mArch jobs and wait. We wait here because if they fail
-                        // we don't want to bother running the release job again since the
-                        // goal is to get a complete build.
-                        run_multiarch_jobs(missing_arches, rev, buildID, konflux_oci_image, cosa_img, true)
-                        if (stream_info.type != "production") {
-                            run_release_job(buildID)
-                        }
-                    }
-                }
-
-                // And we're done!
-                return
-            }
-            newBuildID = buildID
         }
 
+        def buildID = shwrapCapture("readlink builds/latest")
+        if (prevBuildID == buildID) {
+            currentBuild.result = 'SUCCESS'
+            currentBuild.description = "${build_description} 💤 (no new build)"
+
+            // Nothing changed since the latest build. Check if it's missing
+            // some arches and retrigger `build-arch` only for the missing
+            // arches, and the follow-up `release` job. Match the exact src
+            // config commit that was used. But only do this if there isn't
+            // already outstanding work in progress for that build ID. Skip if
+            // not uploading since it's required for multi-arch.
+            if (uploading && !buildid_has_work_pending(buildID, additional_arches)) {
+                def builds = readJSON file: "builds/builds.json"
+                assert buildID == builds.builds[0].id
+                def missing_arches = additional_arches - builds.builds[0].arches
+                if (missing_arches) {
+                    def meta = readJSON(text: shwrapCapture("cosa meta --build=${buildID} --dump"))
+                    def rev = meta["coreos-assembler.container-config-git"]["commit"]
+                    currentBuild.description = "${build_description} 🔨 ${buildID}"
+                    // Run the mArch jobs and wait. We wait here because if they fail
+                    // we don't want to bother running the release job again since the
+                    // goal is to get a complete build.
+                    run_multiarch_jobs(missing_arches, rev, buildID, konflux_oci_image, cosa_img, true)
+                    if (stream_info.type != "production") {
+                        run_release_job(buildID, konflux_snapshot)
+                    }
+                }
+            }
+
+            // And we're done!
+            return
+        }
+
+        newBuildID = buildID
         currentBuild.description = "${build_description} ⚡ ${newBuildID}"
 
         // Insert the parent info into meta.json so we can display it in
