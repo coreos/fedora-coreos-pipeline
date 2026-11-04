@@ -206,10 +206,11 @@ lock(resource: "build-${params.STREAM}") {
         def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
         def src_config_commit = shwrapCapture("git ls-remote ${url} refs/heads/${ref} | cut -d \$'\t' -f 1")
 
+        def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
+        def yumrepos_ref = pipecfg.source_config.yumrepos_ref ? "--yumrepos-branch ${pipecfg.source_config.yumrepos_ref}" : ""
+        def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
+
         stage('Init') {
-            def yumrepos = pipecfg.source_config.yumrepos ? "--yumrepos ${pipecfg.source_config.yumrepos}" : ""
-            def yumrepos_ref = pipecfg.source_config.yumrepos_ref ? "--yumrepos-branch ${pipecfg.source_config.yumrepos_ref}" : ""
-            def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
             shwrap("""
             cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
             """)
@@ -281,30 +282,45 @@ lock(resource: "build-${params.STREAM}") {
         }
 
         if (build_in_konflux) {
-            // Trigger a Konflux build and wait for it to complete
+            // Check for existing Konflux snapshot or trigger a new build
             stage('Build in Konflux') {
                 def component_name = stream_info.konflux_application
-                echo "Triggering Konflux build for component: ${component_name}"
+                echo "Checking for existing validated Konflux snapshot for component: ${component_name}, commit: ${src_config_commit}"
 
-                // Trigger the build
-                def trigger_result = pipeutils.trigger_konflux_build(konflux, component_name)
-
-                // Wait for the Snapshot to be ready
-                def snapshot = pipeutils.wait_for_konflux_pipelinerun(
+                // Check if a validated snapshot already exists for this commit
+                def existing_snapshot = pipeutils.find_validated_konflux_snapshot(
                     konflux_config: konflux,
                     component_name: component_name,
-                    trigger_time: trigger_result.trigger_time,
                     commit_sha: src_config_commit
                 )
-                konflux_snapshot = snapshot.name
-                konflux_oci_image = snapshot.container_image
-                // Verify the commit SHA from Konflux matches what we used for cosa init
-                if (snapshot.commit_sha != src_config_commit) {
-                    echo "WARNING: Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit}). Re-running cosa init with the Konflux commit."
-                    src_config_commit = snapshot.commit_sha
-                    shwrap("""
-                    cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
-                    """)
+
+                if (existing_snapshot.found) {
+                    echo "Skipping Konflux build - using existing snapshot: ${existing_snapshot.name}"
+                    konflux_snapshot = existing_snapshot.name
+                    konflux_oci_image = existing_snapshot.container_image
+                } else {
+                    // No existing snapshot - trigger a new build
+                    echo "No existing snapshot found. Triggering Konflux build for component: ${component_name}"
+                    def trigger_result = pipeutils.trigger_konflux_build(konflux, component_name)
+
+                    // Wait for the Snapshot to be ready
+                    def snapshot = pipeutils.wait_for_konflux_pipelinerun(
+                        konflux_config: konflux,
+                        component_name: component_name,
+                        trigger_time: trigger_result.trigger_time,
+                        commit_sha: src_config_commit
+                    )
+                    konflux_snapshot = snapshot.name
+                    konflux_oci_image = snapshot.container_image
+
+                    // Verify the commit SHA from Konflux matches what we used for cosa init
+                    if (snapshot.commit_sha != src_config_commit) {
+                        echo "WARNING: Konflux build commit SHA (${snapshot.commit_sha}) does not match the commit used for cosa init (${src_config_commit}). Re-running cosa init with the Konflux commit."
+                        src_config_commit = snapshot.commit_sha
+                        shwrap("""
+                        cosa init --force --branch ${ref} --commit=${src_config_commit} ${yumrepos} ${yumrepos_ref} ${variant} ${url}
+                        """)
+                    }
                 }
                 echo "Konflux build completed. Snapshot: ${konflux_snapshot}, Container image: ${konflux_oci_image}, Commit: ${src_config_commit}"
             }

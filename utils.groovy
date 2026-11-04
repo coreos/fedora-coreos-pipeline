@@ -1277,6 +1277,79 @@ def trigger_konflux_build(konflux_config, component_name) {
     ]
 }
 
+// Find an existing validated Konflux Snapshot for a given commit.
+//
+// This function queries the Konflux API to check if a Snapshot already exists
+// for the specified commit and component. It only returns Snapshots that have
+// passed validation (AppStudioTestSucceeded: True).
+//
+// Parameters:
+//   konflux_config:  map -- Konflux configuration (api_url, namespace, token_credential)
+//   component_name:  string -- Name of the Konflux component
+//   commit_sha:      string -- Source commit SHA to search for
+//
+// Returns a map with:
+//   - found:           boolean -- true if a validated snapshot exists
+//   - name:            string -- Snapshot name (if found)
+//   - container_image: string -- Container image URL with digest (if found)
+//   - commit_sha:      string -- Source commit SHA (if found)
+def find_validated_konflux_snapshot(Map params) {
+    def konflux_config = params.konflux_config
+    def component_name = params.component_name
+    def commit_sha = params.commit_sha
+
+    ensure_konflux_login(konflux_config)
+
+    def result
+    withEnv([
+        "KUBECONFIG=${KONFLUX_KUBECONFIG}",
+        "KONFLUX_NAMESPACE=${konflux_config.namespace}",
+        "KONFLUX_COMPONENT=${component_name}",
+        "COMMIT_SHA=${commit_sha}",
+    ]) {
+        // Query snapshots by commit SHA and component labels
+        def snapshot_json = shwrapCapture('''
+            oc get snapshots \
+                --namespace="${KONFLUX_NAMESPACE}" \
+                --selector="appstudio.openshift.io/component=${KONFLUX_COMPONENT},pac.test.appstudio.openshift.io/sha=${COMMIT_SHA}" \
+                --output=json | \
+            jq -ec --arg component "${KONFLUX_COMPONENT}" '
+                # Filter for validated snapshots (AppStudioTestSucceeded: True)
+                [.items[] | select(
+                    .status.conditions != null and
+                    any(.status.conditions[]; .type == "AppStudioTestSucceeded" and .status == "True")
+                )]
+                # Sort by creation time descending and take the most recent
+                | sort_by(.metadata.creationTimestamp) | reverse
+                | .[0]
+                | if . == null then
+                    {found: false}
+                  else
+                    {
+                      found: true,
+                      name: .metadata.name,
+                      commit_sha: .metadata.annotations["build.appstudio.redhat.com/commit_sha"],
+                      container_image: (
+                        .spec.components[]
+                        | select(.name == $component)
+                        | .containerImage
+                      )
+                    }
+                  end
+            '
+        ''')
+        result = readJSON(text: snapshot_json)
+    }
+
+    if (result.found) {
+        echo "Found existing validated Konflux snapshot: ${result.name} for commit ${commit_sha}"
+    } else {
+        echo "No validated Konflux snapshot found for commit ${commit_sha}"
+    }
+
+    return result
+}
+
 // Wait for a Konflux PipelineRun to complete.
 //
 // Parameters:
