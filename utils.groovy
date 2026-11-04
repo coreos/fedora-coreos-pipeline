@@ -1370,6 +1370,7 @@ def wait_for_konflux_pipelinerun(Map params) {
                                     if .status.conditions == null then "Running"
                                     elif any(.status.conditions[]; .type == "Succeeded" and .status == "True") then "Succeeded"
                                     elif any(.status.conditions[]; .type == "Succeeded" and .status == "False") then "Failed"
+                                    elif any(.status.conditions[]; .type == "Succeeded" and .status == "Unknown" and .reason == "PipelineRunPending") then "Pending"
                                     else "Running"
                                     end
                                 ),
@@ -1438,7 +1439,11 @@ def wait_for_konflux_pipelinerun(Map params) {
                 if (snapshot_name == "") {
                     def elapsed_mins = String.format('%.1f', elapsed / 60000.0)
                     if (pipelinerun_name != "") {
-                        echo "Waiting for PipelineRun ${pipelinerun_name} to complete... (${elapsed_mins}m elapsed)"
+                        if (pr_data.status == "Pending") {
+                            echo "PipelineRun ${pipelinerun_name} is queued (Konflux is waiting for resources)... (${elapsed_mins}m elapsed)"
+                        } else {
+                            echo "Waiting for PipelineRun ${pipelinerun_name} to complete... (${elapsed_mins}m elapsed)"
+                        }
                     } else {
                         echo "Waiting for PipelineRun to be created... (${elapsed_mins}m elapsed)"
                     }
