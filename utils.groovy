@@ -1131,7 +1131,7 @@ def getImageAccessConfig(Map params) {
         result.image = image.replace("quay.io", proxy_domain)
         result.auth_file = auth_file_path
         result.auth_file_arg = "--authfile ${auth_file_path}"
-        result.login_cmd = "skopeo login ${result.auth_file_arg} -u ${auth_user} -p \${${auth_password}} ${proxy_domain}"
+        result.login_cmd = "skopeo login ${result.auth_file_arg} -u ${auth_user} -p \${${auth_password}} ${proxy_domain} >/dev/null"
     }
 
     return result
