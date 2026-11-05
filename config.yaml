@@ -17,8 +17,8 @@ streams:
     type: development
     default: true
     konflux_application: fedora-coreos-testing-devel
-  next-devel:         # do not touch; line managed by `next-devel/manage.py`
-    type: development # do not touch; line managed by `next-devel/manage.py`
+  # next-devel:         # do not touch; line managed by `next-devel/manage.py`
+    # type: development # do not touch; line managed by `next-devel/manage.py`
     konflux_application: fedora-coreos-next-devel
   rawhide:
     type: development
