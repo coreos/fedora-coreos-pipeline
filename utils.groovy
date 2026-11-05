@@ -1430,6 +1430,9 @@ def wait_for_konflux_pipelinerun(Map params) {
                     }
                 }
 
+                // Declare pr_data at a higher scope so it's accessible in the progress reporting block
+                def pr_data = [status: "Unknown"]
+
                 if (pipelinerun_name != "") {
                     // Step 1b: Check PipelineRun status before looking for Snapshot
                     def pr_json = shwrapCapture("""
@@ -1452,7 +1455,7 @@ def wait_for_konflux_pipelinerun(Map params) {
                             }
                         ' || echo '{"name":"","status":"NotFound"}'
                     """)
-                    def pr_data = readJSON(text: pr_json)
+                    pr_data = readJSON(text: pr_json)
 
                     if (pr_data.status == "NotFound" || pr_data.name == "") {
                         // PipelineRun disappeared - try to find Snapshot anyway
