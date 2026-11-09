@@ -41,46 +41,12 @@ check "health_check_distro" {
 }
 
 
-# Variables used for splunk deployment, which is only
-# for RHCOS builders. Define them in the environment with:
-# export TF_VAR_splunk_hostname=...
-# export TF_VAR_splunk_sidecar_repo=...
-# export TF_VAR_itpaas_splunk_repo=...
-variable "splunk_hostname" {
- type    = string
- default = ""
-}
-variable "splunk_sidecar_repo" {
- type    = string
- default = ""
-}
-variable "itpaas_splunk_repo" {
- type    = string
- default = ""
-}
-# Check that if we are deploying a RHCOS builder the splunk
-# variables have been defined.
-check "health_check_rhcos_splunk_vars" {
-  assert {
-    condition = !(var.distro == "rhcos" && anytrue([
-                        var.splunk_hostname == "",
-                        var.splunk_sidecar_repo == ""
-                    ]))
-    error_message = "Must define splunk env vars for RCHOS builders"
-  }
-}
-
-
 locals {
     fcos_snippets = [
       file("../../coreos-aarch64-builder.bu"),
     ]
     rhcos_snippets = [
       file("../../coreos-aarch64-builder.bu"),
-      templatefile("../../builder-splunk.bu", {
-        SPLUNK_HOSTNAME = var.splunk_hostname
-        SPLUNK_SIDECAR_REPO = var.splunk_sidecar_repo
-      })
     ]
 }
 data "ct_config" "butane" {
