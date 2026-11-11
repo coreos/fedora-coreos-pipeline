@@ -69,13 +69,13 @@ if (start_version == '' && params.ARCH == 'x86_64') {
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
 
 // Set the memory request to a reasonable value.
-def cosa_memory_request_mb = 1024
+def cosa_memory_request_mb = 2048
 // set the CPU request to the cosaPod default
 def cosa_cpu_request = 2
 if (params.ARCH == 'x86_64') {
     // local (qemu+x86_64) testing will require more memory
-    // bios=1536, uefi-secure=1536, overhead=1024
-    cosa_memory_request_mb = 1536 + 1536 + 1024
+    // bios=1536, uefi-secure=1536, overhead=2048 (the base value above)
+    cosa_memory_request_mb += 1536 + 1536
 
     // for x86_64 we'll give 2 CPUs for each parallel kola/qemu VM (bios + uefi-secure)
     cosa_cpu_request = 4
