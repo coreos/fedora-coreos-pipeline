@@ -74,14 +74,11 @@ def cosa_memory_request_mb = 2048
 def cosa_cpu_request = 2
 if (params.ARCH == 'x86_64') {
     // local (qemu+x86_64) testing will require more memory
-    // bios=2560, uefi-secure=2560, overhead=1024
-    cosa_memory_request_mb = 2560 + 2560 + 1024
+    // bios=1536, uefi-secure=1536, overhead=2048 (the base value above)
+    cosa_memory_request_mb += 1536 + 1536
 
     // for x86_64 we'll give 2 CPUs for each parallel kola/qemu VM (bios + uefi-secure)
     cosa_cpu_request = 4
-} else if (params.ARCH == 'ppc64le') {
-    // ppc64le uses a 64K pages and requires more memory
-    cosa_memory_request_mb *= 2
 }
 
 
