@@ -89,8 +89,8 @@ def timeout_mins = 300
 // The global hard timeout (sum of all budgets) is the only thing that
 // can abort execution.
 def stage_budgets = [
-    'Build Node Image':       20,
-    'Build Extensions Image': 20,
+    'Build Node Image':       40,
+    'Build Extensions Image': 40,
     'Run Tests':              15,
     'Brew Upload':            10,
     'Release Manifests':      10,
