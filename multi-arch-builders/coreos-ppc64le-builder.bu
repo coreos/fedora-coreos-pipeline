@@ -14,8 +14,8 @@ passwd:
   users:
     - name: builder
       ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFsZ+IH1M1TWoBXz5uRe03gmk8waNrij0sDrPgTTb/rf builder@fcos-pipeline-ppc64le
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID8cIzlrmq9NXHT320rg0J+eplyWUdAfNsDvHNBadUxx builder@rhcos-pipeline-ppc64le
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDZX3VQjF4dfE8ZPMbJ62xv1s45Y48pVGwAQUWWGCY76 builder@fcos-pipeline-ppc64le
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFy7WwuUSf1inqiOlvG22keC94noDrnYh58ObHmVC04l builder@rhcos-pipeline-ppc64le
 storage:
   files:
     - path: /etc/hostname
