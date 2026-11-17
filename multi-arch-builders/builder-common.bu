@@ -15,6 +15,7 @@ passwd:
   users:
     - name: core
       ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKU/M/tMpknVPKw9owgQViKbXeEEnjpDNMSp35S1BFys c4rt0
 kernel_arguments:
   should_exist:
     - mitigations=off
