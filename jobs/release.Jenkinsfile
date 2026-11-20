@@ -142,9 +142,9 @@ lock(resource: locks.remove(0).resource, extra: locks) {
     if (brew_profile) {
         cosaPodDefinition = [cpu: "2", memory: "5120Mi", image: cosa_img,
             serviceAccount: "jenkins",
-            secrets: ["brew-keytab", "brew-ca:ca.crt:/etc/pki/ca.crt",
-                      "koji-conf:koji.conf:/etc/koji.conf",
-                      "krb5-conf:krb5.conf:/etc/krb5.conf"]]
+            secrets: ["brew-keytab", "brew-ca:text:/etc/pki/ca.crt",
+                      "koji-conf:text:/etc/koji.conf",
+                      "krb5-conf:text:/etc/krb5.conf"]]
     }
     cosaPod(cosaPodDefinition) {
         currentBuild.description = "${build_description} Running"
@@ -424,7 +424,7 @@ lock(resource: locks.remove(0).resource, extra: locks) {
                     state = shwrapCapture("""
                     coreos-assembler koji-upload search \
                         --nvr ${nvr} \
-                        --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                        --keytab "/run/kubernetes/secrets/brew-keytab/data" \
                         --owner ${brew_principal} \
                         --profile ${brew_profile} \
                         --build ${params.VERSION}
@@ -438,7 +438,7 @@ lock(resource: locks.remove(0).resource, extra: locks) {
                         shwrap("""
                             coreos-assembler koji-upload \
                                 upload --reserve-id \
-                                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                                --keytab "/run/kubernetes/secrets/brew-keytab/data" \
                                 --build ${params.VERSION} \
                                 --retry-attempts 6 \
                                 --buildroot builds \
@@ -455,7 +455,7 @@ lock(resource: locks.remove(0).resource, extra: locks) {
                             coreos-assembler koji-upload ensure-tag \
                                 --nvr ${nvr} \
                                 --build ${params.VERSION} \
-                                --keytab "/run/kubernetes/secrets/brew-keytab/brew.keytab" \
+                                --keytab "/run/kubernetes/secrets/brew-keytab/data" \
                                 --owner ${brew_principal} \
                                 --profile ${brew_profile} \
                                 --tag ${tag}
