@@ -16,6 +16,15 @@ passwd:
     - name: core
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKU/M/tMpknVPKw9owgQViKbXeEEnjpDNMSp35S1BFys c4rt0
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKn8rBrM5tH7gfvdNr+25/mYSFMqAaeTJd74vP3RT8Ic rolv@fedora
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+P37cYfZ9JWGntcBHhry0cwVhCZSBZTPSBivLTdW8s angelcerveraroldan@protonmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJXJfATDWgAQuXXBWpSvUaHw0vvD2eeGd9fsDba9v8V rravanel@redhat.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC32cU/ECfTtp3c5EtAbDnG08XqRFKOm44EwsDuLYYIS tiago.bueno@gmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC9Nei11ige8Qa13+qrDbLLRFzTfhvAQUEgUT5p9LwL6 jbtrystram@fedoraproject.org
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMcyjTzxQ3Bso3NBJUQwt1jFr42Orwk6tRc//PqSCckD ydesouza@redhat.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHZ9vLZymL1kuiHWkzmacz5de4WmdLmmJ1PlIB6FkAZD marmijo@artemis
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBA/7FTaJ7y+KA+uyTacExT7fFCJIztazLnjWwoK7yZY afrosi@redhat.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILf3KGyH0x5VIQTD2V5m10TVh1lmhucDY4Gno6yW4QTn bbnaraya@redhat.com
 kernel_arguments:
   should_exist:
     - mitigations=off
