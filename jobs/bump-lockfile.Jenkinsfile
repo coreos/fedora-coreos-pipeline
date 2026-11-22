@@ -77,6 +77,80 @@ def getLockfileInfo(lockfile) {
     return [pkgChecksum, pkgTimestamp]
 }
 
+def latestComposeCommit(s3_stream_dir) {
+    def builds_uri = "s3://${s3_stream_dir}/builds"
+    return dir("previous-compose") {
+        deleteDir()
+        pipeutils.aws_s3_cp_allow_noent("${builds_uri}/builds.json", "./builds.json")
+        if (!fileExists("builds.json")) {
+            return null
+        }
+
+        def builds = readJSON(file: "builds.json", returnPojo: true)
+        def latest = builds.builds.find { it.arches.contains("x86_64") }
+        if (!latest) {
+            return null
+        }
+
+        pipeutils.aws_s3_cp_allow_noent("${builds_uri}/${latest.id}/x86_64/meta.json", "./meta.json")
+        def meta = readJSON(file: "meta.json", returnPojo: true)
+        def commit = meta["coreos-assembler.container-config-git"]?.commit
+        if (!(commit ==~ /[0-9a-f]{40}/)) {
+            error("Base compose ${latest.id} has no valid source config commit")
+        }
+        return commit
+    }
+}
+
+def committedPackageChecksum(commit, lockfile) {
+    if (shwrapRc("git -C src/config cat-file -e '${commit}:${lockfile}'") != 0) {
+        return null
+    }
+    return shwrapCapture("git -C src/config show '${commit}:${lockfile}' | jq -cS .packages | sha256sum")
+}
+
+def triggerCompose(src_config_commit) {
+    stage("Trigger Build") {
+        echo "Triggering build for stream: ${params.STREAM} (lockfiles at ${src_config_commit})"
+        retry(3) {
+            try {
+                build job: 'build', wait: false, propagate: false, parameters: [
+                    string(name: 'STREAM', value: params.STREAM),
+                    booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
+                ]
+            } catch (e) {
+                sleep time: 10, unit: 'SECONDS'
+                throw e
+            }
+        }
+    }
+}
+
+def recoverCompose(s3_stream_dir, lockfile_prefix, arches, src_config_commit) {
+    // The downstream job uses this lock while composing. Jenkins coalesces
+    // queued requests for the same job and parameters.
+    lock(resource: "build-${params.STREAM}", skipIfLocked: true) {
+        def built_commit = latestComposeCommit(s3_stream_dir)
+        if (!built_commit || built_commit == src_config_commit) {
+            return
+        }
+        if (shwrapRc("git -C src/config cat-file -e '${built_commit}^{commit}'") != 0) {
+            shwrap("git -C src/config fetch --no-tags origin '${built_commit}'")
+        }
+
+        // Compare this stream's package sets. Timestamp-only bumps and
+        // changes for other streams on the same branch don't need a compose.
+        if (arches.any { arch ->
+            def lockfile = "${lockfile_prefix}manifest-lock.${arch}.json"
+            committedPackageChecksum(built_commit, lockfile) != committedPackageChecksum(src_config_commit, lockfile)
+        }) {
+            echo "The latest base compose for ${params.STREAM} predates the current package lockfiles"
+            triggerCompose(src_config_commit)
+            currentBuild.description = "[${params.STREAM}] ⚡ (queued missing compose)"
+        }
+    }
+}
+
 // Keep in sync with build.Jenkinsfile
 def cosa_memory_request_mb = 10.5 * 1024 as Integer
 def ncpus = ((cosa_memory_request_mb - 512) / 1536) as Integer
@@ -240,8 +314,11 @@ lock(resource: "bump-lockfile") {
         }
 
         if (!haveChanges && !forceTimestamp) {
-            currentBuild.result = 'SUCCESS'
             currentBuild.description = "[${params.STREAM}] 💤 (no change)"
+            if (uses_lockfiles_subdir) {
+                recoverCompose(s3_stream_dir, lockfile_prefix, arches, src_config_commit)
+            }
+            currentBuild.result = 'SUCCESS'
             return
         }
         
@@ -373,15 +450,13 @@ lock(resource: "bump-lockfile") {
             currentBuild.description = "[${params.STREAM}] ⚡ (retriggered)"
         } else if (!haveChanges && forceTimestamp) {
             currentBuild.description = "[${params.STREAM}] ⚡ (pushed timestamp update)"
+            if (uses_lockfiles_subdir) {
+                recoverCompose(s3_stream_dir, lockfile_prefix, arches, src_config_commit)
+            }
         } else {
             currentBuild.description = skip_tests ? "[${params.STREAM}] ⚡ (pushed, tests skipped)" : "[${params.STREAM}] ⚡ (pushed)"
-            stage("Trigger Build") {
-                echo "Triggering build for stream: ${params.STREAM}"
-                build job: 'build', wait: false, propagate: false, parameters: [
-                  string(name: 'STREAM', value: params.STREAM),
-                  booleanParam(name: 'EARLY_ARCH_JOBS', value: false)
-                ]
-            }
+            def pushed_commit = shwrapCapture("git -C src/config rev-parse HEAD")
+            triggerCompose(pushed_commit)
         }
         currentBuild.result = 'SUCCESS'
 
