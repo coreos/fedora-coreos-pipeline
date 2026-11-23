@@ -367,6 +367,8 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
         artifacts.contains("powervs") &&
         utils.credentialsExist(credentials)) {
         def creds = credentials
+        // Temporarily disable PowerVS uploads until the IBM Cloud API key is fixed.
+        /*
         uploaders["☁️ ⬆️ :powervs"] = {
             withCredentials(creds) {
                 utils.syncCredentialsIfInRemoteSession(["POWERVS_IMAGE_UPLOAD_CONFIG"])
@@ -385,6 +387,7 @@ def upload_to_clouds(pipecfg, basearch, buildID, stream) {
                  """);
             }
         }
+        */
     }
 
     // Run the resulting set of uploaders in parallel
