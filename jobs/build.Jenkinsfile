@@ -326,12 +326,24 @@ lock(resource: "build-${params.STREAM}") {
             }
 
             stage("Import Konflux image") {
-                def result = pipeutils.import_konflux_oci_image(
-                    oci_image: konflux_oci_image,
-                    konflux_config: konflux,
-                    parent_arg: parent_arg,
-                    stream: params.STREAM
-                )
+                // A repeated request for an unchanged commit reuses the snapshot
+                // that is already the latest build. Skip the import so the "no
+                // new build" handling below runs instead of `cosa import`
+                // failing because the build ID exists. See docs/KONFLUX.md.
+                if (!params.FORCE && pipeutils.konflux_image_is_build(
+                        oci_image: konflux_oci_image,
+                        konflux_config: konflux,
+                        buildid: prevBuildID,
+                        basearch: basearch)) {
+                    echo "Konflux image ${konflux_oci_image} is already build ${prevBuildID}; skipping import"
+                } else {
+                    def result = pipeutils.import_konflux_oci_image(
+                        oci_image: konflux_oci_image,
+                        konflux_config: konflux,
+                        parent_arg: parent_arg,
+                        stream: params.STREAM
+                    )
+                }
             }
         } else {
             // fetch from repos for the current build
