@@ -18,78 +18,86 @@ enforcement.
 
 ```
 ══════════════════════════════════════════════════════════════════════════════════════
-                              CURRENT WORKFLOW (Phase 1)
+                      CURRENT WORKFLOW (Jenkins as orchestrator)
 ══════════════════════════════════════════════════════════════════════════════════════
 
- GITHUB              KONFLUX                                         JENKINS
+ JENKINS                                   KONFLUX
 ────────────────────────────────────────────────────────────────────────────────────────
-    │                    │                                               │
-    │   PR/Push          │                                               │
-    │───────────────────►│                                               │
-    │                    │                                               │
-    │               ┌────┴────┐                                          │
-    │               │   PAC   │                                          │
-    │               └────┬────┘                                          │
-    │                    │                                               │
-    │               ┌────┴─────────────────┐                             │
-    │               │     PipelineRun      │                             │
-    │               │  • clone-repository  │                             │
-    │               │  • prepare-build-ctx │                             │
-    │               │  • prefetch-deps     │                             │
-    │               │  • multi-arch build  │                             │
-    │               │  • etc               │                             │
-    │               └────┬─────────────────┘                             │
-    │                    │  pushed to                                    │
-    │                    ▼                                               │
-    │         ┌─────────────────────┐                                    │
-    │         │ quay.io/konflux-    │                                    │
-    │         │ fedora/coreos-tenant│                                    │
-    │         │ (intermediate)      │                                    │
-    │         └─────────────────────┘                                    │
-    │                    │                                               │
-    │               ┌────┴────┐                                          │
-    │               │   ITS   │ (optional)                               │
-    │               └────┬────┘                                          │
-    │                    │                                               │
-    │               ┌────┴────────┐                                      │
-    │               │ ReleasePlan │                                      │
-    │               └────┬────────┘                                      │
-    │                    │                                               │
-    │                    ▼                                               │
-    │         ┌─────────────────────┐    triggers                        │
-    │         │ quay.io/coreos-     │───────────────────────────────────►│
-    │         │ devel/fedora-coreos │                                    │
-    │         │ (devel)             │                                    │
-    │         └─────────────────────┘                              ┌─────┴─────┐
-    │                                                              │  Import   │
-    │                                                              └─────┬─────┘
-    │                                                                    │
-    │                                                              ┌─────┴─────┐
-    │                                                              │   Build   │
-    │                                                              │ disk imgs │
-    │                                                              └─────┬─────┘
-    │                                                                    │
-    │                                                              ┌─────┴─────┐
-    │                                                              │   Test    │
-    │                                                              └─────┬─────┘
-    │                                                                    │
-    │                                                              ┌─────┴─────┐
-    │                                                              │  Release  │
-    │                                                              └───────────┘
+    │                                         │
+ ┌──┴───────────────────┐                     │
+ │ build job            │   look up a         │
+ │ • Build in Konflux   │   validated         │
+ │                      │   Snapshot for      │
+ │                      │   the commit        │
+ │                      │────────────────────►│
+ │                      │                     │
+ │                      │   if none:          │
+ │                      │   trigger-pac-build │
+ │                      │────────────────────►│
+ │                      │                ┌────┴─────────────────┐
+ │                      │                │     PipelineRun      │
+ │                      │                │  • clone-repository  │
+ │                      │                │  • prepare-build-ctx │
+ │                      │                │  • prefetch-deps     │
+ │                      │                │  • multi-arch build  │
+ │                      │                │  • etc               │
+ │                      │                └────┬─────────────────┘
+ │                      │                     │  pushed to
+ │                      │                     ▼
+ │                      │          ┌─────────────────────┐
+ │                      │          │ quay.io/konflux-    │
+ │                      │          │ fedora/coreos-tenant│
+ │                      │          │ (intermediate)      │
+ │                      │          └──────────┬──────────┘
+ │                      │                ┌────┴────┐
+ │                      │                │   ITS   │
+ │                      │                └────┬────┘
+ │                      │   poll Snapshot     │
+ │                      │◄────────────────────│
+ │ • Import (cosa)      │                     │
+ │ • Build disk images  │                     │
+ │ • Test               │                     │
+ └──┬───────────────────┘                     │
+    │                                         │
+ ┌──┴───────────────────┐   create Release    │
+ │ release job          │   (RHCOS only)      │
+ │ • Konflux Release    │────────────────────►│
+ │   (RHCOS only)       │                ┌────┴────────┐
+ │                      │   poll status  │ ReleasePlan │
+ │                      │◄───────────────└────┬────────┘
+ │                      │                     │
+ │                      │                     ▼
+ │                      │          ┌─────────────────────┐
+ │                      │          │ ReleasePlanAdmission│
+ │                      │          │ (RH Release         │
+ │                      │          │ Engineering tenant) │
+ │                      │          └─────────────────────┘
+ │ • Release            │
+ └──┬───────────────────┘
+    │  pushed to
+    ▼
+ ┌─────────────────────┐
+ │ quay.io/fedora/     │
+ │ fedora-coreos       │
+ │ (final)             │
+ └─────────────────────┘
 ```
+
+See [Jenkins and Konflux Integration](#jenkins-and-konflux-integration) for details.
 
 #### Container Registries
 
 | Registry | Purpose |
 |----------|---------|
-| [`quay.io/konflux-fedora/coreos-tenant/`](https://quay.io/organization/konflux-fedora?tab=repositories&q=coreos-tenant) | **Intermediate registry** - Stores all artifacts built by Tekton pipelines. Created via the `ImageRepository` CRD defined in the [ProjectDevelopmentStreamTemplate](#projectdevelopmentstreamtemplate). |
-| [`quay.io/coreos-devel/fedora-coreos`](https://quay.io/repository/coreos-devel/fedora-coreos) | **Devel registry** - Stores images built and released by Konflux. Used by Jenkins for downstream processing. |
+| [`quay.io/konflux-fedora/coreos-tenant/`](https://quay.io/organization/konflux-fedora?tab=repositories&q=coreos-tenant) | **Intermediate registry** - Stores all artifacts built by Tekton pipelines. Created via the `ImageRepository` CRD defined in the [ProjectDevelopmentStreamTemplate](#projectdevelopmentstreamtemplate). Jenkins imports the container image from here. |
+| [`quay.io/coreos-devel/fedora-coreos`](https://quay.io/repository/coreos-devel/fedora-coreos) | **Devel registry** - Stores images released by Konflux through the ReleasePlan. No longer updated for FCOS since automatic release has been disabled (see [ReleasePlan](#releaseplan)). |
 | [`quay.io/fedora/fedora-coreos`](https://quay.io/repository/fedora/fedora-coreos) | **Final registry** - Official public registry for end users. Images are pushed here by Jenkins after successful release. |
 
 
 > [!NOTE]
-> The images in the devel registry (`coreos-devel/fedora-coreos`) and final registry (`fedora/fedora-coreos`) repositories
-> are exactly identical. The difference is that the final registry images are the official artifacts
+> The images that were published in the devel registry (`coreos-devel/fedora-coreos`) when automatic
+> release was enabled are exactly identical to the ones in the final registry (`fedora/fedora-coreos`).
+> The difference is that the final registry images are the official artifacts
 > pushed by Jenkins as part of the release process. The devel registry repository is expected to be deprecated
 > once Konflux takes over the release responsibility (Phase 4).
 
@@ -99,52 +107,58 @@ The Konflux tenant configuration for FCOS is where all Konflux-specific OpenShif
 are defined in GitOps mode. The configuration is stored in the
 [tenants-config](https://gitlab.com/fedora/infrastructure/konflux/tenants-config) repository.
 
-**Location**: [`cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos)
+**Location**: [`clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos)
+
+> [!NOTE]
+> The `cluster/kfluxfedorap01/` directory is deprecated since the installation
+> of the new `kflux-fedora-01` cluster. All changes must go to
+> `clusters/kflux-fedora-01/`.
 
 #### Fedora Konflux Cluster
 
-The Fedora Konflux instance runs on a ROSA (Red Hat OpenShift on AWS) cluster. Key characteristics:
+The Fedora Konflux instance runs on the `kflux-fedora-01` ROSA (Red Hat OpenShift on AWS) cluster. Key characteristics:
 
-- **Konflux components**: Deployed from [infra-deployments](https://gitlab.com/fedora/infrastructure/konflux/infra-deployments)
+- **Konflux components**: Deployed from [redhat-appstudio/infra-deployments](https://github.com/redhat-appstudio/infra-deployments)
 - **Authentication**: Integrated with Fedora Account System (FAS)
 - **Multi-architecture support**: Provisioned for `x86_64`, `aarch64`, `ppc64le`, and `s390x`
 
 For more details (web UI, OpenShift console, ArgoCD, etc.), see the
-[infra-deployments README](https://gitlab.com/fedora/infrastructure/konflux/infra-deployments).
-
-> [!WARNING]
-> The Fedora-specific [infra-deployments](https://gitlab.com/fedora/infrastructure/konflux/infra-deployments)
-> repository will be deprecated in favor of the upstream [redhat-appstudio/infra-deployments](https://github.com/redhat-appstudio/infra-deployments).
-> A new Fedora Konflux cluster is being deployed, tracked in [KONFLUX-11098](https://issues.redhat.com/browse/KONFLUX-11098).
+[infra-deployments README](https://github.com/redhat-appstudio/infra-deployments).
 
 #### Directory Structure
 
 ```
-fedora-coreos/
-├── kustomization.yaml
-├── project.yaml                    # Project definition
-├── template.yaml                   # ProjectDevelopmentStreamTemplate
-├── ec-policy.yaml                  # EnterpriseContractPolicy
-├── devstreams/                     # ProjectDevelopmentStream definitions
-│   ├── kustomization.yaml
-│   ├── testing-devel.yaml
-│   ├── testing.yaml
-│   ├── stable.yaml
-│   ├── next.yaml
-│   ├── next-devel.yaml
-│   ├── branched.yaml
-│   └── rawhide.yaml
-└── releaseplans/                   # ReleasePlan configurations
+coreos-tenant/
+├── rbac/                           # RBAC, incl. the Jenkins ServiceAccount
+│   └── rbac.yaml
+└── fedora-coreos/
     ├── kustomization.yaml
-    ├── base/
-    │   └── releaseplan.yaml
-    ├── testing-devel/
-    ├── testing/
-    ├── stable/
-    ├── next/
-    ├── next-devel/
-    ├── branched/
-    └── rawhide/
+    ├── project.yaml                # Project definition
+    ├── template.yaml               # ProjectDevelopmentStreamTemplate
+    ├── ec-policies/                # EnterpriseContractPolicy
+    │   ├── kustomization.yaml
+    │   ├── development/
+    │   └── production/
+    ├── devstreams/                 # ProjectDevelopmentStream definitions
+    │   ├── kustomization.yaml
+    │   ├── testing-devel.yaml
+    │   ├── testing.yaml
+    │   ├── stable.yaml
+    │   ├── next.yaml
+    │   ├── next-devel.yaml
+    │   ├── branched.yaml
+    │   └── rawhide.yaml
+    └── releaseplans/               # ReleasePlan configurations
+        ├── kustomization.yaml
+        ├── base/
+        │   └── releaseplan.yaml
+        ├── testing-devel/
+        ├── testing/
+        ├── stable/
+        ├── next/
+        ├── next-devel/
+        ├── branched/
+        └── rawhide/
 ```
 
 #### Konflux Resources
@@ -153,7 +167,7 @@ fedora-coreos/
 
 Defines the `fedora-coreos` project in Konflux.
 
-- **File**: [`project.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/project.yaml)
+- **File**: [`project.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/project.yaml)
 
 ##### ProjectDevelopmentStreamTemplate
 
@@ -168,12 +182,12 @@ generates the following Konflux resources for each stream:
 | **ImageRepository** | Intermediate container image repository storing all Tekton pipeline artifacts |
 | **IntegrationTestScenario** | Enterprise Contract policy validation |
 
-- **File**: [`template.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/template.yaml)
+- **File**: [`template.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/template.yaml)
 
 > [!NOTE]
 > The `ReleasePlan` CRD is not currently supported in the `ProjectDevelopmentStreamTemplate`.
 > This is why ReleasePlans are managed separately using Kustomize overlays in the
-> [`releaseplans/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/releaseplans) directory.
+> [`releaseplans/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/releaseplans) directory.
 
 ##### ProjectDevelopmentStream
 
@@ -183,7 +197,7 @@ with the appropriate version/branch value.
 **Configured streams**: `testing-devel`, `testing`, `stable`, `next`, `next-devel`,
 `branched`, `rawhide`
 
-- **Files**: [`devstreams/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/devstreams)
+- **Files**: [`devstreams/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/devstreams)
 
 ##### EnterpriseContractPolicy
 
@@ -194,7 +208,14 @@ from Conforma with FCOS-specific rule data.
 The policy rule data is maintained in a dedicated repository with minimal baseline
 rules as a starting point.
 
-- **File**: [`ec-policy.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/ec-policy.yaml)
+There are two policies:
+
+| Policy | Description |
+|--------|-------------|
+| `fedora-coreos-ec-policy-production` | Base policy |
+| `fedora-coreos-ec-policy-development` | Kustomize overlay of the production policy that also excludes the `rpm_signature.rule_data_provided` rule |
+
+- **Files**: [`ec-policies/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/ec-policies)
 - **Policy Data**: [`coreos/conforma-policy`](https://github.com/coreos/conforma-policy) (see [`data/rule_data.yml`](https://github.com/coreos/conforma-policy/blob/main/data/rule_data.yml))
 
 > [!NOTE]
@@ -204,14 +225,20 @@ rules as a starting point.
 
 ##### ReleasePlan
 
-Configures the release process for each stream, including:
-- Triggering the Jenkins pipeline for downstream processing
-- Pushing images to the devel registry ([`quay.io/coreos-devel/fedora-coreos`](https://quay.io/repository/coreos-devel/fedora-coreos))
+Configures the release process for each stream (`release-fedora-coreos-<stream>`),
+which pushes images to the devel registry
+([`quay.io/coreos-devel/fedora-coreos`](https://quay.io/repository/coreos-devel/fedora-coreos)).
+
+Automatic release is disabled (`release.appstudio.openshift.io/auto-release: 'false'`),
+so the ReleasePlans are currently not used for FCOS: they no longer trigger Jenkins,
+and the Jenkins `release` job does not trigger them either (see [Release Flow](#release-flow)).
+The ReleasePlan definitions are kept so they can be reused once the whole pipeline
+moves to Konflux.
 
 Uses Kustomize overlays for stream-specific configurations (tags, parameters).
 
-- **Files**: [`releaseplans/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/releaseplans)
-- **Base ReleasePlan**: [`releaseplans/base/releaseplan.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos/releaseplans/base/releaseplan.yaml)
+- **Files**: [`releaseplans/`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/releaseplans)
+- **Base ReleasePlan**: [`releaseplans/base/releaseplan.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos/releaseplans/base/releaseplan.yaml)
 
 ### Pipeline Configuration
 
@@ -246,8 +273,6 @@ These Tekton artifacts (bundles) are built and pushed to
 ```
 .tekton/
 ├── README.md
-├── trigger                         # Trigger file (see "Trigger File Mechanism" below)
-├── trigger-file-comment
 ├── templates/                      # Jinja2 templates and configuration
 │   ├── pipelinerun.yaml.j2        # Jinja2 template for PipelineRun
 │   └── streams.yaml               # Stream definitions and settings
@@ -298,47 +323,106 @@ To verify that generated files are up to date (useful for CI):
 
 - **Script**: [`ci/generate-tekton-pipelinerun.py`](https://github.com/coreos/fedora-coreos-config/blob/testing-devel/ci/generate-tekton-pipelinerun.py)
 
-#### Trigger File Mechanism
+#### Build Triggering
 
-Konflux is commit-based, meaning a new build is only triggered when changes are
-committed. Unlike the current Jenkins setup where a daily cron job triggers builds
-unconditionally, Konflux only builds when there are actual changes in the repo.
+The `on-push` PipelineRuns are **not** triggered by merged commits: they are
+configured with `pipelinesascode.tekton.dev/on-cel-expression: "false"`.
+Instead, the Jenkins `build` job triggers them on demand (see
+[Jenkins and Konflux Integration](#jenkins-and-konflux-integration)).
 
-The **trigger file** (`.tekton/trigger`) serves as a mechanism to consolidate changes
-and ensure at most one build per day for mechanical streams (`rawhide`, `testing-devel`):
-
-1. **Lockfile updates**: The `bump-lockfile` job updates the trigger file with a
-   timestamp whenever new packages are pulled from Fedora repositories.
-2. **Config changes**: The `config-bot` updates the trigger file when propagating
-   configuration changes from the main branch (`testing-devel`) to streams that
-   inherit from it. Note that `testing-devel` itself does not have this property
-   since changes are committed directly to it; only lockfile bumps update the
-   trigger file on this branch.
-3. **CEL expression filtering**: Konflux pipelines are configured (via `on-cel-expression`)
-   to only build when the trigger file is modified.
-4. **Autorelease**: When a new container image is built, the Konflux release pipeline
-   is automatically triggered, which in turn triggers the Jenkins build job.
-
-This approach ensures that a new FCOS build is triggered **only** when there is
-a new package set OR new configuration changes, avoiding unnecessary builds compared
-to the current Jenkins cron-based approach.
-
-> [!IMPORTANT]
-> Manual pipeline triggering is currently not possible due to a known bug
-> tracked in [KFLUXSPRT-6050](https://issues.redhat.com/browse/KFLUXSPRT-6050).
-> This capability will be available once the issue is resolved.
+The `on-pull-request` PipelineRuns are still triggered by Pipelines-as-Code on
+pull requests.
 
 #### Retriggering Failed Pipelines
-
-If a pipeline fails, you can retrigger it using the `/retest` comment:
 
 | Scenario | How to retrigger |
 |----------|------------------|
 | **Pull Request** | Add a `/retest` comment on the PR |
-| **Merged commit (main branch `testing-devel`)** | Add a `/retest` comment on the commit |
-| **Merged commit (other branches)** | Add a `/retest branch:<branch-name>` comment on the commit (e.g., `/retest branch:rawhide` on [76896b7](https://github.com/coreos/fedora-coreos-config/commit/76896b7fc55efca9743a05797692b6695b66c3e5)) |
+| **Branch build** | Re-run the Jenkins `build` job for the stream |
 
-For more details, see the [Konflux documentation on triggering builds](https://konflux-ci.dev/docs/building/running/#triggering-a-post-merge-build).
+For more details, see the [Konflux documentation on triggering builds](https://konflux-ci.dev/docs/building/running/).
+
+### Jenkins and Konflux Integration
+
+As long as both Jenkins and Konflux are part of the pipeline, **Jenkins is the
+orchestrator**: it triggers the Konflux container build, waits for the result,
+builds the disk images, runs the tests, and finally releases the build.
+
+This replaces the previous push-based model, where every Konflux build triggered
+the Jenkins `build` job through the ReleasePlan. Having a single orchestrator:
+
+- avoids building container images that are never used,
+- avoids delays between the Konflux build and the rest of the pipeline,
+- keeps Jenkins as the single interface to manually start a build,
+- avoids ping-pong and duplicated failure notifications between both systems.
+
+We will evaluate later whether Konflux should become the orchestrator.
+
+The design discussion took place in this thread [fedora-coreos-tracker#2241](https://github.com/coreos/fedora-coreos-tracker/issues/2241).
+
+#### Build Flow
+
+When `build_in_konflux` is enabled for a stream, the `Build in Konflux` stage
+of the [`build`](../jobs/build.Jenkinsfile) job:
+
+1. Looks for an existing **validated** Snapshot (`AppStudioTestSucceeded: True`)
+   for the component and the source config commit. If one exists, its container
+   image is reused and no new build is triggered.
+2. Otherwise, triggers a Konflux build by annotating the component with
+   `build.appstudio.openshift.io/request=trigger-pac-build`, which runs the
+   `on-push` PipelineRun.
+3. Polls the PipelineRun and the resulting Snapshot until it is validated.
+   Note: PipelineRuns queued while Konflux waits for resources are reported as pending.
+4. If the commit built by Konflux differs from the one used for `cosa init`,
+   re-runs `cosa init` with the Konflux commit.
+
+The `Import Konflux image` stage then imports the container image with
+`cosa import`, and the rest of the pipeline (disk images, tests, multi-arch
+jobs) runs as usual. The Snapshot name is passed to the `release` job.
+
+#### Release Flow
+
+The [`release`](../jobs/release.Jenkinsfile) job publishes the container image
+to the final registry ([`quay.io/fedora/fedora-coreos`](https://quay.io/repository/fedora/fedora-coreos))
+as usual.
+
+In addition, when the `KONFLUX_SNAPSHOT` parameter is set, its `Konflux Release` stage:
+
+1. Fetches the Snapshot and checks that the container image version
+   (`org.opencontainers.image.version` label) matches the `VERSION` parameter.
+2. Creates a `Release` resource for the ReleasePlan named after the Snapshot's
+   application (e.g. `fedora-coreos-rawhide`). The stage is skipped if that
+   ReleasePlan does not exist.
+3. Polls the `Release` until it succeeds or fails (10 minutes timeout).
+
+> [!NOTE]
+> This stage is currently **not active for FCOS**: the FCOS ReleasePlans are named
+> `release-fedora-coreos-<stream>`, so no ReleasePlan matches the application name
+> and no Konflux `Release` is created.
+> It is **active for RHCOS**, where the stream's ReleasePlan (e.g. `rhel-coreos-10-2`)
+> triggers a `ReleasePlanAdmission` in the Red Hat Release Engineering tenant.
+
+#### Configuration
+
+The integration is configured in [`config.yaml`](../config.yaml) (see
+[`docs/config.yaml`](config.yaml) for all options):
+
+| Option | Level | Description |
+|--------|-------|-------------|
+| `build_in_konflux` | stream | Build the container image in Konflux instead of Jenkins |
+| `konflux_application` | stream | Konflux application/component name of the stream (e.g. `fedora-coreos-rawhide`) |
+| `konflux.api_url` | top-level | Konflux cluster API URL |
+| `konflux.namespace` | top-level | Konflux tenant namespace (`coreos-tenant`) |
+| `konflux.token_credential` | top-level | Jenkins credential ID holding the Konflux API token |
+| `konflux.proxy_domain` | top-level | Optional proxy used to pull images from the intermediate registry |
+
+#### Service Account
+
+Jenkins authenticates to Konflux with the `konflux-bot-0` ServiceAccount, defined in
+[`rbac/rbac.yaml`](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/blob/main/clusters/kflux-fedora-01/tenants/coreos-tenant/rbac/rbac.yaml).
+It is bound to the `konflux-builder-bot-actions` and `konflux-releaser-bot-actions`
+ClusterRoles, so that it can trigger builds, read Snapshots and create Releases.
+Its token is stored as a secret in the Jenkins instance (`konflux-bot-0` credential).
 
 ### Hermetic Builds & RPM Lockfiles
 
@@ -368,13 +452,14 @@ the repository.
 ### SBOMs and Attestations
 
 SBOMs (Software Bill of Materials) and build attestations are **not yet published**
-to the final registry ([`quay.io/fedora/fedora-coreos`](https://quay.io/repository/fedora/fedora-coreos)). They are currently available
-in the devel registry ([`quay.io/coreos-devel/fedora-coreos`](https://quay.io/repository/coreos-devel/fedora-coreos)).
+to the final registry ([`quay.io/fedora/fedora-coreos`](https://quay.io/repository/fedora/fedora-coreos)). They are only available
+in the devel registry ([`quay.io/coreos-devel/fedora-coreos`](https://quay.io/repository/coreos-devel/fedora-coreos))
+for the images published there while automatic release was enabled.
 
 **Reasons**:
 
-1. **Jenkins-based releases**: In Phase 1, releases are handled by Jenkins, which
-   does not propagate the associated artifacts (SBOMs, attestations, signatures).
+1. **Jenkins-based releases**: Releases to the final registry are handled by Jenkins,
+   which does not propagate the associated artifacts (SBOMs, attestations, signatures).
    Phase 4 will address this when Konflux handles the full release process.
 
 2. **Registry clutter**: The current Cosign tag-based conventions create multiple
@@ -387,7 +472,8 @@ For more details, see the comment [fedora-coreos-tracker#2031 (comment)](https:/
 ### References
 
 - **Migration Tracker**: [fedora-coreos-tracker#2031](https://github.com/coreos/fedora-coreos-tracker/issues/2031)
+- **Jenkins as orchestrator**: [fedora-coreos-tracker#2241](https://github.com/coreos/fedora-coreos-tracker/issues/2241)
 - **Konflux Documentation**: [konflux-ci.dev](https://konflux-ci.dev/docs/)
 - **Conforma Policy Documentation**: [conforma.dev](https://conforma.dev/docs/policy/release_policy.html)
-- **Tenant Configuration**: [GitLab tenants-config](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/cluster/kfluxfedorap01/coreos-tenant/fedora-coreos)
+- **Tenant Configuration**: [GitLab tenants-config](https://gitlab.com/fedora/infrastructure/konflux/tenants-config/-/tree/main/clusters/kflux-fedora-01/tenants/coreos-tenant/fedora-coreos)
 - **Pipeline Configuration**: [GitHub .tekton/](https://github.com/coreos/fedora-coreos-config/tree/testing-devel/.tekton)
