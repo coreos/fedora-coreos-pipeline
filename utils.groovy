@@ -1185,6 +1185,53 @@ def import_konflux_oci_image(Map params) {
     ]
 }
 
+// Returns true if `oci_image` is exactly the image already imported as build
+// `buildid`: its linux/<arch> image index entry has the digest that
+// `cosa import` recorded as `images.oci-manifest.sha256` (import copies with
+// preserved digests). Anything else, including errors, returns false so the
+// caller imports normally and `cosa import` still rejects real collisions.
+//
+// Parameters:
+//   oci_image:       string -- The Konflux OCI image URL (with digest)
+//   konflux_config:  map -- Konflux configuration (proxy_domain, token_credential)
+//   buildid:         string -- Existing build ID to compare against (e.g. builds/latest)
+//   basearch:        string -- Architecture of the build (e.g. x86_64)
+//
+// Returns true if the image is that build, false otherwise.
+def konflux_image_is_build(Map params) {
+    def konflux_config = params.konflux_config ?: [:]
+    def goarch = rpm_to_go_arch(params.basearch)
+    if (!params.buildid || !goarch) {
+        return false
+    }
+    try {
+        def stored = shwrapCapture("cosa meta --build=${params.buildid} --arch=${params.basearch} --get-value images.oci-manifest.sha256")
+        def access_config = getImageAccessConfig(
+            image: params.oci_image,
+            proxy_domain: konflux_config.proxy_domain,
+            auth_user: konflux_config.token_credential,
+            auth_password: 'KONFLUX_API_TOKEN'
+        )
+        withCredentials([string(credentialsId: konflux_config.token_credential, variable: 'KONFLUX_API_TOKEN')]) {
+            shwrap("""
+            cosa shell -- env KONFLUX_API_TOKEN=\${KONFLUX_API_TOKEN} bash -c '${access_config.login_cmd} && REGISTRY_AUTH_FILE=${access_config.auth_file} skopeo inspect --raw docker://${access_config.image} > tmp/konflux-image-index.json'
+            """)
+        }
+        def digest = shwrapCapture("""
+        jq -r --arg arch ${goarch} '.manifests[]? | select(.platform.os == "linux" and .platform.architecture == \$arch and (.artifactType | not)) | .digest' tmp/konflux-image-index.json
+        """)
+        if (digest == "sha256:${stored}".toString()) {
+            return true
+        }
+        echo "Konflux image ${params.oci_image} (${goarch}: ${digest}) is not build ${params.buildid} (${stored})"
+    } catch (InterruptedException e) {
+        throw e
+    } catch (Exception e) {
+        echo "Could not compare Konflux image with build ${params.buildid}: ${e}"
+    }
+    return false
+}
+
 // Permanent KUBECONFIG file for Konflux operations
 KONFLUX_KUBECONFIG = "/tmp/konflux-kubeconfig"
 

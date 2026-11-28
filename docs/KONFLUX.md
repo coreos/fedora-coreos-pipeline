@@ -340,6 +340,29 @@ If a pipeline fails, you can retrigger it using the `/retest` comment:
 
 For more details, see the [Konflux documentation on triggering builds](https://konflux-ci.dev/docs/building/running/#triggering-a-post-merge-build).
 
+#### Repeated Jenkins builds of the same snapshot
+
+The Jenkins `build` job is intentionally requested more than once for the same
+content: `bump-lockfile` requests a build after pushing lockfile updates, and
+the daily `build-development` job requests one as a fallback in case the bump
+failed. When nothing changed, the second request should end as
+"💤 (no new build)".
+
+For Konflux streams, `build` reuses the existing validated snapshot for the
+config commit. Before importing it, the job compares the snapshot's
+`linux/<arch>` image index digest with the checksum `cosa import` recorded for
+the latest build (`images.oci-manifest.sha256` in `meta.json`). If they are
+equal, the job skips `cosa import` and follows the usual "no new build" path,
+which reruns missing architectures and `release` when uploading and no other
+work is pending for that build. Otherwise, including on any error, it imports
+as before, so `cosa import` still fails with `Build ID ... already exists!` on
+a real collision. Running the job with `FORCE` always imports.
+
+No configuration is needed. To verify, rerun `build` for a Konflux stream
+without a new config commit after a successful build: the log shows
+`Konflux image ... is already build <ID>; skipping import` and the build ends
+as "no new build". The check is `konflux_image_is_build()` in `utils.groovy`.
+
 ### Hermetic Builds & RPM Lockfiles
 
 FCOS builds in Konflux are **hermetic**, meaning all dependencies are pre-fetched
